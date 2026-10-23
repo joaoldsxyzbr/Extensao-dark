@@ -96,6 +96,17 @@
     return (Math.max(a,b) + 0.05) / (Math.min(a,b) + 0.05);
   }
 
+  // Características numéricas de contexto, em ordem estável para treino e inferência.
+  function neuralFeatures(background, foreground, ancestor, state = {}) {
+    if (!background || !foreground) return null;
+    const n = value => Math.max(0, Math.min(1, value));
+    return [
+      n(luminance(background)), n(luminance(foreground)), n(background.a),
+      n(rgbToHsl(background).s), ancestor ? n(luminance(ancestor)) : 1,
+      state.control ? 1 : 0, state.selected ? 1 : 0
+    ];
+  }
+
   function compositeColor(foreground, background) {
     if (!foreground || !background) return null;
     const a = foreground.a;
@@ -155,7 +166,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

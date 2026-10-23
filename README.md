@@ -145,8 +145,10 @@ Requer Chromium não bloqueado por política de administrador. Para incluir uma 
 Se o navegador deste ambiente estiver sob uma política que bloqueia páginas locais, o teste deve **falhar explicitamente**, não simular sucesso. O GitHub Actions executa o navegador em ambiente isolado sem essa restrição.
 
 
-## P3 — melhorias após comparação visual (0.4.2)
+## P4 — rede neural contextual (0.5.0)
 
-A análise do Chrome for Testing revelou textos com apenas cerca de 4,5:1 de contraste em cartões escuros, visualmente apagados, e uma faixa branca criada por um painel semitransparente. A versão 0.4.2 clareia textos originalmente escuros quando a superfície se torna escura, preserva títulos/indicadores já legíveis e ajusta painéis claros semitransparentes de forma conservadora, **mantendo a opacidade original**.
+O modelo local continua pequeno e sem telemetria, mas agora usa **7 atributos**, incluindo saturação, luminância do fundo ancestral, controle interativo e estado selecionado. Exemplos documentados em `data/neural-cases.json` têm rótulos curados por intenção visual, em vez de rótulos produzidos apenas por uma regra matemática. São **cenários sintéticos**, não coleta de navegação.
 
-A suíte nativa valida reversão, transparência e cores acentuadas. O teste de navegador agora também exige contraste confortável nos textos da página, cartão, Shadow DOM e painel semitransparente, além de verificar a luminância da faixa. Os critérios acima de 8:1 são um objetivo de qualidade interno no fixture, não um novo requisito universal da WCAG. Ainda precisamos testar sites reais; o Dark Reader continua a referência externa. O modelo neural, permissões e sua rotina de treinamento não mudaram.
+Para reproduzir o treino e validar: `node scripts/train-neural.js && node scripts/evaluate-neural.js && node --test`. A avaliação reserva cenários inteiros, fora do treino, e compara com a heurística anterior. O CI rejeita pesos que não sejam reproduzíveis. Não há aprendizagem online, serviço externo ou dependência de IA de terceiros.
+
+A validação visual com Chrome e Dark Reader continua necessária. O modo neural permanece desligável no popup, mantendo o modo tradicional como fallback. Acurácia em exemplos curados não significa desempenho superior ao Dark Reader nem compatibilidade geral.

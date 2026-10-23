@@ -20,6 +20,7 @@ function mockElement(tag, baseBackground, baseText, backgroundImage='none') {
     },
     closest:()=>null,
     attributes:{},
+    getAttribute(key){return this.attributes[key] ?? null;},
     setAttribute(key,value){this.attributes[key]=value;},
     removeAttribute(key){delete this.attributes[key];},
     appendChild(child){this.child=child;},
@@ -27,9 +28,10 @@ function mockElement(tag, baseBackground, baseText, backgroundImage='none') {
   };
   return node;
 }
-async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural}) {
+async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural,childSelected=false}) {
   const root=mockElement('HTML',bg,fg),body=mockElement('BODY',bg,fg),child=mockElement('DIV',childBg,childFg,backgroundImage);
   body.parentElement=root;child.parentElement=body;root.firstElementChild=body;body.firstElementChild=child;
+  if (childSelected) child.attributes['aria-selected']='true';
   const nodes=[root,body,child];
   const pending=[];
   const d={documentElement:root,body,readyState:'complete',createElement:()=>({textContent:'',remove(){}}),
@@ -73,7 +75,6 @@ test('tema nativo escuro permanece intacto mesmo com rede neural habilitada',asy
   }
 });
 
-
 // Neural-first: a decisão do modelo deve prevalecer sobre o mapeamento tradicional.
 test('modo neural: modelo veta fundo claro mesmo que heurística o modificasse', async () => {
   const never = {probability:()=>0};
@@ -99,4 +100,13 @@ test('rede com confiança alta não escurece superfície já escura', async () =
   const always = {probability:()=>1};
   const page = await runPage({childBg:'rgb(20,20,20)',childFg:'rgb(235,235,235)',model:always,smartEnabled:true});
   assert.equal(page.child.style.getPropertyValue('background-color'), '');
+});
+
+
+test('contexto semântico diferencia aba selecionada de botão normal com a mesma cor',async()=>{
+  const model={probability(features){return features[6]===1 ? 0 : 1;}};
+  const normal=await runPage({childBg:'rgb(190,190,190)',model,childSelected:false});
+  const selected=await runPage({childBg:'rgb(190,190,190)',model,childSelected:true});
+  assert.ok(normal.child.style.getPropertyValue('background-color'));
+  assert.equal(selected.child.style.getPropertyValue('background-color'),'');
 });

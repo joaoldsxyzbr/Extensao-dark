@@ -91,14 +91,16 @@
     baseStyle = null;
   }
 
-  function neuralScore(background, foreground) {
+  function neuralScore(background, foreground, ancestor, state) {
     if (!neural || !background || !foreground) return 0;
-    const bg = colors.luminance(background), fg = colors.luminance(foreground);
-    const key = `${Math.round(bg * 128)}:${Math.round(fg * 128)}:${Math.round(background.a * 16)}`;
+    const features = colors.neuralFeatures(background, foreground, ancestor, state);
+    if (!features) return 0;
+    // Todos os atributos entram na chave: a mesma cor pode ser uma aba ativa
+    // ou um cartão comum. Cache global pequeno e sem dados do usuário.
+    const key = features.map(n => Math.round(n * 128)).join(':');
     if (predictionCache.has(key)) return predictionCache.get(key);
-    const score = neural.probability([bg, fg, background.a]);
-    // O cache é pequeno, independente do número de nós ou domínios visitados.
-    if (predictionCache.size >= 128) predictionCache.clear();
+    const score = neural.probability(features);
+    if (predictionCache.size >= 256) predictionCache.clear();
     predictionCache.set(key, score);
     return score;
   }
@@ -145,6 +147,16 @@
   function isControlElement(element) {
     return ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(element.tagName) ||
       /^(button|checkbox|radio|switch|textbox|combobox|searchbox|tab|slider)$/.test(element.getAttribute?.('role') || '');
+  }
+
+  function isSelectedElement(element) {
+    const attr = name => element.getAttribute?.(name);
+    const state = attr('data-state');
+    const current = attr('aria-current');
+    return attr('aria-selected') === 'true' || attr('aria-pressed') === 'true' ||
+      (current != null && current !== 'false') ||
+      state === 'active' || state === 'selected' || state === 'checked' ||
+      /(?:^|\s)(?:active|selected|current)(?:\s|$)/i.test(attr('class') || '');
   }
 
   function restoreRecord(element, record) {
@@ -198,7 +210,8 @@
       // Limites físicos continuam protegendo cores escuras nativas e transparências.
       if (originalBackground && originalText && !isTranslucent && originalBackground.a >= .82 &&
           colors.luminance(originalBackground) >= .17 &&
-          neuralScore(originalBackground, originalText) >= .80) {
+          neuralScore(originalBackground, originalText, inheritedBackground(element),
+            {control: isControlElement(element), selected: isSelectedElement(element)}) >= .80) {
         background = colors.mapBackground(originalBackground, settings.theme, true);
       }
     } else {

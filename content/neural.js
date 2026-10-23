@@ -1,21 +1,19 @@
-/* Rede neural pequena, treinada localmente com amostras sintéticas curadas.
- * Gerada por: node scripts/train-neural.js (Node nativo).
- * Sem aprendizagem online, telemetria, dependências ou conexões externas. */
-(function exposeNeural(root) {
-  'use strict';
-  const MODEL = Object.freeze({"input":3,"hidden":8,"w1":[[-0.4591304,2.9612279,22.3370299],[-1.6394145,-4.2042959,5.9498617],[-0.2664546,20.0165454,-1.3010157],[0.6242128,-1.5659089,1.2716371],[-1.922664,4.2662182,-3.8640002],[-0.3360619,1.4680141,-1.0643245],[15.3288408,-11.5538883,-2.434002],[1.2584863,-3.0425807,2.3658751]],"b1":[-18.0297639,-3.2293014,-4.7376316,-1.2027207,5.0545274,0.8625934,0.6113935,-3.4618697],"w2":[6.003161,1.2907013,-5.5824515,0.2869224,-2.2095975,-0.2495643,6.4963986,1.65606],"b2":-8.6136615});
-  function probability(features) {
-    if (!Array.isArray(features) || features.length !== MODEL.input) return 0;
-    const x = features.map(value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0);
-    let sum = MODEL.b2;
-    for (let j=0;j<MODEL.hidden;j++) {
-      let a = MODEL.b1[j];
-      for (let k=0;k<MODEL.input;k++) a += MODEL.w1[j][k]*x[k];
-      sum += Math.tanh(a)*MODEL.w2[j];
-    }
-    return 1 / (1 + Math.exp(-Math.max(-35, Math.min(35, sum))));
+/* Modelo neural contextual, treino offline reproduzível com exemplos curados.
+ * Gerado por node scripts/train-neural.js. Sem telemetria ou aprendizagem online. */
+(function exposeNeural(root){
+ 'use strict';
+ const MODEL=Object.freeze({"input":7,"hidden":12,"w1":[[1.0008906,-0.4599396,1.1997892,-0.3892695,0.3057005,-0.0111879,-0.6368879],[1.3388871,-0.2772353,1.0733151,0.1544775,-0.6651275,0.0396599,-0.6662048],[0.6718722,-0.3494559,0.973506,-0.3343691,0.0173004,0.3451055,-0.1371481],[-1.4871566,1.0561777,-2.6602616,0.7695777,-0.2778356,0.0309604,1.3323455],[-0.8440732,1.3230301,-4.0547866,6.3967963,-0.8120152,0.4592368,1.7919284],[0.9635341,-0.530297,1.520517,-0.4337787,0.5697867,0.3662026,-0.9002062],[0.0077818,-0.4630036,0.1546513,0.1248227,0.2487469,0.2388955,0.047794],[0.967851,-0.0649745,1.1368621,-0.2981102,0.1365644,-0.0237854,-0.7778922],[-6.228154,1.3040282,-1.2405684,1.9043418,2.8289769,0.5078797,1.877597],[-1.8207414,0.888235,-2.7596791,0.8882453,0.1030839,0.1127511,1.1009198],[0.953236,-0.1795969,1.2917617,-0.4073636,0.4684423,0.4260121,0.0626202],[-0.554883,-0.1247213,-1.2527833,0.0893147,-0.7759338,-0.4031641,0.7639264]],"b1":[-1.4068661,-1.641835,-0.944901,2.8797452,3.5686557,-1.7404002,-0.1439274,-1.3319216,1.9891838,3.0247885,-1.4808919,1.384242],"w2":[2.0270837,2.1893511,1.2643835,-4.1191208,-8.8186643,2.5727058,0.2639706,1.9075594,-6.4182933,-4.1638712,2.0696406,-2.0968607],"b2":-1.4713583});
+ function probability(features){
+  if(!Array.isArray(features)||features.length!==MODEL.input || !features.every(Number.isFinite))return 0;
+  const x=features.map(value=>Math.max(0,Math.min(1,value)));
+  let sum=MODEL.b2;
+  for(let j=0;j<MODEL.hidden;j++){
+   let a=MODEL.b1[j];for(let k=0;k<MODEL.input;k++)a+=MODEL.w1[j][k]*x[k];
+   sum+=Math.tanh(a)*MODEL.w2[j];
   }
-  const api = Object.freeze({MODEL, probability});
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.DarkExtensionNeural = api;
+  return 1/(1+Math.exp(-Math.max(-35,Math.min(35,sum))));
+ }
+ const api=Object.freeze({MODEL,probability});
+ if(typeof module!=='undefined'&&module.exports)module.exports=api;
+ else root.DarkExtensionNeural=api;
 })(globalThis);

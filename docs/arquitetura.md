@@ -55,3 +55,8 @@ Nenhuma biblioteca, nova permissão ou envio de dados. Testes nativos do Node pa
 ## P2 — contraste contextual
 
 O avaliador calcula a cor aparente da superfície por composição alfa de fundos computados, atravessando hosts de Shadow DOM aberto. Suspende correção quando há imagens ou gradientes não mensuráveis. Para conteúdo elegível, aplica contraste mínimo WCAG 2.2 AA (texto 4,5:1; texto grande 3:1) usando interpolação local em RGB e sem modificar cores que já atingem o limiar. Bordas de controles recebem pelo menos 3:1 contra a superfície ao redor; superfícies acentuadas são preservadas. Não equivale a certificar acessibilidade global da página.
+
+
+## Experimento P4: modelo de contexto 7–12–1
+
+As sete entradas normalizadas são: luminância do fundo, luminância do texto, opacidade do fundo, saturação, luminância do ancestral, indicador de controle e indicador de estado selecionado. Extrator único `colors.neuralFeatures` é usado tanto no treinamento quanto na extensão para evitar discrepância. O treino determinístico usa cenários rotulados manualmente mais pequenas variações de cor; exemplos reservados por **cenário** avaliam erros, com comparação à heurística original. Os dados continuam sintéticos. Regras determinísticas mantêm a responsabilidade pela composição de transparências, contraste, mídias e temas escuros nativos. O modelo não produz cores RGB, não coleta dados e não se atualiza automaticamente.
