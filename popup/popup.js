@@ -1,9 +1,10 @@
 (() => {
   'use strict';
-  const DEFAULTS = {enabled:true, theme:'deep', disabledHosts:[]};
+  const DEFAULTS = {enabled:true, theme:'deep', disabledHosts:[], smartEnabled:true};
   const $ = (id) => document.getElementById(id);
   const enabledInput = $('enabled');
   const siteInput = $('site-enabled');
+  const smartInput = $('smart-enabled');
   const notice = $('notice');
   let settings = {...DEFAULTS};
   let hostname = null;
@@ -15,6 +16,7 @@
 
   function render() {
     enabledInput.checked = settings.enabled;
+    smartInput.checked = settings.smartEnabled !== false;
     siteInput.checked = Boolean(hostname) && !settings.disabledHosts.includes(hostname);
     siteInput.disabled = !hostname;
     $('site-name').textContent = hostname || 'Esta página não permite alterações';
@@ -63,6 +65,7 @@
   }
 
   enabledInput.addEventListener('change', () => save({enabled:enabledInput.checked}));
+  smartInput.addEventListener('change', () => save({smartEnabled:smartInput.checked}));
   siteInput.addEventListener('change', () => {
     if (!hostname) return;
     const hosts = new Set(settings.disabledHosts);
@@ -75,7 +78,7 @@
   }
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    for (const key of ['enabled', 'theme', 'disabledHosts']) {
+    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled']) {
       if (changes[key]) settings[key] = changes[key].newValue ?? DEFAULTS[key];
     }
     render();

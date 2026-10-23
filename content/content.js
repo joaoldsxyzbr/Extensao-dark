@@ -2,12 +2,14 @@
 (() => {
   'use strict';
   const colors = globalThis.DarkExtensionColors;
+  const neural = globalThis.DarkExtensionNeural;
   if (!colors || !/^https?:$/.test(location.protocol)) return;
 
-  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: []};
+  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true};
   const SKIP_TAGS = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PATH', 'SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'SOURCE', 'TRACK']);
   const originals = new Map();
   const work = [];
+  const predictionCache = new Map();
   let settings = DEFAULTS;
   let generation = 0;
   let running = false;
@@ -70,12 +72,65 @@
     baseStyle = null;
   }
 
+  function neuralScore(background, foreground) {
+    if (!neural || !background || !foreground) return 0;
+    const bg = colors.luminance(background), fg = colors.luminance(foreground);
+    const key = `${Math.round(bg * 128)}:${Math.round(fg * 128)}:${Math.round(background.a * 16)}`;
+    if (predictionCache.has(key)) return predictionCache.get(key);
+    const score = neural.probability([bg, fg, background.a]);
+    // O cache é pequeno, independente do número de nós ou domínios visitados.
+    if (predictionCache.size >= 128) predictionCache.clear();
+    predictionCache.set(key, score);
+    return score;
+  }
+
+  function inheritedBackground(element) {
+    // Usa a cor computada efetiva dos ancestrais, já atualizada nesta passagem.
+    let ancestor = element.parentElement;
+    let depth = 0;
+    while (ancestor && depth++ < 12) {
+      const style = getComputedStyle(ancestor);
+      if (style.backgroundImage && style.backgroundImage !== 'none') return null;
+      const color = colors.parseColor(style.backgroundColor);
+      if (color && color.a >= .95) return color;
+      ancestor = ancestor.parentElement;
+    }
+    return null;
+  }
+
   function styleElement(element) {
     if (!element.isConnected || SKIP_TAGS.has(element.tagName) || element.closest('svg, canvas, picture, video, audio, [data-extensao-dark-ignore]')) return;
     if (originals.has(element)) return;
     const style = getComputedStyle(element);
-    const background = colors.mapBackground(colors.parseColor(style.backgroundColor), settings.theme);
-    const foreground = colors.mapText(colors.parseColor(style.color));
+    // Gradientes/imagens contêm informação visual que CSS background-color não descreve.
+    if (style.backgroundImage && style.backgroundImage !== 'none') return;
+    const originalBackground = colors.parseColor(style.backgroundColor);
+    const originalText = colors.parseColor(style.color);
+    let background = colors.mapBackground(originalBackground, settings.theme);
+    if (!background && settings.smartEnabled && neural && originalBackground && originalText &&
+        originalBackground.a >= .82) {
+      const bgLum = colors.luminance(originalBackground);
+      const fgLum = colors.luminance(originalText);
+      // A rede não tem permissão de inverter superfícies originalmente escuras.
+      if (bgLum >= .17 && bgLum < .35 && fgLum < .28 &&
+          neuralScore(originalBackground, originalText) >= .80) {
+        background = colors.mapBackground(originalBackground, settings.theme, true);
+      }
+    }
+    let foreground = null;
+    if (originalText && colors.luminance(originalText) <= .54) {
+      const visibleBackground = background ? colors.parseColor(background) :
+        (originalBackground?.a >= .95 ? originalBackground : inheritedBackground(element));
+      if (visibleBackground && colors.luminance(visibleBackground) < .25) {
+        foreground = colors.mapText(originalText);
+      }
+    }
+    // Contraste WCAG: nunca gerar texto claro demais? Priorizar legibilidade do texto.
+    if (background && originalText) {
+      const outputBackground = colors.parseColor(background);
+      const outputText = colors.parseColor(foreground || style.color);
+      if (colors.contrastRatio(outputBackground, outputText) < 4.5) foreground = 'rgb(235, 239, 245)';
+    }
     if (!background && !foreground) return;
     const record = {};
     if (background) {
@@ -156,7 +211,7 @@
   }
 
   function update(next) {
-    const shouldRebuild = isActive() && next.theme !== settings.theme;
+    const shouldRebuild = isActive() && (next.theme !== settings.theme || next.smartEnabled !== settings.smartEnabled);
     if (baseStyle && (shouldRebuild || !colors.isEnabledForSite(next, location.hostname))) deactivate();
     settings = next;
     if (isActive()) activate();
@@ -169,9 +224,9 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!['enabled', 'theme', 'disabledHosts'].some(key => Object.hasOwn(changes, key))) return;
+    if (!['enabled', 'theme', 'disabledHosts', 'smartEnabled'].some(key => Object.hasOwn(changes, key))) return;
     const next = {...settings};
-    for (const key of ['enabled', 'theme', 'disabledHosts']) {
+    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled']) {
       if (changes[key]) next[key] = changes[key].newValue ?? DEFAULTS[key];
     }
     update(next);

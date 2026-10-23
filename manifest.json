@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Extensão Dark",
   "short_name": "Dark",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Modo escuro local para sites. Leve, independente e sem rastreamento.",
   "permissions": [
     "storage",
@@ -25,6 +25,7 @@
       ],
       "js": [
         "content/colors.js",
+        "content/neural.js",
         "content/content.js"
       ],
       "run_at": "document_start"

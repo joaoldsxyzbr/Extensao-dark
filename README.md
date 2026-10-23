@@ -12,7 +12,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.1.3
+## Recursos da versão 0.2.0
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -59,3 +59,18 @@ Se você selecionar uma pasta acima ou o arquivo ZIP ainda compactado, o Chrome 
 - Páginas com tema escuro próprio e texto claro são preservadas para evitar contrastes quebrados.
 - A verificação do tema acontece antes da primeira modificação de estilos, após a estrutura principal da página estar pronta.
 - Este é um primeiro mecanismo de detecção; aplicações com temas complexos ainda podem exigir ajustes específicos.
+
+## Motor híbrido experimental — versão 0.2.0
+
+Além das regras tradicionais de luminância e contraste, há uma **rede neural feed-forward compacta** (3 entradas, 8 neurônios ocultos, 1 saída) treinada **offline** com exemplos sintéticos. Ela **não aprende com sua navegação** e não envia nenhum dado para fora do navegador. A rede apenas avalia fundos opacos em uma faixa ambígua de luminosidade, enquanto as regras determinísticas continuam protegendo imagens, gradientes, páginas nativamente escuras e contraste. O modelo é um protótipo: resultados de validação sintética **não representam precisão em sites reais**.
+
+A opção **Análise inteligente (beta)** no popup liga/desliga a rede neural local. Com a opção desligada, a extensão utiliza somente as regras determinísticas. O modelo usa poucas dezenas de pesos e cache limitado para reduzir custo de CPU.
+
+Para treinar novamente o classificador com as amostras sintéticas reproduzíveis (requer Node.js, sem pacotes):
+
+```bash
+node scripts/train-neural.js
+node --test
+```
+
+A extensão continua independente e sem permissões adicionais, bibliotecas ou serviços de IA de terceiros. **Não confundir com um modelo generativo ou com uma rede treinada em grande volume de dados reais.**

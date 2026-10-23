@@ -49,8 +49,8 @@
     return `rgb(${rgb.join(', ')})`;
   }
 
-  function mapBackground(color, theme = 'deep') {
-    if (!color || color.a < 0.12 || luminance(color) < 0.35) return null;
+  function mapBackground(color, theme = 'deep', allowMedium = false) {
+    if (!color || color.a < 0.12 || luminance(color) < (allowMedium ? 0.17 : 0.35)) return null;
     const {h, s, l} = rgbToHsl(color);
     const base = PALETTE[theme] ?? PALETTE.deep;
     const targetL = base === 0 ? Math.max(0, (1 - l) * 0.09) : Math.min(0.25, base + (1 - l) * 0.13);
@@ -64,6 +64,12 @@
   }
 
   // Um site já escuro, com texto claro legível, deve continuar com suas próprias cores.
+  function contrastRatio(first, second) {
+    if (!first || !second) return 1;
+    const a = luminance(first), b = luminance(second);
+    return (Math.max(a,b) + 0.05) / (Math.min(a,b) + 0.05);
+  }
+
   function isNativeDarkSurface(background, foreground) {
     const bg = parseColor(background);
     const fg = parseColor(foreground);
@@ -75,7 +81,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, contrastRatio, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

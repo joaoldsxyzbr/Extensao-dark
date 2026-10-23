@@ -29,3 +29,9 @@
 ## Privacidade e segurança
 
 A permissão de acesso a páginas `http(s)` é necessária para ajustar sites automaticamente. A extensão não faz chamadas à rede, não lê formulários para armazenamento, não envia dados e não coleta navegação. Guarda apenas as preferências e domínios desativados pelo usuário.
+
+## Adição 0.2.0: rede neural experimental
+
+A classificação neural pequena e offline decide somente se fundos opacos de luminosidade intermediária com texto escuro podem ser tratados como superfícies claras. Entrada: luminância do fundo, luminância do texto e opacidade (normalizadas 0–1); saída: probabilidade. Modelo 3–8–1 treinado com dados sintéticos gerados por `scripts/train-neural.js`, reprodutível e sem telemetria.
+
+A rede não é autorizada a reverter uma página já escura, mexer em imagens/gradientes, alterar páginas restritas ou dispensar verificações de contraste. Há cache limitado por combinações de cores. `smartEnabled` é armazenado apenas no navegador, habilitado por padrão, desligável no popup. A avaliação do modelo em dados sintéticos não prova compatibilidade em sites reais; precisa de testes práticos e amostras diversas antes de ampliar a autonomia.
