@@ -55,16 +55,23 @@ async function launch(extension) {
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-cdp-'));
   const args=['--headless=new','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
   if(extension)args.unshift(`--disable-extensions-except=${extension}`,`--load-extension=${extension}`);
-  const child=spawn(browserPath(),args,{stdio:'ignore'});
+  const child=spawn(browserPath(),args,{stdio:['ignore','pipe','pipe']});
+  let diagnostic='';
+  let spawnError=null;
+  child.on('error',error=>{spawnError=error;});
+  for(const stream of [child.stdout,child.stderr]) stream.on('data',chunk=>{
+    diagnostic=(diagnostic+String(chunk)).slice(-2500);
+  });
   let connected=false;
   try {
     const activePort=path.join(profile,'DevToolsActivePort');
-    for(let i=0;i<70;i++){
+    for(let i=0;i<120;i++){
       if(fs.existsSync(activePort)){connected=true;break;}
-      if(child.exitCode!=null)throw Error('Chrome encerrou com código '+child.exitCode);
+      if(spawnError)throw Error('Não foi possível iniciar Chrome: '+spawnError.message);
+      if(child.exitCode!=null)throw Error('Chrome encerrou com código '+child.exitCode+'; stderr: '+diagnostic);
       await sleep(100);
     }
-    if(!connected)throw Error('Chrome não abriu porta de depuração');
+    if(!connected)throw Error('Chrome não abriu porta de depuração; stderr: '+diagnostic);
     const [port,socketPath]=fs.readFileSync(activePort,'utf8').trim().split('\n');
     const socket = new WebSocket(`ws://127.0.0.1:${port}${socketPath}`);
     await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
