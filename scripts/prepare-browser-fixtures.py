@@ -16,7 +16,7 @@ BASE = pathlib.Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'extensao-dark-p3'
 CHROME_VERSION = '156.0.8078.47'
 CHROME_URL = f'https://storage.googleapis.com/chrome-for-testing-public/{CHROME_VERSION}/linux64/chrome-linux64.zip'
 # SHA-256 registrado no CI da primeira execução e fixado na revisão seguinte.
-CHROME_SHA256 = ''
+CHROME_SHA256 = 'e6c94490f0b6b337225aeb2d2a5034858516b7017356980ba94f5176d8774a50'
 DARKREADER = 'https://github.com/darkreader/darkreader/releases/download/v4.9.133/darkreader-chrome-mv3.zip'
 DARKREADER_SHA256 = 'a5a1a9c78d377fafd8c9190ce9d57b96f89bc95d21f077888601e4c445b20ebf'
 
@@ -76,7 +76,7 @@ def safe_extract(blob, target, *, max_files=16000, max_unpacked=1_500_000_000):
 def main():
     chrome = download(CHROME_URL, 350_000_000)
     checksum = hashlib.sha256(chrome).hexdigest()
-    if CHROME_SHA256 and checksum != CHROME_SHA256:
+    if checksum != CHROME_SHA256:
         raise ValueError('Checksum SHA-256 do Chrome divergiu')
     print('SHA256 Chrome for Testing:', checksum)
     chrome_dir = BASE / 'chrome'

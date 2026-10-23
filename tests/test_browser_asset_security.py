@@ -59,3 +59,4 @@ class ArchiveSecurityTest(unittest.TestCase):
         self.assertIn('/156.0.8078.47/linux64/chrome-linux64.zip',assets.CHROME_URL)
         self.assertIn('/v4.9.133/',assets.DARKREADER)
         self.assertEqual(len(assets.DARKREADER_SHA256),64)
+        self.assertEqual(assets.CHROME_SHA256,'e6c94490f0b6b337225aeb2d2a5034858516b7017356980ba94f5176d8774a50')

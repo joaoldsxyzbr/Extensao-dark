@@ -28,4 +28,4 @@ node --test
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-O checksum oficial SHA-256 do ZIP Chrome não consta nos manifests JSON públicos da API CfT. O download fica fixado na versão e o digest observado no CI será registrado e congelado em uma segunda revisão, deixando claro o grau de confiança do processo.
+A API pública de Chrome for Testing não inclui checksum SHA-256 do ZIP em seu catálogo. Registramos o SHA-256 de `156.0.8078.47` a partir do download oficial na execução do [GitHub Actions 40001062606](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40001062606), e o congelamos no código: `e6c94490f0b6b337225aeb2d2a5034858516b7017356980ba94f5176d8774a50`. Essa fixação protege contra mudanças posteriores do conteúdo, mas parte da confiança inicial no download oficial registrado no CI (TOFU) e não substitui assinatura do fornecedor.
