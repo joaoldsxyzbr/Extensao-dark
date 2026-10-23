@@ -12,7 +12,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.1.2
+## Recursos da versão 0.1.3
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -53,3 +53,9 @@ Ao carregar no navegador, selecione **a pasta extraída que contém o arquivo `m
 Se você selecionar uma pasta acima ou o arquivo ZIP ainda compactado, o Chrome mostra a mensagem de manifesto ausente ou ilegível.
 
 **Atualização:** após baixar uma versão nova do GitHub, substitua os arquivos da pasta extraída e clique em **Atualizar** na página de extensões.
+
+### Melhorias na 0.1.3
+
+- Páginas com tema escuro próprio e texto claro são preservadas para evitar contrastes quebrados.
+- A verificação do tema acontece antes da primeira modificação de estilos, após a estrutura principal da página estar pronta.
+- Este é um primeiro mecanismo de detecção; aplicações com temas complexos ainda podem exigir ajustes específicos.

@@ -63,11 +63,19 @@
     return hslToCss(h, Math.min(s * 0.65, 0.7), Math.max(0.72, 0.90 - l * 0.2));
   }
 
+  // Um site já escuro, com texto claro legível, deve continuar com suas próprias cores.
+  function isNativeDarkSurface(background, foreground) {
+    const bg = parseColor(background);
+    const fg = parseColor(foreground);
+    return Boolean(bg && fg && bg.a >= 0.95 && fg.a >= 0.7 &&
+      luminance(bg) <= 0.12 && luminance(fg) >= 0.45);
+  }
+
   function isEnabledForSite(settings, hostname) {
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

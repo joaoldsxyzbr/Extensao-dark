@@ -18,6 +18,21 @@
     return colors.isEnabledForSite(settings, location.hostname);
   }
 
+  function hasNativeDarkTheme() {
+    // Verifica apenas superfícies principais, não cartões isolados.
+    const candidates = [document.documentElement, document.body, document.body?.firstElementChild];
+    let hasDarkSurface = false;
+    for (const element of candidates) {
+      if (!element) continue;
+      const style = getComputedStyle(element);
+      const background = colors.parseColor(style.backgroundColor);
+      // Um documento claro com apenas uma barra superior escura não é uma página escura.
+      if (background && background.a >= 0.95 && colors.luminance(background) >= 0.72) return false;
+      if (colors.isNativeDarkSurface(style.backgroundColor, style.color)) hasDarkSurface = true;
+    }
+    return hasDarkSurface;
+  }
+
   function backgroundForPalette() {
     return ({soft: '#25282b', deep: '#17191c', amoled: '#000000'})[settings.theme] || '#17191c';
   }
@@ -116,6 +131,11 @@
       return;
     }
     if (baseStyle) return;
+    if (document.readyState === 'loading' && !document.body) {
+      document.addEventListener('DOMContentLoaded', () => activate(), {once: true});
+      return;
+    }
+    if (hasNativeDarkTheme()) return;
     generation++;
     installBaseStyle();
     observer = new MutationObserver(records => {
