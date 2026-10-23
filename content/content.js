@@ -125,16 +125,18 @@
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.
     if (colors.isVividAccent(originalBackground)) return;
-    let background = colors.mapBackground(originalBackground, settings.theme);
-    if (!background && settings.smartEnabled && neural && originalBackground && originalText &&
-        originalBackground.a >= .82) {
-      const bgLum = colors.luminance(originalBackground);
-      const fgLum = colors.luminance(originalText);
-      // A rede não tem permissão de inverter superfícies originalmente escuras.
-      if (bgLum >= .17 && bgLum < .35 && fgLum < .28 &&
+    let background = null;
+    if (settings.smartEnabled && neural) {
+      // Neural-first: o modelo decide se esta superfície será convertida.
+      // Limites físicos continuam protegendo cores escuras nativas e transparências.
+      if (originalBackground && originalText && originalBackground.a >= .82 &&
+          colors.luminance(originalBackground) >= .17 &&
           neuralScore(originalBackground, originalText) >= .80) {
         background = colors.mapBackground(originalBackground, settings.theme, true);
       }
+    } else {
+      // Modo tradicional disponível no popup e também como fallback seguro.
+      background = colors.mapBackground(originalBackground, settings.theme);
     }
     let foreground = null;
     if (originalText && colors.luminance(originalText) <= .54) {

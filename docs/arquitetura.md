@@ -35,3 +35,10 @@ A permissão de acesso a páginas `http(s)` é necessária para ajustar sites au
 A classificação neural pequena e offline decide somente se fundos opacos de luminosidade intermediária com texto escuro podem ser tratados como superfícies claras. Entrada: luminância do fundo, luminância do texto e opacidade (normalizadas 0–1); saída: probabilidade. Modelo 3–8–1 treinado com dados sintéticos gerados por `scripts/train-neural.js`, reprodutível e sem telemetria.
 
 A rede não é autorizada a reverter uma página já escura, mexer em imagens/gradientes, alterar páginas restritas ou dispensar verificações de contraste. Há cache limitado por combinações de cores. `smartEnabled` é armazenado apenas no navegador, habilitado por padrão, desligável no popup. A avaliação do modelo em dados sintéticos não prova compatibilidade em sites reais; precisa de testes práticos e amostras diversas antes de ampliar a autonomia.
+
+
+## Experimento 0.3.0: neural-first
+
+Com `smartEnabled=true` e modelo disponível, a rede decide **se** cada superfície opaca será transformada. A conversão de cores permanece matemática; o processamento neural não gera RGB diretamente. Regras de segurança impedem alterações em fundos muito escuros, acentos saturados, gradientes, mídia e sites que já usam modo escuro nativo. Uma opção no popup permite usar o motor legado.
+
+Esse experimento não amplia os dados de treinamento do modelo 3-8-1. Ele é propositalmente reversível para comparar qualidade, compatibilidade e desempenho em sites reais.

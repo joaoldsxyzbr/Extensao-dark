@@ -12,7 +12,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.2.1
+## Recursos da versão 0.3.0
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -83,3 +83,12 @@ O GitHub Actions roda em push na `main`, pull requests e pelo botão **Run workf
 Para atualizar pesos deliberadamente, o desenvolvedor executa o treinamento localmente, analisa as métricas e envia o modelo modificado junto dos testes; o CI barra divergências. O classificador de 3 atributos ainda não reconhece semanticamente sites ou interfaces: proteção de acentos visuais, temas nativos e contraste fica por conta do motor determinístico. A amostragem é sintética, portanto **nenhuma métrica de treinamento demonstra ser melhor que o Dark Reader**. É preciso comparar visualmente os dois em sites reais com cenários e critérios idênticos.
 
 **Correção 0.2.1:** respeita indicadores saturados e atributos de tema nativo (ex.: `html[dark]` no YouTube), inclusive quando o tema muda depois de a página carregar. O botão de modo inteligente continua opcional.
+
+
+## Experimento 0.3.0: neural-first
+
+O **Motor neural (experimental)** fica ativado por padrão e a rede neural treinada offline é responsável pela decisão de transformar cada superfície opaca elegível. Se a probabilidade excede 80%, o motor calcula a cor de saída com as funções matemáticas nativas. O modelo possui **apenas três entradas** (luminosidade de fundo, luminosidade de texto e opacidade); ainda **não reconhece semanticamente** botões, avisos ou menus e não é comparável à inteligência de um modelo visual.
+
+Mantivemos proteções determinísticas de contraste, cores saturadas, gradientes, imagens/vídeos e temas escuros nativos. Desativar **Motor neural** no popup retorna ao algoritmo de cores tradicional, permitindo comparações sem reinstalação. Não existe autoaprendizado nem transferência de dados para serviços externos.
+
+Para comparar visualmente, use uma página clara, uma com tema escuro nativo (ex.: YouTube) e outra com cartões coloridos. Alterne o Motor neural e verifique textos, botões, badges e imagens. **Uma suíte de testes passando não demonstra superioridade ao Dark Reader.**

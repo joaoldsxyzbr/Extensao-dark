@@ -27,7 +27,7 @@ function mockElement(tag, baseBackground, baseText, backgroundImage='none') {
   };
   return node;
 }
-async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true}) {
+async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural}) {
   const root=mockElement('HTML',bg,fg),body=mockElement('BODY',bg,fg),child=mockElement('DIV',childBg,childFg,backgroundImage);
   body.parentElement=root;child.parentElement=body;root.firstElementChild=body;body.firstElementChild=child;
   const nodes=[root,body,child];
@@ -36,7 +36,7 @@ async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(15
     createTreeWalker:()=>{let i=0;return {nextNode:()=>nodes[++i]??null};},addEventListener(){}
   };
   const world={document:d, location:{protocol:'https:',hostname:'test.example'},
-    DarkExtensionColors:colors,DarkExtensionNeural:neural, Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
+    DarkExtensionColors:colors,DarkExtensionNeural:model, Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
     chrome:{storage:{local:{get: async defaults=>({...defaults,smartEnabled})},onChanged:{addListener(){}}}},
     getComputedStyle:node=>({
       backgroundColor:node.style?.getPropertyValue('background-color') || node.sourceBackground,
@@ -71,4 +71,32 @@ test('tema nativo escuro permanece intacto mesmo com rede neural habilitada',asy
     assert.equal(node.style.getPropertyValue('background-color'),'');
     assert.equal(node.style.getPropertyValue('color'),'');
   }
+});
+
+
+// Neural-first: a decisão do modelo deve prevalecer sobre o mapeamento tradicional.
+test('modo neural: modelo veta fundo claro mesmo que heurística o modificasse', async () => {
+  const never = {probability:()=>0};
+  const smart = await runPage({childBg:'rgb(250,250,250)', model:never,smartEnabled:true});
+  const classic = await runPage({childBg:'rgb(250,250,250)',model:never,smartEnabled:false});
+  assert.equal(smart.child.style.getPropertyValue('background-color'), '', 'decisão da rede deveria ser primária');
+  assert.notEqual(classic.child.style.getPropertyValue('background-color'), '', 'modo tradicional continua disponível');
+});
+
+test('modo neural: modelo seleciona fundo cinza intermediário sem depender de limiar antigo', async () => {
+  const always = {probability:()=>1};
+  const page = await runPage({childBg:'rgb(125,125,125)', model:always,smartEnabled:true});
+  assert.match(page.child.style.getPropertyValue('background-color'), /^rgb\(/);
+});
+
+test('rede não pode sobrescrever indicador saturado mesmo com alta confiança', async () => {
+  const always = {probability:()=>1};
+  const page = await runPage({childBg:'rgb(8,115,235)',childFg:'rgb(255,255,255)',model:always,smartEnabled:true});
+  assert.equal(page.child.style.getPropertyValue('background-color'), '');
+});
+
+test('rede com confiança alta não escurece superfície já escura', async () => {
+  const always = {probability:()=>1};
+  const page = await runPage({childBg:'rgb(20,20,20)',childFg:'rgb(235,235,235)',model:always,smartEnabled:true});
+  assert.equal(page.child.style.getPropertyValue('background-color'), '');
 });
