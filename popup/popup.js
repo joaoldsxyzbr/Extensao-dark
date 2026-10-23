@@ -48,8 +48,12 @@
       settings = {...DEFAULTS, ...stored};
       const url = tabs?.[0]?.url;
       if (url) {
-        const page = new URL(url);
-        if (page.protocol === 'https:' || page.protocol === 'http:') hostname = page.hostname;
+        try {
+          const page = new URL(url);
+          if (page.protocol === 'https:' || page.protocol === 'http:') hostname = page.hostname;
+        } catch (_) {
+          // Algumas abas especiais não expõem uma URL HTTP(S) válida.
+        }
       }
       render();
     } catch (error) {

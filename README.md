@@ -4,15 +4,15 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 ## Instalação de desenvolvimento
 
-1. Baixe o repositório (ou clone).
+1. No GitHub, clique em **Code → Download ZIP** e extraia completamente o arquivo.
 2. Abra `chrome://extensions` no Chrome, ou `edge://extensions` no Edge.
 3. Ative **Modo do desenvolvedor**.
-4. Escolha **Carregar sem compactação** e selecione a pasta que contém `manifest.json`.
+4. Escolha **Carregar sem compactação** e selecione a pasta **`Extensao-dark-main`** que contém o arquivo `manifest.json` diretamente em sua raiz (não selecione o ZIP nem uma pasta acima).
 5. Abra um site `https://` e clique no ícone **Extensão Dark** para alterar as preferências.
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.1.0
+## Recursos da versão 0.1.2
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -45,3 +45,11 @@ Usa o executor de testes nativo do Node.js, sem instalar pacotes.
 O navegador solicita acesso a sites HTTP(S) para poder modificar o visual automaticamente. A extensão não envia URL, texto ou dados de formulários para lugar nenhum. A lista de domínios desativados fica no armazenamento local do navegador.
 
 Projeto independente; não afiliado ao Dark Reader.
+
+
+## Instalação sem erro
+
+Ao carregar no navegador, selecione **a pasta extraída que contém o arquivo `manifest.json`**.
+Se você selecionar uma pasta acima ou o arquivo ZIP ainda compactado, o Chrome mostra a mensagem de manifesto ausente ou ilegível.
+
+**Atualização:** após baixar uma versão nova do GitHub, substitua os arquivos da pasta extraída e clique em **Atualizar** na página de extensões.

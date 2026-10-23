@@ -11,7 +11,7 @@ button, input {font:inherit}
 button {cursor:pointer}
 .app {padding:19px}
 .head {display:flex; align-items:center; gap:11px; margin-bottom:24px}
-.logo {width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,#607deb,#8b6df5);display:grid;place-items:center;font-size:28px;color:white;flex:none}
+.logo {width:42px;height:42px;object-fit:contain;flex:none}
 .heading {flex:1;min-width:0}
 h1 {font-size:15px;line-height:1.2;margin:0 0 5px;font-weight:750;letter-spacing:-.25px}
 p {margin:0}
