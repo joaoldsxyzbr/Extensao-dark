@@ -34,6 +34,15 @@ def safe_extract(blob, target):
             if path.is_absolute() or '..' in path.parts:
                 raise ValueError('Caminho ZIP inseguro')
         archive.extractall(target)
+        # zipfile não preserva bits POSIX executáveis automaticamente. Sem
+        # isso o chrome_crashpad_handler é bloqueado com EACCES no CI.
+        for entry in archive.infolist():
+            if entry.is_dir():
+                continue
+            executable = (entry.external_attr >> 16) & 0o111
+            if executable:
+                dest = target.joinpath(*pathlib.PurePosixPath(entry.filename).parts)
+                dest.chmod(dest.stat().st_mode | executable)
 
 
 def main():
