@@ -12,7 +12,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.3.0
+## Recursos da versão 0.4.0
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -103,3 +103,13 @@ Para comparar visualmente, use uma página clara, uma com tema escuro nativo (ex
 - Mantém o motor neural, o treinamento e o GitHub Actions inalterados.
 
 Para conferir os testes sem dependências: `node --test`. A suíte usa DOM simulado; compatibilidade visual em sites reais continua exigindo testes manuais.
+
+
+## P1 — Compatibilidade CSS (0.4.0)
+
+- **Variáveis CSS:** utiliza valores computados pelo navegador, que já resolvem `var(--nome)`; reavalia estilos após mudanças de atributos de elementos, conteúdo de `<style>` e carregamento de folhas de estilo via `<link>`. **Não reescreve variáveis nem a CSSOM.** Alterações feitas diretamente por `CSSStyleSheet.replaceSync()`/`insertRule()` sem eventos ainda podem exigir recarregar a página.
+- **Bordas visíveis:** ajusta somente cores de bordas claras em superfícies escuras, sem modificar espessuras ou bordas de destaque saturadas. Restaura os estilos originais quando o modo escuro é desligado.
+- **Fundos herdados:** acompanha fundos de ancestrais e atravessa o host de um Shadow DOM aberto para manter o texto legível.
+- **Shadow DOM aberto:** percorre o conteúdo de componentes já existentes e dos novos componentes inseridos, observa alterações e limpa estilos ao remover o host. **Shadow DOM fechado** permanece intocado por segurança e por limitações da plataforma.
+
+A extensão continua sem bibliotecas de terceiros, coleta de dados ou permissões adicionais. Para verificar os casos reproduzíveis: `node --test`. A versão não oferece compatibilidade universal com todos os estilos CSS; screenshots e testes de uso real permanecem necessários.

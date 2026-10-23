@@ -39,6 +39,15 @@ A rede não é autorizada a reverter uma página já escura, mexer em imagens/gr
 
 ## Experimento 0.3.0: neural-first
 
-Com `smartEnabled=true` e modelo disponível, a rede decide **se** cada superfície opaca será transformada. A conversão de cores permanece matemática; o processamento neural não gera RGB diretamente. Regras de segurança impedem alterações em fundos muito escuros, acentos saturados, gradientes, mídia e sites que já usam modo escuro nativo. Uma opção no popup permite usar o motor legado.
+Com  smartEnabled=true e modelo disponível, a rede decide **se** cada superfície opaca será transformada. A conversão de cores permanece matemática; o processamento neural não gera RGB diretamente. Gates de segurança impedem alterações em fundos muito escuros, acentos saturados, gradientes, mídia e sites que já usam modo escuro nativo. Uma opção no popup permite usar o motor legado.
 
 Esse experimento não amplia os dados de treinamento do modelo 3-8-1. Ele é propositalmente reversível para comparar qualidade, compatibilidade e desempenho em sites reais.
+
+
+## P1 (0.4.0): cores computadas, bordas e componentes
+
+O motor mantém o modelo neural-first e utiliza `getComputedStyle` para ler cores já resolvidas pelo Chrome/Edge, inclusive referências a custom properties (`var()`). Observa mudanças de atributos, edições de texto em `<style>` e eventos de carregamento de folhas externas, invalidando apenas a raiz pertinente quando possível. Mudanças imperativas na CSSOM sem eventos DOM não podem ser capturadas pelo observador atual.
+
+A adaptação de bordas compara cor computada e visibilidade por lado, sem modificar espessura ou estilos. A restauração preserva prioridades inline anteriores. Componentes Shadow DOM **abertos** são descobertos nos hosts percorridos, têm observadores próprios e são removidos do processamento ao desconectar os hosts. A resolução de fundos atravessa o host. Raízes **fechadas** e Shadow DOM anexado sem qualquer mutação observável após a descoberta do host estão fora do escopo.
+
+Nenhuma biblioteca, nova permissão ou envio de dados. Testes nativos do Node para CSS var, bordas e Shadow DOM; validação visual em Chrome real continua necessária.

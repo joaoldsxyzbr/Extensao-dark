@@ -57,6 +57,13 @@
     return hslToCss(h, Math.min(s * 0.48, 0.30), targetL);
   }
 
+  function mapBorder(color, theme = 'deep') {
+    if (!color || color.a < .65 || isVividAccent(color) || luminance(color) < .35) return null;
+    const {h, s} = rgbToHsl(color);
+    const tone = theme === 'amoled' ? .30 : theme === 'soft' ? .38 : .34;
+    return hslToCss(h, Math.min(s * .45, .28), tone);
+  }
+
   function mapText(color) {
     if (!color || color.a < 0.12 || luminance(color) > 0.54) return null;
     const {h, s, l} = rgbToHsl(color);
@@ -87,7 +94,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, isVividAccent, contrastRatio, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapBorder, mapText, isVividAccent, contrastRatio, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

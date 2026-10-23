@@ -17,6 +17,7 @@
   let running = false;
   let observer = null;
   let themeObserver = null;
+  let observedShadowRoots = new WeakSet();
   let baseStyle = null;
 
   function isActive() {
@@ -82,8 +83,7 @@
 
   function restoreEverything() {
     for (const [element, record] of originals) {
-      if (record.background) restoreProperty(element, 'background-color', record.background);
-      if (record.color) restoreProperty(element, 'color', record.color);
+      restoreRecord(element, record);
     }
     originals.clear();
     document.documentElement.removeAttribute('data-extensao-dark');
@@ -103,18 +103,32 @@
     return score;
   }
 
+  function composedParent(element) {
+    // parentElement é null ao atravessar a fronteira de um ShadowRoot real.
+    return element.parentElement?.nodeType === Node.ELEMENT_NODE ? element.parentElement :
+      (element.getRootNode?.()?.host || element.parentElement?.host || null);
+  }
+
   function inheritedBackground(element) {
-    // Usa a cor computada efetiva dos ancestrais, já atualizada nesta passagem.
-    let ancestor = element.parentElement;
+    // Segue a cadeia de fundos incluindo o host de um Shadow DOM aberto.
+    let ancestor = composedParent(element);
     let depth = 0;
     while (ancestor && depth++ < 12) {
       const style = getComputedStyle(ancestor);
       if (style.backgroundImage && style.backgroundImage !== 'none') return null;
       const color = colors.parseColor(style.backgroundColor);
       if (color && color.a >= .95) return color;
-      ancestor = ancestor.parentElement;
+      ancestor = composedParent(ancestor);
     }
     return null;
+  }
+
+  function restoreRecord(element, record) {
+    if (record.background) restoreProperty(element, 'background-color', record.background);
+    if (record.color) restoreProperty(element, 'color', record.color);
+    for (const [property, saved] of Object.entries(record.borders || {})) {
+      restoreProperty(element, property, saved);
+    }
   }
 
   function rememberStyle(element) {
@@ -128,8 +142,7 @@
     const previous = originals.get(element);
     if (previous) {
       // Reavalia com o CSS do site, não com a cor que aplicamos anteriormente.
-      if (previous.background) restoreProperty(element, 'background-color', previous.background);
-      if (previous.color) restoreProperty(element, 'color', previous.color);
+      restoreRecord(element, previous);
       originals.delete(element);
     }
     if (SKIP_TAGS.has(element.tagName) || element.closest('svg, canvas, picture, video, audio, [data-extensao-dark-ignore]')) {
@@ -170,7 +183,27 @@
       const outputText = colors.parseColor(foreground || style.color);
       if (colors.contrastRatio(outputBackground, outputText) < 4.5) foreground = 'rgb(235, 239, 245)';
     }
-    if (!background && !foreground) {rememberStyle(element); return;}
+    const borders = {};
+    // Cores computadas já resolvem var(--cor); não sobrescrever custom properties.
+    // Modificar apenas bordas de fato visíveis e superfícies que escurecemos.
+    const surface = background ? colors.parseColor(background) : inheritedBackground(element);
+    if (surface && colors.luminance(surface) < .25) {
+      for (const side of ['Top', 'Right', 'Bottom', 'Left']) {
+        const borderStyle = style[`border${side}Style`];
+        const borderWidth = parseFloat(style[`border${side}Width`]);
+        if (!borderStyle || borderStyle === 'none' || borderStyle === 'hidden' ||
+            !Number.isFinite(borderWidth) || borderWidth <= 0) continue;
+        const mapped = colors.mapBorder(colors.parseColor(style[`border${side}Color`]), settings.theme);
+        if (!mapped) continue;
+        const property = `border-${side.toLowerCase()}-color`;
+        borders[property] = {
+          original: element.style.getPropertyValue(property),
+          priority: element.style.getPropertyPriority(property),
+          applied: mapped
+        };
+      }
+    }
+    if (!background && !foreground && !Object.keys(borders).length) {rememberStyle(element); return;}
     const record = {};
     if (background) {
       record.background = {
@@ -188,37 +221,44 @@
       };
       element.style.setProperty('color', foreground, 'important');
     }
+    if (Object.keys(borders).length) {
+      record.borders = borders;
+      for (const [property, saved] of Object.entries(borders)) {
+        element.style.setProperty(property, saved.applied, 'important');
+      }
+    }
     originals.set(element, record);
     rememberStyle(element);
   }
 
   function cleanupDetachedSubtree(root) {
-    if (!root || root.nodeType !== Node.ELEMENT_NODE || root.isConnected) return;
+    if (!root || (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== 11) || root.isConnected) return;
     // Liberar referências fortes de elementos que saíram do DOM. Se forem
     // reutilizados depois, entram novamente na fila como elementos novos.
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    let current = root;
+    let current = root.nodeType === Node.ELEMENT_NODE ? root : walker.nextNode();
     while (current) {
       const record = originals.get(current);
       if (record) {
-        if (record.background) restoreProperty(current, 'background-color', record.background);
-        if (record.color) restoreProperty(current, 'color', record.color);
+        restoreRecord(current, record);
         originals.delete(current);
       }
       styleSnapshots.delete(current);
+      if (current.shadowRoot) cleanupDetachedSubtree(current.shadowRoot);
       current = walker.nextNode();
     }
   }
 
   function enqueueSubtree(root, force = false) {
-    if (!root || root.nodeType !== Node.ELEMENT_NODE || !root.isConnected) return;
+    if (!root || (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== 11) ||
+        !(root.isConnected || root.host?.isConnected)) return;
     // Reaproveitar tarefas do mesmo nó, evitando trabalho redundante.
     const existing = work.find(task => task.generation === generation && task.root === root);
     if (existing) {
       if (force && !existing.force) {
         existing.force = true;
-        existing.current = root;
         existing.walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        existing.current = root.nodeType === Node.ELEMENT_NODE ? root : existing.walker.nextNode();
       }
       return;
     }
@@ -230,7 +270,7 @@
       force = true;
     }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    work.push({root, walker, current: root, generation, force});
+    work.push({root, walker, current: root.nodeType === Node.ELEMENT_NODE ? root : walker.nextNode(), generation, force});
     scheduleWork();
   }
 
@@ -254,7 +294,12 @@
     while (work.length && count < 160) {
       const task = work[0];
       if (task.generation !== generation || !task.current || !task.root.isConnected) {work.shift(); continue;}
-      styleElement(task.current);
+      const current = task.current;
+      styleElement(current);
+      if (current.shadowRoot) {
+        observeShadowRoot(current.shadowRoot);
+        enqueueSubtree(current.shadowRoot);
+      }
       task.current = task.walker.nextNode();
       count++;
     }
@@ -265,9 +310,36 @@
     generation++;
     observer?.disconnect();
     observer = null;
+    observedShadowRoots = new WeakSet();
+    document.removeEventListener?.('load', onStyleSheetLoad, true);
     running = false;
     work.length = 0;
     if (baseStyle) restoreEverything();
+  }
+
+  function observeShadowRoot(root) {
+    if (!observer || !root || observedShadowRoots.has(root)) return;
+    observer.observe(root, observerOptions());
+    observedShadowRoots.add(root);
+  }
+
+  function observerOptions() {
+    return {
+      childList: true, subtree: true, attributes: true, characterData: true,
+      attributeFilter: ['class', 'style', 'aria-selected', 'aria-pressed', 'aria-current',
+        'data-state', 'href', 'rel', 'media', 'disabled']
+    };
+  }
+
+  function styleSheetRoot(node) {
+    const tree = node?.getRootNode?.();
+    return tree?.nodeType === 11 && tree.host ? tree : document.documentElement;
+  }
+
+  function onStyleSheetLoad(event) {
+    if (event.target?.tagName === 'LINK' && event.target.rel?.includes('stylesheet')) {
+      enqueueSubtree(styleSheetRoot(event.target), true);
+    }
   }
 
   function startStyling() {
@@ -276,7 +348,17 @@
     installBaseStyle();
     observer = new MutationObserver(records => {
       for (const record of records) {
+        if (record.type === 'characterData') {
+          if (record.target.parentElement?.tagName === 'STYLE') {
+            enqueueSubtree(styleSheetRoot(record.target.parentElement), true);
+          }
+          continue;
+        }
         if (record.type === 'attributes') {
+          if (record.target.tagName === 'LINK') {
+            enqueueSubtree(styleSheetRoot(record.target), true);
+            continue;
+          }
           if (record.attributeName === 'style' &&
               styleSnapshots.has(record.target) &&
               styleSnapshots.get(record.target) === (record.target.getAttribute?.('style') ?? '')) continue;
@@ -284,15 +366,22 @@
           // herdados e estados de abas/botões, não só o elemento alvo.
           enqueueSubtree(record.target, true);
         } else if (record.type === 'childList') {
+          if (record.target.tagName === 'STYLE') {
+            enqueueSubtree(styleSheetRoot(record.target), true);
+          }
           for (const node of record.removedNodes || []) cleanupDetachedSubtree(node);
-          for (const node of record.addedNodes || []) enqueueSubtree(node);
+          for (const node of record.addedNodes || []) {
+            if (node.tagName === 'STYLE' || node.tagName === 'LINK') {
+              enqueueSubtree(styleSheetRoot(node), true);
+            } else {
+              enqueueSubtree(node);
+            }
+          }
         }
       }
     });
-    observer.observe(document.documentElement, {
-      childList: true, subtree: true, attributes: true,
-      attributeFilter: ['class', 'style', 'aria-selected', 'aria-pressed', 'aria-current', 'data-state']
-    });
+    observer.observe(document.documentElement, observerOptions());
+    document.addEventListener?.('load', onStyleSheetLoad, true);
     enqueueSubtree(document.documentElement);
   }
 
