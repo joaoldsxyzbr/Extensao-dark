@@ -1,52 +1,1148 @@
 {
-  "description": "Casos curados de intenção visual; NÃO foram extraídos de páginas reais. split=holdout permanece fora do treinamento.",
+  "description": "Cenários de intenção visual rotulados manualmente, inteiramente SINTÉTICOS; não são capturas de sites reais. Treino, validação e holdout separados por cenário; perturbações apenas no treino.",
   "cases": [
-    {"id":"page-white","split":"train","bg":"rgb(250,250,250)","fg":"rgb(18,18,18)","parent":"rgb(248,248,248)","label":1},
-    {"id":"page-offwhite","split":"train","bg":"rgb(240,242,241)","fg":"rgb(25,27,28)","parent":"rgb(250,250,250)","label":1},
-    {"id":"card-medium-gray","split":"train","bg":"rgb(150,150,150)","fg":"rgb(12,12,12)","parent":"rgb(245,245,245)","label":1},
-    {"id":"card-neutral-mid","split":"train","bg":"rgb(125,125,125)","fg":"rgb(15,15,15)","parent":"rgb(25,25,25)","label":1},
-    {"id":"button-light","split":"train","bg":"rgb(231,234,239)","fg":"rgb(18,22,29)","parent":"rgb(243,243,243)","control":true,"label":1},
-    {"id":"input-white","split":"train","bg":"rgb(250,250,250)","fg":"rgb(25,25,25)","parent":"rgb(24,24,24)","control":true,"label":1},
-    {"id":"light-card-on-dark","split":"train","bg":"rgb(242,240,235)","fg":"rgb(21,21,21)","parent":"rgb(26,27,31)","label":1},
-    {"id":"pale-cool-card","split":"train","bg":"rgb(218,228,232)","fg":"rgb(29,32,34)","parent":"rgb(30,30,32)","label":1},
-    {"id":"gray-card-on-dark","split":"train","bg":"rgb(170,170,170)","fg":"rgb(35,35,35)","parent":"rgb(23,23,23)","label":1},
-    {"id":"light-navbar","split":"train","bg":"rgb(245,247,248)","fg":"rgb(15,18,20)","parent":"rgb(248,248,248)","label":1},
-    {"id":"neutral-table-header","split":"train","bg":"rgb(212,214,216)","fg":"rgb(35,35,35)","parent":"rgb(22,24,26)","label":1},
-    {"id":"neutral-panel-on-dark","split":"train","bg":"rgb(185,185,185)","fg":"rgb(35,35,35)","parent":"rgb(26,26,26)","label":1},
-    {"id":"gray-control-on-dark","split":"train","bg":"rgb(185,188,190)","fg":"rgb(18,18,18)","parent":"rgb(35,35,35)","control":true,"label":1},
-    {"id":"warm-beige-panel","split":"train","bg":"rgb(236,230,219)","fg":"rgb(33,33,33)","parent":"rgb(237,237,237)","label":1},
-    {"id":"soft-grey-body","split":"train","bg":"rgb(223,223,223)","fg":"rgb(60,60,60)","parent":"rgb(26,26,26)","label":1},
-    {"id":"grey-card-dark-text-on-light","split":"train","bg":"rgb(152,157,159)","fg":"rgb(25,25,25)","parent":"rgb(235,235,235)","label":1},
-    {"id":"native-dark-card","split":"train","bg":"rgb(35,35,38)","fg":"rgb(235,235,235)","parent":"rgb(22,22,22)","label":0},
-    {"id":"native-dark-button","split":"train","bg":"rgb(53,55,59)","fg":"rgb(235,235,235)","parent":"rgb(22,22,22)","control":true,"label":0},
-    {"id":"blue-alert","split":"train","bg":"rgb(8,115,235)","fg":"rgb(255,255,255)","parent":"rgb(240,240,240)","label":0},
-    {"id":"orange-action","split":"train","bg":"rgb(240,112,20)","fg":"rgb(255,255,255)","parent":"rgb(245,245,245)","control":true,"label":0},
-    {"id":"green-action","split":"train","bg":"rgb(85,198,140)","fg":"rgb(26,27,27)","parent":"rgb(240,240,240)","control":true,"label":0},
-    {"id":"muted-selected-tab","split":"train","bg":"rgb(165,174,188)","fg":"rgb(20,20,20)","parent":"rgb(245,245,245)","control":true,"selected":true,"label":0},
-    {"id":"gray-selected-chip","split":"train","bg":"rgb(192,192,194)","fg":"rgb(27,27,27)","parent":"rgb(32,33,35)","control":true,"selected":true,"label":0},
-    {"id":"light-current-navigation","split":"train","bg":"rgb(234,236,237)","fg":"rgb(19,19,19)","parent":"rgb(250,250,250)","control":true,"selected":true,"label":0},
-    {"id":"gray-with-white-label","split":"train","bg":"rgb(145,145,150)","fg":"rgb(244,244,244)","parent":"rgb(244,244,244)","label":0},
-    {"id":"native-dark-medium","split":"train","bg":"rgb(108,110,115)","fg":"rgb(235,236,237)","parent":"rgb(28,29,32)","label":0},
-    {"id":"transparent-overlay","split":"train","bg":"rgba(255,255,255,0.15)","fg":"rgb(25,25,25)","parent":"rgb(27,27,28)","label":0},
-    {"id":"translucent-tint","split":"train","bg":"rgba(220,220,220,0.55)","fg":"rgb(22,22,22)","parent":"rgb(28,28,30)","label":0},
-    {"id":"red-danger","split":"train","bg":"rgb(221,65,67)","fg":"rgb(255,255,255)","parent":"rgb(245,245,245)","label":0},
-    {"id":"bright-green-status","split":"train","bg":"rgb(138,219,161)","fg":"rgb(27,27,27)","parent":"rgb(245,245,245)","label":0},
-    {"id":"blue-gray-dark-text-selected","split":"train","bg":"rgb(179,190,201)","fg":"rgb(27,27,27)","parent":"rgb(25,25,25)","control":true,"selected":true,"label":0},
-    {"id":"indigo-pill","split":"train","bg":"rgb(104,89,191)","fg":"rgb(241,241,241)","parent":"rgb(244,244,244)","label":0},
-    {"id":"deep-gray-with-black","split":"train","bg":"rgb(69,70,71)","fg":"rgb(19,19,19)","parent":"rgb(28,28,28)","label":0},
-    {"id":"clear-white-navigation","split":"holdout","bg":"rgb(239,240,241)","fg":"rgb(18,18,18)","parent":"rgb(250,250,250)","label":1},
-    {"id":"pale-card-dark-parent","split":"holdout","bg":"rgb(248,249,247)","fg":"rgb(31,31,31)","parent":"rgb(24,24,24)","label":1},
-    {"id":"gray-surface-dark-parent","split":"holdout","bg":"rgb(136,138,138)","fg":"rgb(20,20,20)","parent":"rgb(25,25,25)","label":1},
-    {"id":"toolbar-light-control","split":"holdout","bg":"rgb(225,228,233)","fg":"rgb(29,30,30)","parent":"rgb(240,240,240)","control":true,"label":1},
-    {"id":"light-modal-on-dark","split":"holdout","bg":"rgb(246,245,243)","fg":"rgb(21,21,21)","parent":"rgb(27,28,29)","label":1},
-    {"id":"neutral-card","split":"holdout","bg":"rgb(171,171,171)","fg":"rgb(22,22,22)","parent":"rgb(233,233,233)","label":1},
-    {"id":"selected-tab-pale-gray","split":"holdout","bg":"rgb(206,206,210)","fg":"rgb(22,22,22)","parent":"rgb(242,242,242)","control":true,"selected":true,"label":0},
-    {"id":"active-mint-button","split":"holdout","bg":"rgb(135,216,169)","fg":"rgb(25,25,25)","parent":"rgb(245,245,245)","control":true,"selected":true,"label":0},
-    {"id":"dark-surface-with-light-text","split":"holdout","bg":"rgb(61,62,64)","fg":"rgb(221,221,221)","parent":"rgb(26,26,26)","label":0},
-    {"id":"brand-teal-button","split":"holdout","bg":"rgb(12,158,174)","fg":"rgb(255,255,255)","parent":"rgb(240,240,240)","control":true,"label":0},
-    {"id":"gray-chip-light-text","split":"holdout","bg":"rgb(144,145,145)","fg":"rgb(250,250,250)","parent":"rgb(233,233,233)","label":0},
-    {"id":"translucent-gray","split":"holdout","bg":"rgba(235,235,235,0.30)","fg":"rgb(20,20,20)","parent":"rgb(25,25,25)","label":0},
-    {"id":"bright-yellow-warning","split":"holdout","bg":"rgb(246,209,82)","fg":"rgb(35,35,35)","parent":"rgb(245,245,245)","label":0},
-    {"id":"selected-neutral-surface","split":"holdout","bg":"rgb(180,180,182)","fg":"rgb(20,20,20)","parent":"rgb(27,27,29)","control":true,"selected":true,"label":0}
+    {
+      "id": "page-white",
+      "split": "train",
+      "bg": "rgb(250,250,250)",
+      "fg": "rgb(18,18,18)",
+      "parent": "rgb(248,248,248)",
+      "label": 1
+    },
+    {
+      "id": "page-offwhite",
+      "split": "train",
+      "bg": "rgb(240,242,241)",
+      "fg": "rgb(25,27,28)",
+      "parent": "rgb(250,250,250)",
+      "label": 1
+    },
+    {
+      "id": "card-medium-gray",
+      "split": "train",
+      "bg": "rgb(150,150,150)",
+      "fg": "rgb(12,12,12)",
+      "parent": "rgb(245,245,245)",
+      "label": 1
+    },
+    {
+      "id": "card-neutral-mid",
+      "split": "train",
+      "bg": "rgb(125,125,125)",
+      "fg": "rgb(15,15,15)",
+      "parent": "rgb(25,25,25)",
+      "label": 1
+    },
+    {
+      "id": "button-light",
+      "split": "train",
+      "bg": "rgb(231,234,239)",
+      "fg": "rgb(18,22,29)",
+      "parent": "rgb(243,243,243)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "input-white",
+      "split": "train",
+      "bg": "rgb(250,250,250)",
+      "fg": "rgb(25,25,25)",
+      "parent": "rgb(24,24,24)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "light-card-on-dark",
+      "split": "train",
+      "bg": "rgb(242,240,235)",
+      "fg": "rgb(21,21,21)",
+      "parent": "rgb(26,27,31)",
+      "label": 1
+    },
+    {
+      "id": "pale-cool-card",
+      "split": "train",
+      "bg": "rgb(218,228,232)",
+      "fg": "rgb(29,32,34)",
+      "parent": "rgb(30,30,32)",
+      "label": 1
+    },
+    {
+      "id": "gray-card-on-dark",
+      "split": "train",
+      "bg": "rgb(170,170,170)",
+      "fg": "rgb(35,35,35)",
+      "parent": "rgb(23,23,23)",
+      "label": 1
+    },
+    {
+      "id": "light-navbar",
+      "split": "train",
+      "bg": "rgb(245,247,248)",
+      "fg": "rgb(15,18,20)",
+      "parent": "rgb(248,248,248)",
+      "label": 1
+    },
+    {
+      "id": "neutral-table-header",
+      "split": "train",
+      "bg": "rgb(212,214,216)",
+      "fg": "rgb(35,35,35)",
+      "parent": "rgb(22,24,26)",
+      "label": 1
+    },
+    {
+      "id": "neutral-panel-on-dark",
+      "split": "train",
+      "bg": "rgb(185,185,185)",
+      "fg": "rgb(35,35,35)",
+      "parent": "rgb(26,26,26)",
+      "label": 1
+    },
+    {
+      "id": "gray-control-on-dark",
+      "split": "train",
+      "bg": "rgb(185,188,190)",
+      "fg": "rgb(18,18,18)",
+      "parent": "rgb(35,35,35)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "warm-beige-panel",
+      "split": "train",
+      "bg": "rgb(236,230,219)",
+      "fg": "rgb(33,33,33)",
+      "parent": "rgb(237,237,237)",
+      "label": 1
+    },
+    {
+      "id": "soft-grey-body",
+      "split": "train",
+      "bg": "rgb(223,223,223)",
+      "fg": "rgb(60,60,60)",
+      "parent": "rgb(26,26,26)",
+      "label": 1
+    },
+    {
+      "id": "grey-card-dark-text-on-light",
+      "split": "train",
+      "bg": "rgb(152,157,159)",
+      "fg": "rgb(25,25,25)",
+      "parent": "rgb(235,235,235)",
+      "label": 1
+    },
+    {
+      "id": "native-dark-card",
+      "split": "train",
+      "bg": "rgb(35,35,38)",
+      "fg": "rgb(235,235,235)",
+      "parent": "rgb(22,22,22)",
+      "label": 0
+    },
+    {
+      "id": "native-dark-button",
+      "split": "train",
+      "bg": "rgb(53,55,59)",
+      "fg": "rgb(235,235,235)",
+      "parent": "rgb(22,22,22)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "blue-alert",
+      "split": "train",
+      "bg": "rgb(8,115,235)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(240,240,240)",
+      "label": 0
+    },
+    {
+      "id": "orange-action",
+      "split": "train",
+      "bg": "rgb(240,112,20)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(245,245,245)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "green-action",
+      "split": "train",
+      "bg": "rgb(85,198,140)",
+      "fg": "rgb(26,27,27)",
+      "parent": "rgb(240,240,240)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "muted-selected-tab",
+      "split": "train",
+      "bg": "rgb(165,174,188)",
+      "fg": "rgb(20,20,20)",
+      "parent": "rgb(245,245,245)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "gray-selected-chip",
+      "split": "train",
+      "bg": "rgb(192,192,194)",
+      "fg": "rgb(27,27,27)",
+      "parent": "rgb(32,33,35)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "light-current-navigation",
+      "split": "train",
+      "bg": "rgb(234,236,237)",
+      "fg": "rgb(19,19,19)",
+      "parent": "rgb(250,250,250)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "gray-with-white-label",
+      "split": "train",
+      "bg": "rgb(145,145,150)",
+      "fg": "rgb(244,244,244)",
+      "parent": "rgb(244,244,244)",
+      "label": 0
+    },
+    {
+      "id": "native-dark-medium",
+      "split": "train",
+      "bg": "rgb(108,110,115)",
+      "fg": "rgb(235,236,237)",
+      "parent": "rgb(28,29,32)",
+      "label": 0
+    },
+    {
+      "id": "transparent-overlay",
+      "split": "train",
+      "bg": "rgba(255,255,255,0.15)",
+      "fg": "rgb(25,25,25)",
+      "parent": "rgb(27,27,28)",
+      "label": 0
+    },
+    {
+      "id": "translucent-tint",
+      "split": "train",
+      "bg": "rgba(220,220,220,0.55)",
+      "fg": "rgb(22,22,22)",
+      "parent": "rgb(28,28,30)",
+      "label": 0
+    },
+    {
+      "id": "red-danger",
+      "split": "train",
+      "bg": "rgb(221,65,67)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(245,245,245)",
+      "label": 0
+    },
+    {
+      "id": "bright-green-status",
+      "split": "train",
+      "bg": "rgb(138,219,161)",
+      "fg": "rgb(27,27,27)",
+      "parent": "rgb(245,245,245)",
+      "label": 0
+    },
+    {
+      "id": "blue-gray-dark-text-selected",
+      "split": "train",
+      "bg": "rgb(179,190,201)",
+      "fg": "rgb(27,27,27)",
+      "parent": "rgb(25,25,25)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "indigo-pill",
+      "split": "train",
+      "bg": "rgb(104,89,191)",
+      "fg": "rgb(241,241,241)",
+      "parent": "rgb(244,244,244)",
+      "label": 0
+    },
+    {
+      "id": "deep-gray-with-black",
+      "split": "train",
+      "bg": "rgb(69,70,71)",
+      "fg": "rgb(19,19,19)",
+      "parent": "rgb(28,28,28)",
+      "label": 0
+    },
+    {
+      "id": "clear-white-navigation",
+      "split": "holdout",
+      "bg": "rgb(239,240,241)",
+      "fg": "rgb(18,18,18)",
+      "parent": "rgb(250,250,250)",
+      "label": 1
+    },
+    {
+      "id": "pale-card-dark-parent",
+      "split": "holdout",
+      "bg": "rgb(248,249,247)",
+      "fg": "rgb(31,31,31)",
+      "parent": "rgb(24,24,24)",
+      "label": 1
+    },
+    {
+      "id": "gray-surface-dark-parent",
+      "split": "holdout",
+      "bg": "rgb(136,138,138)",
+      "fg": "rgb(20,20,20)",
+      "parent": "rgb(25,25,25)",
+      "label": 1
+    },
+    {
+      "id": "toolbar-light-control",
+      "split": "holdout",
+      "bg": "rgb(225,228,233)",
+      "fg": "rgb(29,30,30)",
+      "parent": "rgb(240,240,240)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "light-modal-on-dark",
+      "split": "holdout",
+      "bg": "rgb(246,245,243)",
+      "fg": "rgb(21,21,21)",
+      "parent": "rgb(27,28,29)",
+      "label": 1
+    },
+    {
+      "id": "neutral-card",
+      "split": "holdout",
+      "bg": "rgb(171,171,171)",
+      "fg": "rgb(22,22,22)",
+      "parent": "rgb(233,233,233)",
+      "label": 1
+    },
+    {
+      "id": "selected-tab-pale-gray",
+      "split": "holdout",
+      "bg": "rgb(206,206,210)",
+      "fg": "rgb(22,22,22)",
+      "parent": "rgb(242,242,242)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "active-mint-button",
+      "split": "holdout",
+      "bg": "rgb(135,216,169)",
+      "fg": "rgb(25,25,25)",
+      "parent": "rgb(245,245,245)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "dark-surface-with-light-text",
+      "split": "holdout",
+      "bg": "rgb(61,62,64)",
+      "fg": "rgb(221,221,221)",
+      "parent": "rgb(26,26,26)",
+      "label": 0
+    },
+    {
+      "id": "brand-teal-button",
+      "split": "holdout",
+      "bg": "rgb(12,158,174)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(240,240,240)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "gray-chip-light-text",
+      "split": "holdout",
+      "bg": "rgb(144,145,145)",
+      "fg": "rgb(250,250,250)",
+      "parent": "rgb(233,233,233)",
+      "label": 0
+    },
+    {
+      "id": "translucent-gray",
+      "split": "holdout",
+      "bg": "rgba(235,235,235,0.30)",
+      "fg": "rgb(20,20,20)",
+      "parent": "rgb(25,25,25)",
+      "label": 0
+    },
+    {
+      "id": "bright-yellow-warning",
+      "split": "holdout",
+      "bg": "rgb(246,209,82)",
+      "fg": "rgb(35,35,35)",
+      "parent": "rgb(245,245,245)",
+      "label": 0
+    },
+    {
+      "id": "selected-neutral-surface",
+      "split": "holdout",
+      "bg": "rgb(180,180,182)",
+      "fg": "rgb(20,20,20)",
+      "parent": "rgb(27,27,29)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "invoice-form-white",
+      "split": "train",
+      "bg": "rgb(253,252,248)",
+      "fg": "rgb(52,54,58)",
+      "parent": "rgb(239,240,242)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "settings-panel-ash",
+      "split": "train",
+      "bg": "rgb(199,202,204)",
+      "fg": "rgb(29,34,38)",
+      "parent": "rgb(37,38,40)",
+      "label": 1
+    },
+    {
+      "id": "search-light-neutral",
+      "split": "train",
+      "bg": "rgb(214,218,220)",
+      "fg": "rgb(33,35,38)",
+      "parent": "rgb(241,243,245)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "side-menu-pale",
+      "split": "train",
+      "bg": "rgb(232,231,231)",
+      "fg": "rgb(42,43,44)",
+      "parent": "rgb(24,25,28)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "list-zebra-bluegray",
+      "split": "train",
+      "bg": "rgb(206,214,219)",
+      "fg": "rgb(32,38,44)",
+      "parent": "rgb(245,247,250)",
+      "label": 1
+    },
+    {
+      "id": "schedule-body-taupe",
+      "split": "train",
+      "bg": "rgb(186,179,170)",
+      "fg": "rgb(27,29,30)",
+      "parent": "rgb(30,30,31)",
+      "label": 1
+    },
+    {
+      "id": "spreadsheet-cell-linen",
+      "split": "train",
+      "bg": "rgb(226,225,211)",
+      "fg": "rgb(32,30,27)",
+      "parent": "rgb(249,250,248)",
+      "label": 1
+    },
+    {
+      "id": "email-pane-white",
+      "split": "train",
+      "bg": "rgb(246,246,247)",
+      "fg": "rgb(66,66,68)",
+      "parent": "rgb(23,24,25)",
+      "label": 1
+    },
+    {
+      "id": "dropdown-light",
+      "split": "train",
+      "bg": "rgb(244,247,250)",
+      "fg": "rgb(21,24,27)",
+      "parent": "rgb(22,23,25)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "input-muted-gray",
+      "split": "train",
+      "bg": "rgb(170,174,180)",
+      "fg": "rgb(18,23,26)",
+      "parent": "rgb(28,30,33)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "sidebar-stone",
+      "split": "train",
+      "bg": "rgb(167,161,157)",
+      "fg": "rgb(26,26,25)",
+      "parent": "rgb(237,238,240)",
+      "label": 1
+    },
+    {
+      "id": "header-offwhite",
+      "split": "train",
+      "bg": "rgb(249,248,244)",
+      "fg": "rgb(34,34,32)",
+      "parent": "rgb(233,233,233)",
+      "label": 1
+    },
+    {
+      "id": "white-tooltip",
+      "split": "train",
+      "bg": "rgb(252,251,253)",
+      "fg": "rgb(48,48,51)",
+      "parent": "rgb(28,27,31)",
+      "label": 1
+    },
+    {
+      "id": "pale-row-selected-false",
+      "split": "train",
+      "bg": "rgb(221,224,225)",
+      "fg": "rgb(24,26,29)",
+      "parent": "rgb(248,248,248)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "table-stripe-gray",
+      "split": "train",
+      "bg": "rgb(184,190,193)",
+      "fg": "rgb(25,28,29)",
+      "parent": "rgb(250,250,250)",
+      "label": 1
+    },
+    {
+      "id": "card-neutral-charcoal-parent",
+      "split": "train",
+      "bg": "rgb(194,192,188)",
+      "fg": "rgb(40,40,41)",
+      "parent": "rgb(44,46,48)",
+      "label": 1
+    },
+    {
+      "id": "pale-cream-button",
+      "split": "train",
+      "bg": "rgb(233,226,213)",
+      "fg": "rgb(26,23,22)",
+      "parent": "rgb(25,27,29)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "form-field-olivegray",
+      "split": "train",
+      "bg": "rgb(183,184,170)",
+      "fg": "rgb(31,32,30)",
+      "parent": "rgb(244,245,246)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "cool-table-cell",
+      "split": "train",
+      "bg": "rgb(207,215,228)",
+      "fg": "rgb(35,41,50)",
+      "parent": "rgb(246,247,248)",
+      "label": 1
+    },
+    {
+      "id": "neutral-gray-surface",
+      "split": "train",
+      "bg": "rgb(131,135,139)",
+      "fg": "rgb(24,27,29)",
+      "parent": "rgb(242,243,244)",
+      "label": 1
+    },
+    {
+      "id": "neutral-medium-control",
+      "split": "train",
+      "bg": "rgb(117,122,126)",
+      "fg": "rgb(20,24,28)",
+      "parent": "rgb(24,25,27)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "neutral-borderline-panel",
+      "split": "train",
+      "bg": "rgb(123,126,127)",
+      "fg": "rgb(23,23,24)",
+      "parent": "rgb(238,238,240)",
+      "label": 1
+    },
+    {
+      "id": "selected-bluegray-nav",
+      "split": "train",
+      "bg": "rgb(204,210,218)",
+      "fg": "rgb(36,41,45)",
+      "parent": "rgb(249,249,249)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-light-cream",
+      "split": "train",
+      "bg": "rgb(243,238,218)",
+      "fg": "rgb(31,31,29)",
+      "parent": "rgb(250,250,248)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-dark-gray-chip",
+      "split": "train",
+      "bg": "rgb(112,116,119)",
+      "fg": "rgb(236,238,239)",
+      "parent": "rgb(30,32,34)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-gray-badge",
+      "split": "train",
+      "bg": "rgb(166,170,173)",
+      "fg": "rgb(18,21,24)",
+      "parent": "rgb(24,26,28)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-white-pill",
+      "split": "train",
+      "bg": "rgb(254,254,253)",
+      "fg": "rgb(38,38,38)",
+      "parent": "rgb(233,234,235)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-lavender-tab",
+      "split": "train",
+      "bg": "rgb(208,204,229)",
+      "fg": "rgb(25,23,34)",
+      "parent": "rgb(242,243,245)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-ivory-chip",
+      "split": "train",
+      "bg": "rgb(244,241,235)",
+      "fg": "rgb(35,34,32)",
+      "parent": "rgb(33,34,36)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-steel-toggle",
+      "split": "train",
+      "bg": "rgb(161,172,187)",
+      "fg": "rgb(23,24,27)",
+      "parent": "rgb(242,242,245)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "dark-toast-charcoal",
+      "split": "train",
+      "bg": "rgb(40,42,45)",
+      "fg": "rgb(232,233,234)",
+      "parent": "rgb(235,236,237)",
+      "label": 0
+    },
+    {
+      "id": "dark-toolbar-deep",
+      "split": "train",
+      "bg": "rgb(63,65,68)",
+      "fg": "rgb(220,222,223)",
+      "parent": "rgb(251,251,251)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "dark-card-navyish",
+      "split": "train",
+      "bg": "rgb(57,63,73)",
+      "fg": "rgb(223,224,226)",
+      "parent": "rgb(42,43,46)",
+      "label": 0
+    },
+    {
+      "id": "blue-control-strong",
+      "split": "train",
+      "bg": "rgb(31,113,225)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(242,245,247)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "red-delete-action",
+      "split": "train",
+      "bg": "rgb(218,75,76)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(247,247,247)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "orange-notification",
+      "split": "train",
+      "bg": "rgb(246,163,42)",
+      "fg": "rgb(33,31,28)",
+      "parent": "rgb(249,249,249)",
+      "label": 0
+    },
+    {
+      "id": "cyan-information",
+      "split": "train",
+      "bg": "rgb(47,194,211)",
+      "fg": "rgb(16,34,38)",
+      "parent": "rgb(248,249,250)",
+      "label": 0
+    },
+    {
+      "id": "green-preserved-tag",
+      "split": "train",
+      "bg": "rgb(142,215,166)",
+      "fg": "rgb(24,47,31)",
+      "parent": "rgb(240,240,240)",
+      "label": 0
+    },
+    {
+      "id": "purple-highlight",
+      "split": "train",
+      "bg": "rgb(127,88,189)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(245,245,247)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "warm-yellow-warning",
+      "split": "train",
+      "bg": "rgb(251,224,105)",
+      "fg": "rgb(45,38,26)",
+      "parent": "rgb(247,248,249)",
+      "label": 0
+    },
+    {
+      "id": "transparent-backdrop-20",
+      "split": "train",
+      "bg": "rgba(252,252,252,0.2)",
+      "fg": "rgb(36,37,39)",
+      "parent": "rgb(35,35,36)",
+      "label": 0
+    },
+    {
+      "id": "transparent-surface-60",
+      "split": "train",
+      "bg": "rgba(221,224,225,0.6)",
+      "fg": "rgb(29,30,31)",
+      "parent": "rgb(34,36,37)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "transparent-selected-75",
+      "split": "train",
+      "bg": "rgba(210,215,220,0.75)",
+      "fg": "rgb(30,33,35)",
+      "parent": "rgb(245,247,248)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "mid-gray-white-text",
+      "split": "train",
+      "bg": "rgb(137,142,147)",
+      "fg": "rgb(242,242,242)",
+      "parent": "rgb(24,25,26)",
+      "label": 0
+    },
+    {
+      "id": "deep-gray-dark-text",
+      "split": "train",
+      "bg": "rgb(88,90,92)",
+      "fg": "rgb(18,18,19)",
+      "parent": "rgb(240,241,242)",
+      "label": 0
+    },
+    {
+      "id": "native-dark-faint-bg",
+      "split": "train",
+      "bg": "rgb(79,82,87)",
+      "fg": "rgb(244,244,244)",
+      "parent": "rgb(28,29,31)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "selected-gray-outline",
+      "split": "train",
+      "bg": "rgb(174,174,174)",
+      "fg": "rgb(25,25,25)",
+      "parent": "rgb(248,248,248)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-muted-blue",
+      "split": "train",
+      "bg": "rgb(179,193,211)",
+      "fg": "rgb(24,27,33)",
+      "parent": "rgb(249,250,251)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-cream-highlight",
+      "split": "train",
+      "bg": "rgb(221,212,192)",
+      "fg": "rgb(29,30,32)",
+      "parent": "rgb(248,248,248)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "blue-gray-popover",
+      "split": "validation",
+      "bg": "rgb(203,209,214)",
+      "fg": "rgb(26,29,31)",
+      "parent": "rgb(31,33,35)",
+      "label": 1
+    },
+    {
+      "id": "gray-radio-wrapper",
+      "split": "validation",
+      "bg": "rgb(143,148,153)",
+      "fg": "rgb(20,23,25)",
+      "parent": "rgb(241,242,243)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "warm-sheet-row",
+      "split": "validation",
+      "bg": "rgb(225,221,210)",
+      "fg": "rgb(32,32,33)",
+      "parent": "rgb(250,250,250)",
+      "label": 1
+    },
+    {
+      "id": "pale-azure-tooltip",
+      "split": "validation",
+      "bg": "rgb(232,239,246)",
+      "fg": "rgb(32,40,47)",
+      "parent": "rgb(36,38,40)",
+      "label": 1
+    },
+    {
+      "id": "offwhite-filter-menu",
+      "split": "validation",
+      "bg": "rgb(247,247,243)",
+      "fg": "rgb(25,25,24)",
+      "parent": "rgb(34,34,35)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "email-list-gray",
+      "split": "validation",
+      "bg": "rgb(175,176,178)",
+      "fg": "rgb(40,41,43)",
+      "parent": "rgb(248,249,250)",
+      "label": 1
+    },
+    {
+      "id": "gray-form-input",
+      "split": "validation",
+      "bg": "rgb(121,126,129)",
+      "fg": "rgb(18,20,22)",
+      "parent": "rgb(33,34,36)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "neutral-brown-panel",
+      "split": "validation",
+      "bg": "rgb(185,174,159)",
+      "fg": "rgb(33,29,25)",
+      "parent": "rgb(240,240,240)",
+      "label": 1
+    },
+    {
+      "id": "current-white-navigation",
+      "split": "validation",
+      "bg": "rgb(251,251,249)",
+      "fg": "rgb(21,22,23)",
+      "parent": "rgb(244,245,246)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-gray-nav",
+      "split": "validation",
+      "bg": "rgb(188,193,197)",
+      "fg": "rgb(29,31,34)",
+      "parent": "rgb(241,242,243)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-pale-blue-chip",
+      "split": "validation",
+      "bg": "rgb(215,225,240)",
+      "fg": "rgb(26,32,40)",
+      "parent": "rgb(250,251,252)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-medium-gray",
+      "split": "validation",
+      "bg": "rgb(134,138,141)",
+      "fg": "rgb(18,19,20)",
+      "parent": "rgb(35,36,38)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "accent-salmon-warning",
+      "split": "validation",
+      "bg": "rgb(236,125,101)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(250,250,250)",
+      "label": 0
+    },
+    {
+      "id": "accent-pea-green",
+      "split": "validation",
+      "bg": "rgb(161,219,141)",
+      "fg": "rgb(26,35,27)",
+      "parent": "rgb(245,245,245)",
+      "label": 0
+    },
+    {
+      "id": "dark-native-app-panel",
+      "split": "validation",
+      "bg": "rgb(54,58,64)",
+      "fg": "rgb(238,239,240)",
+      "parent": "rgb(249,250,251)",
+      "label": 0
+    },
+    {
+      "id": "overlay-45-gray",
+      "split": "validation",
+      "bg": "rgba(236,236,236,0.45)",
+      "fg": "rgb(27,28,29)",
+      "parent": "rgb(28,29,31)",
+      "label": 0
+    },
+    {
+      "id": "gray-header-white-text",
+      "split": "validation",
+      "bg": "rgb(125,128,132)",
+      "fg": "rgb(244,245,246)",
+      "parent": "rgb(29,29,31)",
+      "label": 0
+    },
+    {
+      "id": "dark-blue-control",
+      "split": "validation",
+      "bg": "rgb(34,89,148)",
+      "fg": "rgb(238,241,244)",
+      "parent": "rgb(245,245,245)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "search-cream-light",
+      "split": "holdout",
+      "bg": "rgb(230,225,216)",
+      "fg": "rgb(26,27,28)",
+      "parent": "rgb(34,34,34)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "gray-calendar-tile",
+      "split": "holdout",
+      "bg": "rgb(152,154,153)",
+      "fg": "rgb(23,25,25)",
+      "parent": "rgb(241,243,244)",
+      "label": 1
+    },
+    {
+      "id": "gray-right-pane",
+      "split": "holdout",
+      "bg": "rgb(126,130,133)",
+      "fg": "rgb(25,25,27)",
+      "parent": "rgb(29,29,31)",
+      "label": 1
+    },
+    {
+      "id": "offwhite-account-panel",
+      "split": "holdout",
+      "bg": "rgb(252,251,248)",
+      "fg": "rgb(39,41,43)",
+      "parent": "rgb(40,42,44)",
+      "label": 1
+    },
+    {
+      "id": "neutral-table-zebra",
+      "split": "holdout",
+      "bg": "rgb(211,213,214)",
+      "fg": "rgb(48,50,53)",
+      "parent": "rgb(244,244,244)",
+      "label": 1
+    },
+    {
+      "id": "pale-mist-form",
+      "split": "holdout",
+      "bg": "rgb(231,237,241)",
+      "fg": "rgb(33,37,39)",
+      "parent": "rgb(248,249,250)",
+      "control": true,
+      "label": 1
+    },
+    {
+      "id": "selected-whitish-navbar",
+      "split": "holdout",
+      "bg": "rgb(249,249,250)",
+      "fg": "rgb(29,29,29)",
+      "parent": "rgb(245,245,246)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-coolgray-button",
+      "split": "holdout",
+      "bg": "rgb(174,181,190)",
+      "fg": "rgb(25,27,29)",
+      "parent": "rgb(40,42,44)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-taupe-tab",
+      "split": "holdout",
+      "bg": "rgb(196,187,176)",
+      "fg": "rgb(28,28,29)",
+      "parent": "rgb(246,246,246)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "selected-pale-warm",
+      "split": "holdout",
+      "bg": "rgb(244,237,222)",
+      "fg": "rgb(29,30,32)",
+      "parent": "rgb(38,39,40)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "indigo-branded-button",
+      "split": "holdout",
+      "bg": "rgb(91,82,186)",
+      "fg": "rgb(248,247,255)",
+      "parent": "rgb(250,250,250)",
+      "control": true,
+      "label": 0
+    },
+    {
+      "id": "tomato-notification",
+      "split": "holdout",
+      "bg": "rgb(235,74,74)",
+      "fg": "rgb(255,255,255)",
+      "parent": "rgb(240,241,242)",
+      "label": 0
+    },
+    {
+      "id": "yellow-status-chip",
+      "split": "holdout",
+      "bg": "rgb(246,222,91)",
+      "fg": "rgb(30,31,32)",
+      "parent": "rgb(244,244,244)",
+      "label": 0
+    },
+    {
+      "id": "dark-native-widget",
+      "split": "holdout",
+      "bg": "rgb(48,52,58)",
+      "fg": "rgb(232,234,237)",
+      "parent": "rgb(249,249,249)",
+      "label": 0
+    },
+    {
+      "id": "gray-background-light-text",
+      "split": "holdout",
+      "bg": "rgb(157,158,160)",
+      "fg": "rgb(240,242,243)",
+      "parent": "rgb(250,250,250)",
+      "label": 0
+    },
+    {
+      "id": "overlay-light-38",
+      "split": "holdout",
+      "bg": "rgba(245,245,245,0.38)",
+      "fg": "rgb(24,26,28)",
+      "parent": "rgb(33,34,35)",
+      "label": 0
+    },
+    {
+      "id": "selected-ash-toggle",
+      "split": "holdout",
+      "bg": "rgb(155,160,167)",
+      "fg": "rgb(27,28,29)",
+      "parent": "rgb(247,249,250)",
+      "control": true,
+      "selected": true,
+      "label": 0
+    },
+    {
+      "id": "lavender-highlight-action",
+      "split": "holdout",
+      "bg": "rgb(153,115,203)",
+      "fg": "rgb(250,250,250)",
+      "parent": "rgb(247,247,247)",
+      "control": true,
+      "label": 0
+    }
   ]
 }
