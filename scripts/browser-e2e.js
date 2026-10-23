@@ -41,10 +41,10 @@ class CDP {
       this.pending.clear();
     });
   }
-  command(method,params={},sessionId) {
+  command(method,params={},sessionId,timeoutMs=12000) {
     return new Promise((resolve,reject)=>{
       const id=++this.sequence;
-      const timer=setTimeout(()=>{this.pending.delete(id);reject(Error('CDP timeout: '+method));},12000);
+      const timer=setTimeout(()=>{this.pending.delete(id);reject(Error('CDP timeout: '+method));},timeoutMs);
       this.pending.set(id,{resolve,reject,timer});
       this.socket.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));
     });
@@ -83,7 +83,7 @@ async function launch(extension) {
     const page={
       async eval(expr){const r=await cdp.command('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true},sessionId);if(r.exceptionDetails)throw Error('Erro em página: '+(r.exceptionDetails.text||JSON.stringify(r.exceptionDetails)));return r.result?.value;},
       async navigate(url){const result=await cdp.command('Page.navigate',{url},sessionId);if(result.errorText)throw Error('Navegação Chrome bloqueada/falhou: '+result.errorText);await waitFor(async()=>await page.eval('document.readyState === "complete" && window.__fixtureReady === true'),8000);},
-      async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
+      async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
     return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});}};
@@ -107,12 +107,17 @@ async function scenario(name,extension,url){
     // Esperar por trabalho ocioso real, não supor tempo fixo de execução do motor.
     if(name==='ours')await waitFor(async()=>await page.eval('document.documentElement.hasAttribute("data-extensao-dark")'),10000);
     await sleep(350);const initial=await page.eval(metrics);const elapsedMs=Math.round(performance.now()-start);
-    await page.screenshot(path.join(OUTPUT,`${name}-initial.png`));
+    const screenshotWarnings=[];
+    async function capture(stage) {
+      try { await page.screenshot(path.join(OUTPUT,`${name}-${stage}.png`)); }
+      catch(error){screenshotWarnings.push(`${stage}: ${error.message}`);}
+    }
+    await capture('initial');
     await page.eval('window.fixtureAction()');await sleep(650);
-    const dynamic=await page.eval(metrics);await page.screenshot(path.join(OUTPUT,`${name}-dynamic.png`));
+    const dynamic=await page.eval(metrics);await capture('dynamic');
     await page.eval('window.fixtureNativeDark()');await sleep(650);
-    const nativeDark=await page.eval(metrics);await page.screenshot(path.join(OUTPUT,`${name}-native-dark.png`));
-    const record={name,elapsedMs,initial,dynamic,nativeDark};
+    const nativeDark=await page.eval(metrics);await capture('native-dark');
+    const record={name,elapsedMs,initial,dynamic,nativeDark,screenshotWarnings};
     for (const state of [initial,dynamic,nativeDark]) {
       state.contrast=Object.fromEntries(['body','#card','#badge','#action','shadow'].map(key=>{
         const c=state.nodes[key];
@@ -145,6 +150,7 @@ async function main(){
     const output={chromium:spawnSync(browserPath(),['--version'],{encoding:'utf8'}).stdout.trim(),comparisonRequested:Boolean(COMPARISON),benchmarkNote:'Tempo inclui inicialização, carregamento e espera de estabilização; NÃO é benchmark isolado do motor. Capturas dependem do ambiente.',runs};
     fs.writeFileSync(path.join(OUTPUT,'report.json'),JSON.stringify(output,null,2)+'\n');
     console.log(`P3 browser E2E: ${runs.map(r=>r.name).join(', ')} — ${OUTPUT}`);
+    for(const run of runs){if(run.screenshotWarnings.length)console.warn('Capturas incompletas:',run.name,run.screenshotWarnings.join(' | '));}
     console.log(JSON.stringify(runs.map(r=>({mode:r.name,elapsedMs:r.elapsedMs,card:r.initial.nodes['#card']?.background,contraste:r.initial.contrast['#card'],badge:r.initial.nodes['#badge']?.background,nativeDarkPaused:r.nativeDark.extensionActive===false})),null,2));
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
