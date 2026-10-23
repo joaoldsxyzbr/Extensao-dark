@@ -126,7 +126,29 @@ async function scenario(name,extension,url){
         return [key,bg?.a===1 && fg?.a===1?Number(colors.contrastRatio(bg,fg).toFixed(2)):null];
       }));
     }
+    for (const state of [initial,dynamic,nativeDark]) {
+      const panel = state.nodes['#translucent'];
+      const parent = state.nodes['#card'];
+      const overlay = colors.parseColor(panel?.background);
+      const backdrop = colors.parseColor(parent?.background);
+      const text = colors.parseColor(panel?.color);
+      const visible = overlay && backdrop?.a === 1 ? colors.compositeColor(overlay, backdrop) : null;
+      state.contrast['#translucent'] = visible && text?.a === 1 ?
+        Number(colors.contrastRatio(visible,text).toFixed(2)) : null;
+      state.translucentVisibleLuminance = visible ? Number(colors.luminance(visible).toFixed(3)) : null;
+    }
     if(name==='ours'){
+      // Regressão visual P3: contraste nominal de 4.5:1 era legível no papel,
+      // mas resultava em textos cinza apagados. Testar legibilidade confortável.
+      for (const key of ['body','#card','shadow']) {
+        assert.ok(initial.contrast[key] >= 8, `texto apagado em ${key}: ${initial.contrast[key]}:1`);
+      }
+      assert.equal(colors.parseColor(initial.nodes['#translucent'].background)?.a, .75,
+        'painel semitransparente deve preservar a opacidade original');
+      assert.ok(initial.translucentVisibleLuminance < .12,
+        'painel semitransparente voltou a ser uma faixa clara');
+      assert.ok(initial.contrast['#translucent'] >= 8,
+        'texto do painel semitransparente precisa de contraste confortável');
       assert.equal(initial.extensionActive,true,'a extensão precisa injetar estilos');
       assert.equal(initial.imageSrc,dynamic.imageSrc,'imagens não devem ser alteradas');
       assert.equal(dynamic.nodes['#inserted']!==null,true,'componente dinâmico presente');

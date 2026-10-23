@@ -181,19 +181,29 @@
     // Não dessaturar o azul de notificações, badges e outros destaques.
     const vividBackground = colors.isVividAccent(originalBackground);
     let background = null;
-    if (vividBackground) {
+    // O classificador atual evita fundos semitransparentes. Corrigir apenas
+    // painéis claros com texto escuro sobre um fundo já convertido: é um
+    // tratamento de compatibilidade que preserva o alpha do site.
+    const isTranslucent = originalBackground && originalBackground.a >= .35 && originalBackground.a < .95;
+    if (isTranslucent && !vividBackground) {
+      background = colors.mapTranslucentBackground(originalBackground, originalText,
+        inheritedBackground(element), settings.theme);
+    }
+    if (background) {
+      // Painel transparente corrigido por regra conservadora.
+    } else if (vividBackground) {
       // Preserva a identidade do destaque, mas ainda avalia a legibilidade do texto.
     } else if (settings.smartEnabled && neural) {
       // Neural-first: o modelo decide se esta superfície será convertida.
       // Limites físicos continuam protegendo cores escuras nativas e transparências.
-      if (originalBackground && originalText && originalBackground.a >= .82 &&
+      if (originalBackground && originalText && !isTranslucent && originalBackground.a >= .82 &&
           colors.luminance(originalBackground) >= .17 &&
           neuralScore(originalBackground, originalText) >= .80) {
         background = colors.mapBackground(originalBackground, settings.theme, true);
       }
     } else {
       // Modo tradicional disponível no popup e também como fallback seguro.
-      background = colors.mapBackground(originalBackground, settings.theme);
+      if (!isTranslucent) background = colors.mapBackground(originalBackground, settings.theme);
     }
     const surface = effectiveBackground(element, background, style);
     let foreground = null;
@@ -202,7 +212,13 @@
       // corrigir apenas contrastes deficientes de destaques que preservamos.
       const shouldCheck = background || colors.luminance(surface) < .25 || vividBackground;
       if (shouldCheck) {
-        foreground = colors.ensureContrast(originalText, surface, colors.textContrastThreshold(style));
+        // P3: quando a superfície ficou escura, texto que era preto em fundo
+        // claro precisa de uma cor realmente clara, não apenas atingir 4.5:1.
+        // Preservar tons já claros e o texto de badges coloridos.
+        const preferred = !vividBackground && colors.luminance(surface) < .18 &&
+          colors.luminance(originalText) < .10 ? colors.mapText(originalText) : null;
+        const candidate = preferred ? colors.parseColor(preferred) : originalText;
+        foreground = colors.ensureContrast(candidate, surface, colors.textContrastThreshold(style)) || preferred;
       }
     }
     const borders = {};

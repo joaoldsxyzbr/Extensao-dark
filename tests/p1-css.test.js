@@ -225,3 +225,31 @@ test('P2: borda de controle com baixo contraste recebe correção 3:1 e pode ser
   await p.updateSettings({enabled:false});
   assert.equal(field.style.getPropertyValue('border-top-color'),'');
 });
+
+test('P3: texto preto em superfície convertida vira texto claro (mais que o mínimo AA)',async()=>{
+  const p=page();const card=p.body.appendChild(new p.El('SECTION','rgb(245,245,245)','rgb(25,25,25)'));
+  await p.settle();
+  const bg=colors.parseColor(card.style.getPropertyValue('background-color'));
+  const fg=colors.parseColor(card.style.getPropertyValue('color'));
+  assert.ok(bg && fg,'cartão e texto precisam ser transformados');
+  assert.ok(colors.contrastRatio(fg,bg)>=8,'texto não deve ficar cinza escuro no fundo convertido');
+  await p.updateSettings({enabled:false});
+  assert.equal(card.style.getPropertyValue('color'),'');
+});
+
+test('P3: adaptação de painel semitransparente conserva alpha e pode ser restaurada',async()=>{
+  const p=page();const card=p.body.appendChild(new p.El('SECTION','rgb(245,245,245)','rgb(25,25,25)'));
+  const overlay=card.appendChild(new p.El('DIV','rgba(255,255,255,0.75)','rgb(25,25,25)'));
+  await p.settle();
+  const bg=colors.parseColor(overlay.style.getPropertyValue('background-color'));
+  const fg=colors.parseColor(overlay.style.getPropertyValue('color'));
+  const parent=colors.parseColor(card.style.getPropertyValue('background-color'));
+  assert.ok(bg && fg && parent,'painel semitransparente e seu texto precisam ser transformados');
+  assert.equal(bg.a,.75,'transparência original não pode ser perdida');
+  const visible=colors.compositeColor(bg,parent);
+  assert.ok(colors.luminance(visible)<.12,'painel não deve resultar em faixa branca');
+  assert.ok(colors.contrastRatio(fg,visible)>=7,'texto deve ser claramente legível');
+  await p.updateSettings({enabled:false});
+  assert.equal(overlay.style.getPropertyValue('background-color'),'');
+  assert.equal(overlay.style.getPropertyValue('color'),'');
+});
