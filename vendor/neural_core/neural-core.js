@@ -1,4 +1,4 @@
-/* Neural Core reutilizável - snapshot 41e8d0ac8eeebd814abbd4782d3c809c3e46773d; gerado localmente, sem rede. */
+/* Neural Core reutilizável - snapshot fa8bf190613e414eb41ea47a2bffa139950f2d81; gerado localmente, sem rede. */
 (function(root) {
 'use strict';
 function activate(value, kind) {

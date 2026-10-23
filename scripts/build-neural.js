@@ -24,7 +24,11 @@ function output(filename, content) {
   if (check) assert.equal(get(filename), content, filename + ' desatualizado: execute node scripts/build-neural.js');
   else fs.writeFileSync(target, content);
 }
-const revision = '41e8d0ac8eeebd814abbd4782d3c809c3e46773d';
+// UPSTREAM.md é a fonte única da revisão fixada, evitando divergência com o bundle.
+const upstream = get('vendor/neural_core/UPSTREAM.md');
+const revisionMatch = /^Commit fixado: `([a-f0-9]{40})`/m.exec(upstream);
+if (!revisionMatch) throw Error('Referência do Neural Core inválida em UPSTREAM.md');
+const revision = revisionMatch[1];
 const prefix = '/* Neural Core reutilizável - snapshot ' + revision + '; gerado localmente, sem rede. */';
 const bundled = [
   prefix,
