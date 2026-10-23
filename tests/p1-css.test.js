@@ -68,7 +68,8 @@ function page() {
     Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
     chrome:{storage:{local:{get:async defaults=>defaults},onChanged:{addListener:fn=>onSettings.push(fn)}}},
     getComputedStyle:el=>{
-      const s={ backgroundColor:resolveCss(el,el.style.getPropertyValue('background-color')||el.defaultBg),
+      const s={ fontSize:el.fontSize||'16px',fontWeight:el.fontWeight||'400',
+        backgroundColor:resolveCss(el,el.style.getPropertyValue('background-color')||el.defaultBg),
         color:resolveCss(el,el.style.getPropertyValue('color')||el.defaultFg),
         backgroundImage:el.gradient?'linear-gradient(red,blue)':'none' };
       for(const side of ['Top','Right','Bottom','Left']){
@@ -181,4 +182,46 @@ test('remover um host limpa estilos aplicados dentro do Shadow DOM',async()=>{
   assert.notEqual(child.style.getPropertyValue('background-color'),'');
   p.body.removeChild(host);await p.settle();
   assert.equal(child.style.getPropertyValue('background-color'),'');
+});
+
+test('P2: texto translúcido em um painel escurecido recebe contraste mínimo',async()=>{
+  const p=page();const parent=p.body.appendChild(new p.El('SECTION','rgb(245,245,245)'));
+  const text=parent.appendChild(new p.El('SPAN','rgba(0,0,0,0)','rgba(250,250,250,0.4)'));
+  await p.settle();
+  const actual=colors.parseColor(text.style.getPropertyValue('color'));
+  const background=colors.parseColor(parent.style.getPropertyValue('background-color'));
+  assert.ok(actual && background,'o texto sem contraste deve receber ajuste');
+  assert.ok(colors.contrastRatio(actual,background)>=4.5);
+  await p.updateSettings({enabled:false});
+  assert.equal(text.style.getPropertyValue('color'),'','desativar precisa restaurar texto');
+});
+
+test('P2: destaque azul permanece e texto de baixo contraste sobre ele é corrigido',async()=>{
+  const p=page();const card=p.body.appendChild(new p.El('BUTTON','rgb(8,115,235)','rgb(75,125,225)'));
+  await p.settle();
+  assert.equal(card.style.getPropertyValue('background-color'),'');
+  const fg=colors.parseColor(card.style.getPropertyValue('color'));
+  assert.ok(fg,'texto ilegível do botão azul precisa melhorar');
+  assert.ok(colors.contrastRatio(fg,colors.parseColor('rgb(8,115,235)'))>=4.5);
+});
+
+test('P2: texto grande com contraste existente de 3:1 não é alterado',async()=>{
+  const p=page();const parent=p.body.appendChild(new p.El('SECTION','rgb(245,245,245)'));
+  const label=parent.appendChild(new p.El('H1','rgba(0,0,0,0)','rgb(128,128,128)'));
+  label.fontSize='24px';
+  await p.settle();
+  assert.equal(label.style.getPropertyValue('color'),'','WCAG não exige 4.5:1 para texto grande');
+});
+
+test('P2: borda de controle com baixo contraste recebe correção 3:1 e pode ser restaurada',async()=>{
+  const p=page();const panel=p.body.appendChild(new p.El('SECTION','rgb(245,245,245)'));
+  const field=panel.appendChild(new p.El('INPUT','rgba(0,0,0,0)','rgb(232,232,232)'));
+  field.border={style:'solid',width:'1px',color:'rgb(65,65,65)'};
+  await p.settle();
+  const applied=colors.parseColor(field.style.getPropertyValue('border-top-color'));
+  const background=colors.parseColor(panel.style.getPropertyValue('background-color'));
+  assert.ok(applied,'borda de controle inicialmente escura deveria ser melhorada');
+  assert.ok(colors.contrastRatio(applied,background)>=3);
+  await p.updateSettings({enabled:false});
+  assert.equal(field.style.getPropertyValue('border-top-color'),'');
 });

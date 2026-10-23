@@ -83,6 +83,54 @@
     return (Math.max(a,b) + 0.05) / (Math.min(a,b) + 0.05);
   }
 
+  function compositeColor(foreground, background) {
+    if (!foreground || !background) return null;
+    const a = foreground.a;
+    return {
+      r: foreground.r * a + background.r * (1 - a),
+      g: foreground.g * a + background.g * (1 - a),
+      b: foreground.b * a + background.b * (1 - a),
+      a: 1
+    };
+  }
+
+  function textContrastThreshold(style) {
+    const size = parseFloat(style?.fontSize);
+    const weight = style?.fontWeight;
+    const bold = weight === 'bold' || weight === 'bolder' || Number(weight) >= 700;
+    if (Number.isFinite(size) && (size >= 24 || (bold && size >= 18.6667))) return 3;
+    return 4.5;
+  }
+
+  function ensureContrast(foreground, background, threshold) {
+    if (!foreground || !background || ![3, 4.5].includes(threshold) ||
+        foreground.a < .25 || background.a < .99) return null;
+    const visible = compositeColor(foreground, background);
+    if (contrastRatio(visible, background) >= threshold) return null;
+    // Aproxima o tom original da cor mais clara ou mais escura que alcance a razão.
+    // Preserva a matiz sempre que possível e evita substituir tudo por branco puro.
+    const candidates = [];
+    for (const target of [0, 255]) {
+      let lo = 0, hi = 1;
+      const mix = ratio => ({
+        r: Math.round(foreground.r + (target - foreground.r) * ratio),
+        g: Math.round(foreground.g + (target - foreground.g) * ratio),
+        b: Math.round(foreground.b + (target - foreground.b) * ratio), a: 1
+      });
+      if (contrastRatio(mix(1), background) < threshold) continue;
+      for (let i=0;i<16;i++) {
+        const mid = (lo+hi)/2;
+        if (contrastRatio(mix(mid), background) >= threshold + .015) hi = mid;
+        else lo = mid;
+      }
+      const result = mix(hi);
+      if (contrastRatio(result, background) >= threshold) candidates.push({color:result, distance:hi});
+    }
+    if (!candidates.length) return null;
+    const chosen = candidates.reduce((a,b)=> a.distance <= b.distance ? a : b).color;
+    return `rgb(${chosen.r}, ${chosen.g}, ${chosen.b})`;
+  }
+
   function isNativeDarkSurface(background, foreground) {
     const bg = parseColor(background);
     const fg = parseColor(foreground);
@@ -94,7 +142,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapBorder, mapText, isVividAccent, contrastRatio, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapBorder, mapText, isVividAccent, contrastRatio, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

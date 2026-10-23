@@ -113,3 +113,13 @@ Para conferir os testes sem dependências: `node --test`. A suíte usa DOM simul
 - **Shadow DOM aberto:** percorre o conteúdo de componentes já existentes e dos novos componentes inseridos, observa alterações e limpa estilos ao remover o host. **Shadow DOM fechado** permanece intocado por segurança e por limitações da plataforma.
 
 A extensão continua sem bibliotecas de terceiros, coleta de dados ou permissões adicionais. Para verificar os casos reproduzíveis: `node --test`. A versão não oferece compatibilidade universal com todos os estilos CSS; screenshots e testes de uso real permanecem necessários.
+
+## P2 — contraste contextual e acessibilidade (0.4.1)
+
+- O motor calcula o fundo efetivamente visível por composição de transparências (`rgba`), incluindo elementos dentro de Shadow DOM aberto; não tenta adivinhar cores sobre gradientes ou imagens.
+- Corrige **somente contrastes insuficientes**: 4,5:1 para texto comum e 3:1 para texto grande (mínimos WCAG 2.2, nível AA). Ajusta a cor original em direção ao branco ou preto mais próximo, preservando a matiz quando possível.
+- Mantém superfícies azuis e outros destaques saturados, mas corrige o texto quando esse destaque tem baixo contraste. Controles reconhecidos por elemento ou `role` recebem um mínimo de 3:1 para bordas visíveis, com restauração ao desativar.
+- Não altera texto com opacidade inferior a 25% (geralmente efeitos decorativos ou desabilitados), nem promete conformidade WCAG para páginas inteiras. Pseudo-elementos, imagens de texto, gradientes e interações reais ainda exigem avaliação no Chrome.
+- Testes automatizados em `tests/p2-contrast.test.js` e `tests/p1-css.test.js` cobrem transparência, AA, letras grandes, chips azuis, controles e reversibilidade.
+
+**Escopo:** somente P2. Modelo neural, treinamento offline, arquitetura e workflow de CI permanecem inalterados.

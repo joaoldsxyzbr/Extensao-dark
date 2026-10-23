@@ -109,18 +109,42 @@
       (element.getRootNode?.()?.host || element.parentElement?.host || null);
   }
 
-  function inheritedBackground(element) {
-    // Segue a cadeia de fundos incluindo o host de um Shadow DOM aberto.
-    let ancestor = composedParent(element);
+  function effectiveBackground(element, overrideColor = null, overrideStyle = null) {
+    // Computa as camadas sobrepostas, inclusive rgba() e ancestrais de Shadow DOM.
+    // Se há imagens ou gradientes, não inferir uma cor de fundo que não conhecemos.
+    let node = element;
+    let combined = null;
     let depth = 0;
-    while (ancestor && depth++ < 12) {
-      const style = getComputedStyle(ancestor);
+    while (node && depth++ < 24) {
+      const style = node === element && overrideStyle ? overrideStyle : getComputedStyle(node);
       if (style.backgroundImage && style.backgroundImage !== 'none') return null;
-      const color = colors.parseColor(style.backgroundColor);
-      if (color && color.a >= .95) return color;
-      ancestor = composedParent(ancestor);
+      const color = colors.parseColor(node === element && overrideColor !== null ? overrideColor : style.backgroundColor);
+      if (color && color.a > 0) {
+        if (!combined) combined = {...color};
+        else {
+          const outA = combined.a + color.a * (1-combined.a);
+          combined = {
+            r: (combined.r*combined.a + color.r*color.a*(1-combined.a))/outA,
+            g: (combined.g*combined.a + color.g*color.a*(1-combined.a))/outA,
+            b: (combined.b*combined.a + color.b*color.a*(1-combined.a))/outA,
+            a: outA
+          };
+        }
+        if (combined.a >= .99) return {...combined, a:1};
+      }
+      node = composedParent(node);
     }
     return null;
+  }
+
+  function inheritedBackground(element) {
+    const parent = composedParent(element);
+    return parent ? effectiveBackground(parent) : null;
+  }
+
+  function isControlElement(element) {
+    return ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(element.tagName) ||
+      /^(button|checkbox|radio|switch|textbox|combobox|searchbox|tab|slider)$/.test(element.getAttribute?.('role') || '');
   }
 
   function restoreRecord(element, record) {
@@ -155,9 +179,11 @@
     const originalBackground = colors.parseColor(style.backgroundColor);
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.
-    if (colors.isVividAccent(originalBackground)) {rememberStyle(element); return;}
+    const vividBackground = colors.isVividAccent(originalBackground);
     let background = null;
-    if (settings.smartEnabled && neural) {
+    if (vividBackground) {
+      // Preserva a identidade do destaque, mas ainda avalia a legibilidade do texto.
+    } else if (settings.smartEnabled && neural) {
       // Neural-first: o modelo decide se esta superfície será convertida.
       // Limites físicos continuam protegendo cores escuras nativas e transparências.
       if (originalBackground && originalText && originalBackground.a >= .82 &&
@@ -169,31 +195,36 @@
       // Modo tradicional disponível no popup e também como fallback seguro.
       background = colors.mapBackground(originalBackground, settings.theme);
     }
+    const surface = effectiveBackground(element, background, style);
     let foreground = null;
-    if (originalText && colors.luminance(originalText) <= .54) {
-      const visibleBackground = background ? colors.parseColor(background) :
-        (originalBackground?.a >= .95 ? originalBackground : inheritedBackground(element));
-      if (visibleBackground && colors.luminance(visibleBackground) < .25) {
-        foreground = colors.mapText(originalText);
+    if (surface && originalText) {
+      // Não alterar texto sobre fundo desconhecido. Fora das superfícies escuras,
+      // corrigir apenas contrastes deficientes de destaques que preservamos.
+      const shouldCheck = background || colors.luminance(surface) < .25 || vividBackground;
+      if (shouldCheck) {
+        foreground = colors.ensureContrast(originalText, surface, colors.textContrastThreshold(style));
       }
-    }
-    // Contraste WCAG: nunca gerar texto claro demais? Priorizar legibilidade do texto.
-    if (background && originalText) {
-      const outputBackground = colors.parseColor(background);
-      const outputText = colors.parseColor(foreground || style.color);
-      if (colors.contrastRatio(outputBackground, outputText) < 4.5) foreground = 'rgb(235, 239, 245)';
     }
     const borders = {};
     // Cores computadas já resolvem var(--cor); não sobrescrever custom properties.
     // Modificar apenas bordas de fato visíveis e superfícies que escurecemos.
-    const surface = background ? colors.parseColor(background) : inheritedBackground(element);
-    if (surface && colors.luminance(surface) < .25) {
+    const borderSurface = inheritedBackground(element);
+    if (borderSurface && colors.luminance(borderSurface) < .25) {
       for (const side of ['Top', 'Right', 'Bottom', 'Left']) {
         const borderStyle = style[`border${side}Style`];
         const borderWidth = parseFloat(style[`border${side}Width`]);
         if (!borderStyle || borderStyle === 'none' || borderStyle === 'hidden' ||
             !Number.isFinite(borderWidth) || borderWidth <= 0) continue;
-        const mapped = colors.mapBorder(colors.parseColor(style[`border${side}Color`]), settings.theme);
+        const originalBorder = colors.parseColor(style[`border${side}Color`]);
+        let mapped = colors.mapBorder(originalBorder, settings.theme);
+        if (isControlElement(element)) {
+          const candidate = colors.parseColor(mapped) || originalBorder;
+          const contrastFix = colors.ensureContrast(candidate, borderSurface, 3);
+          if (contrastFix) mapped = contrastFix;
+          // Uma borda colorida já visível não deve ser trocada por uma cinza.
+          if (colors.isVividAccent(originalBorder) &&
+              colors.contrastRatio(originalBorder, borderSurface) >= 3) mapped = null;
+        }
         if (!mapped) continue;
         const property = `border-${side.toLowerCase()}-color`;
         borders[property] = {

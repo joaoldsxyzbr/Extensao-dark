@@ -51,3 +51,7 @@ O motor mantém o modelo neural-first e utiliza `getComputedStyle` para ler core
 A adaptação de bordas compara cor computada e visibilidade por lado, sem modificar espessura ou estilos. A restauração preserva prioridades inline anteriores. Componentes Shadow DOM **abertos** são descobertos nos hosts percorridos, têm observadores próprios e são removidos do processamento ao desconectar os hosts. A resolução de fundos atravessa o host. Raízes **fechadas** e Shadow DOM anexado sem qualquer mutação observável após a descoberta do host estão fora do escopo.
 
 Nenhuma biblioteca, nova permissão ou envio de dados. Testes nativos do Node para CSS var, bordas e Shadow DOM; validação visual em Chrome real continua necessária.
+
+## P2 — contraste contextual
+
+O avaliador calcula a cor aparente da superfície por composição alfa de fundos computados, atravessando hosts de Shadow DOM aberto. Suspende correção quando há imagens ou gradientes não mensuráveis. Para conteúdo elegível, aplica contraste mínimo WCAG 2.2 AA (texto 4,5:1; texto grande 3:1) usando interpolação local em RGB e sem modificar cores que já atingem o limiar. Bordas de controles recebem pelo menos 3:1 contra a superfície ao redor; superfícies acentuadas são preservadas. Não equivale a certificar acessibilidade global da página.
