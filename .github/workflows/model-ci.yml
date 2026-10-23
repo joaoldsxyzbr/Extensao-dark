@@ -28,7 +28,7 @@ jobs:
           node scripts/build-neural.js --check
           node scripts/export-neural-features.js --check
       - name: Treinar um modelo candidato com Python (sem substituir pesos distribuídos)
-        run: python3 -m training.train_dark
+        run: python3 -m training.train_dark --print-model
       - name: Testar treinamento Python da extensão
         run: python3 -m unittest discover -s training_tests -v
       - name: Avaliar modelo em exemplos separados
