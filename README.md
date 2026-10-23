@@ -123,3 +123,23 @@ A extensão continua sem bibliotecas de terceiros, coleta de dados ou permissõe
 - Testes automatizados em `tests/p2-contrast.test.js` e `tests/p1-css.test.js` cobrem transparência, AA, letras grandes, chips azuis, controles e reversibilidade.
 
 **Escopo:** somente P2. Modelo neural, treinamento offline, arquitetura e workflow de CI permanecem inalterados.
+
+## P3 — Testes reais e comparação com Dark Reader
+
+Além de `node --test` (testes simulados), o workflow **Navegador real e comparação visual** executa `scripts/browser-e2e.js` em **Chrome for Testing oficial**, usando Chrome DevTools Protocol pelo WebSocket nativo do Node.js e páginas de teste locais. Cada variante usa um perfil separado, com capturas e `report.json` disponíveis no artefato `browser-e2e-comparacao` do GitHub Actions durante 7 dias.
+
+A comparação utiliza três condições na mesma página e resolução: navegador sem extensão, **Extensao-dark**, e **Dark Reader v4.9.133 MV3**. O ZIP de comparação é obtido da [release oficial do Dark Reader](https://github.com/darkreader/darkreader/releases/tag/v4.9.133), validado por SHA-256, e carregado apenas como **baseline isolado no CI**. **O Dark Reader não é dependência nem código incluído na nossa extensão.** O Chrome for Testing é obtido da fonte oficial do Google; a versão executada aparece no relatório.
+
+O ensaio cobre página clara, cartão com variável CSS, botão ativo, badge azul, imagem, transparência, Shadow DOM aberto, conteúdo adicionado via JavaScript e alternância para tema nativo escuro. Captura estilos computados, uma amostragem conservadora de contrastes e screenshots para comparar lado a lado.
+
+Os tempos registrados incluem navegação, inicialização e tempo de estabilização: **não são benchmarks precisos de CPU, memória ou superioridade visual**. Contrast ratio só é calculado diretamente para fundos opacos: imagens, transparências, composição por filtros e outras superfícies precisam de inspeção visual. Sites reais ainda precisam de testes adicionais e repetidos em hardware comparável.
+
+### Executar localmente (sem pacotes JS de terceiros)
+
+```bash
+node scripts/browser-e2e.js --output=browser-results
+```
+
+Requer Chromium não bloqueado por política de administrador. Para incluir uma versão **oficial, já extraída** do Dark Reader, acrescente `--compare-extension=/caminho/para/darkreader-unpacked`.
+
+Se o navegador deste ambiente estiver sob uma política que bloqueia páginas locais, o teste deve **falhar explicitamente**, não simular sucesso. O GitHub Actions executa o navegador em ambiente isolado sem essa restrição.
