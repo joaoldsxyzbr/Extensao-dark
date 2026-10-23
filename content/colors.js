@@ -64,6 +64,12 @@
   }
 
   // Um site já escuro, com texto claro legível, deve continuar com suas próprias cores.
+  function isVividAccent(color) {
+    if (!color || color.a < .65) return false;
+    const {s, l} = rgbToHsl(color);
+    return s >= .55 && l >= .20 && l <= .82;
+  }
+
   function contrastRatio(first, second) {
     if (!first || !second) return 1;
     const a = luminance(first), b = luminance(second);
@@ -81,7 +87,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, contrastRatio, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapText, isVividAccent, contrastRatio, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

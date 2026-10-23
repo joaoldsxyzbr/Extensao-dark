@@ -12,7 +12,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 
 > Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
 
-## Recursos da versão 0.2.0
+## Recursos da versão 0.2.1
 
 - Ativação geral e ativação/desativação por domínio.
 - Três tons de fundo: Suave, Profundo e Preto.
@@ -74,3 +74,12 @@ node --test
 ```
 
 A extensão continua independente e sem permissões adicionais, bibliotecas ou serviços de IA de terceiros. **Não confundir com um modelo generativo ou com uma rede treinada em grande volume de dados reais.**
+
+
+## CI: treinamento e verificação
+
+O GitHub Actions roda em push na `main`, pull requests e pelo botão **Run workflow** em **Actions → Treinamento e qualidade da extensão**. A pipeline executa o treinamento offline (`node scripts/train-neural.js`), verifica se os pesos gerados são **idênticos** aos versionados (`git diff`), avalia cenários rotulados separados da amostragem e executa todos os testes. Nenhum dado de navegação é coletado ou enviado, o CI não atualiza o modelo automaticamente e não altera a branch.
+
+Para atualizar pesos deliberadamente, o desenvolvedor executa o treinamento localmente, analisa as métricas e envia o modelo modificado junto dos testes; o CI barra divergências. O classificador de 3 atributos ainda não reconhece semanticamente sites ou interfaces: proteção de acentos visuais, temas nativos e contraste fica por conta do motor determinístico. A amostragem é sintética, portanto **nenhuma métrica de treinamento demonstra ser melhor que o Dark Reader**. É preciso comparar visualmente os dois em sites reais com cenários e critérios idênticos.
+
+**Correção 0.2.1:** respeita indicadores saturados e atributos de tema nativo (ex.: `html[dark]` no YouTube), inclusive quando o tema muda depois de a página carregar. O botão de modo inteligente continua opcional.

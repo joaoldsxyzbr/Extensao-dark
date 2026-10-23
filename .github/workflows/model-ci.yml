@@ -1,0 +1,40 @@
+name: Treinamento e qualidade da extensão
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  treino-e-testes:
+    name: Treinar e validar modelo local
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Treinar rede neural em CI
+        run: node scripts/train-neural.js
+      - name: Verificar treinamento reproduzível (não publica pesos automaticamente)
+        run: git diff --exit-code -- content/neural.js
+      - name: Avaliar modelo em exemplos separados
+        run: node scripts/evaluate-neural.js
+      - name: Executar testes de regressão
+        run: node --test
+      - name: Validar sintaxe JavaScript
+        run: |
+          for file in content/*.js popup/*.js scripts/*.js tests/*.js; do
+            node --check "$file"
+          done
+      - name: Validar manifesto e referência aos ícones
+        run: node --test tests/manifest.test.js

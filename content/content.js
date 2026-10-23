@@ -14,13 +14,30 @@
   let generation = 0;
   let running = false;
   let observer = null;
+  let themeObserver = null;
   let baseStyle = null;
 
   function isActive() {
     return colors.isEnabledForSite(settings, location.hostname);
   }
 
+  function hasExplicitDarkTheme() {
+    for (const el of [document.documentElement, document.body]) {
+      if (!el) continue;
+      if (el.hasAttribute?.('dark') || el.hasAttribute?.('dark-theme')) return true;
+      for (const name of ['data-theme', 'data-color-scheme', 'data-bs-theme']) {
+        if (el.getAttribute?.(name)?.toLowerCase() === 'dark') return true;
+      }
+      const className = el.getAttribute?.('class') || '';
+      if (/(?:^|\s)(?:dark|dark-mode|theme-dark|dark-theme)(?:\s|$)/i.test(className)) return true;
+    }
+    return false;
+  }
+
   function hasNativeDarkTheme() {
+    if (hasExplicitDarkTheme()) return true;
+    // As cores computadas, após a ativação, já incluem as nossas alterações.
+    if (baseStyle) return false;
     // Verifica apenas superfícies principais, não cartões isolados.
     const candidates = [document.documentElement, document.body, document.body?.firstElementChild];
     let hasDarkSurface = false;
@@ -106,6 +123,8 @@
     if (style.backgroundImage && style.backgroundImage !== 'none') return;
     const originalBackground = colors.parseColor(style.backgroundColor);
     const originalText = colors.parseColor(style.color);
+    // Não dessaturar o azul de notificações, badges e outros destaques.
+    if (colors.isVividAccent(originalBackground)) return;
     let background = colors.mapBackground(originalBackground, settings.theme);
     if (!background && settings.smartEnabled && neural && originalBackground && originalText &&
         originalBackground.a >= .82) {
@@ -180,34 +199,62 @@
     if (work.length) scheduleWork();
   }
 
-  function activate() {
-    if (!document.documentElement) {
-      document.addEventListener('readystatechange', () => activate(), {once: true});
-      return;
-    }
-    if (baseStyle) return;
-    if (document.readyState === 'loading' && !document.body) {
-      document.addEventListener('DOMContentLoaded', () => activate(), {once: true});
-      return;
-    }
-    if (hasNativeDarkTheme()) return;
+  function stopStyling() {
+    generation++;
+    observer?.disconnect();
+    observer = null;
+    work.length = 0;
+    if (baseStyle) restoreEverything();
+  }
+
+  function startStyling() {
+    if (baseStyle || hasNativeDarkTheme()) return;
     generation++;
     installBaseStyle();
     observer = new MutationObserver(records => {
       for (const record of records) {
-        for (const node of record.addedNodes) enqueueSubtree(node);
+        for (const node of record.addedNodes || []) enqueueSubtree(node);
       }
     });
     observer.observe(document.documentElement, {childList: true, subtree: true});
     enqueueSubtree(document.documentElement);
   }
 
+  function observeNativeTheme() {
+    if (themeObserver || !document.documentElement) return;
+    const options = {
+      attributes: true,
+      attributeFilter: ['dark', 'dark-theme', 'class', 'style', 'data-theme', 'data-color-scheme', 'data-bs-theme']
+    };
+    themeObserver = new MutationObserver(records => {
+      if (!records.some(record => record.type === 'attributes')) return;
+      if (hasExplicitDarkTheme()) {
+        if (baseStyle) stopStyling();
+      } else if (isActive() && !baseStyle && !hasNativeDarkTheme()) {
+        startStyling();
+      }
+    });
+    themeObserver.observe(document.documentElement, options);
+    if (document.body) themeObserver.observe(document.body, options);
+  }
+
+  function activate() {
+    if (!document.documentElement) {
+      document.addEventListener('readystatechange', () => activate(), {once: true});
+      return;
+    }
+    if (document.readyState === 'loading' && !document.body) {
+      document.addEventListener('DOMContentLoaded', () => activate(), {once: true});
+      return;
+    }
+    observeNativeTheme();
+    if (!hasNativeDarkTheme()) startStyling();
+  }
+
   function deactivate() {
-    generation++;
-    observer?.disconnect();
-    observer = null;
-    work.length = 0;
-    restoreEverything();
+    themeObserver?.disconnect();
+    themeObserver = null;
+    stopStyling();
   }
 
   function update(next) {
