@@ -1,0 +1,49 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #ecf0f5;
+  background: #111418;
+  font-synthesis: none;
+}
+* {box-sizing:border-box}
+body {margin:0; width:340px; min-height:380px}
+button, input {font:inherit}
+button {cursor:pointer}
+.app {padding:19px}
+.head {display:flex; align-items:center; gap:11px; margin-bottom:24px}
+.logo {width:39px;height:39px;border-radius:12px;background:linear-gradient(135deg,#607deb,#8b6df5);display:grid;place-items:center;font-size:28px;color:white;flex:none}
+.heading {flex:1;min-width:0}
+h1 {font-size:15px;line-height:1.2;margin:0 0 5px;font-weight:750;letter-spacing:-.25px}
+p {margin:0}
+.heading p {font-size:11px;color:#9da7b6}
+.badge {border-radius:99px;padding:5px 8px;background:#153e30;color:#81e1b4;font-size:11px;font-weight:650}
+.badge.off {background:#393038;color:#f2a4af}
+.section {background:#1c2229;border:1px solid #303944;border-radius:14px;padding:4px 14px;margin-bottom:14px}
+.control {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:69px;cursor:pointer}
+.control-copy {display:flex;flex-direction:column;gap:5px}
+.control-copy strong {font-size:13px;font-weight:650}
+.control-copy small {color:#9ca8b6;font-size:11px;max-width:225px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.divider {height:1px;background:#303944}
+.switch {appearance:none;position:relative;width:40px;height:23px;border-radius:99px;flex:none;background:#4e5a68;transition:background .15s;cursor:pointer}
+.switch::after {content:"";position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#f6f7fa;transition:transform .15s}
+.switch:checked {background:#7d8df9}
+.switch:checked::after {transform:translateX(17px)}
+.switch:disabled {opacity:.35;cursor:not-allowed}
+.switch:focus-visible,button:focus-visible {outline:2px solid #b3bcff;outline-offset:3px}
+.themes {padding:15px 13px 13px}
+.section-title {display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.section-title h2 {font-size:13px;font-weight:700;margin:0}
+.section-title span {font-size:11px;color:#9da8b7}
+.theme-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.theme {display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0;padding:8px 4px;border:1px solid #36404d;border-radius:10px;color:#bfc7d4;background:#232a32;font-size:11px}
+.theme:hover {border-color:#7c8aaf}
+.theme[aria-pressed="true"] {border-color:#91a2ff;color:white;background:#2c3450}
+.preview {width:100%;height:37px;border-radius:6px;border:1px solid #454d57;display:block;position:relative}
+.preview::before,.preview::after {content:"";position:absolute;height:3px;border-radius:9px;background:#adbac9;left:10px;right:15px;top:11px}
+.preview::after {top:20px;right:27px;opacity:.5}
+.preview.soft {background:#25282b}
+.preview.deep {background:#17191c}
+.preview.amoled {background:#000}
+.notice {text-align:center;color:#a0aab8;font-size:11px;min-height:15px;margin:17px 0 10px}
+.notice.error {color:#ffadb6}
+footer {text-align:center;color:#747f8e;font-size:10px;border-top:1px solid #252c34;padding-top:12px}

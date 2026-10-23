@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Extensão Dark</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <div class="logo" aria-hidden="true">◐</div>
+      <div class="heading"><h1>Extensão Dark</h1><p>Seu navegador, mais confortável.</p></div>
+      <span class="badge" id="status">Ativo</span>
+    </header>
+
+    <section class="section" aria-label="Controles principais">
+      <label class="control">
+        <span class="control-copy"><strong>Modo escuro</strong><small>Ativar em todos os sites</small></span>
+        <input id="enabled" type="checkbox" class="switch">
+      </label>
+      <div class="divider"></div>
+      <label class="control">
+        <span class="control-copy"><strong>Este site</strong><small id="site-name">Verificando página…</small></span>
+        <input id="site-enabled" type="checkbox" class="switch" disabled>
+      </label>
+    </section>
+
+    <section class="section themes" aria-labelledby="themes-label">
+      <div class="section-title"><h2 id="themes-label">Aparência</h2><span>Tom de fundo</span></div>
+      <div class="theme-grid" role="group" aria-label="Escolha o tom de fundo">
+        <button type="button" class="theme" data-theme="soft" aria-pressed="false"><span class="preview soft"></span><span>Suave</span></button>
+        <button type="button" class="theme" data-theme="deep" aria-pressed="false"><span class="preview deep"></span><span>Profundo</span></button>
+        <button type="button" class="theme" data-theme="amoled" aria-pressed="false"><span class="preview amoled"></span><span>Preto</span></button>
+      </div>
+    </section>
+
+    <p class="notice" role="status" aria-live="polite" id="notice">Preferências salvas apenas neste navegador.</p>
+    <footer>Sem anúncios · Sem contas · Sem rastreamento</footer>
+  </main>
+</body>
+</html>
