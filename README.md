@@ -92,3 +92,14 @@ O **Motor neural (experimental)** fica ativado por padrão e a rede neural trein
 Mantivemos proteções determinísticas de contraste, cores saturadas, gradientes, imagens/vídeos e temas escuros nativos. Desativar **Motor neural** no popup retorna ao algoritmo de cores tradicional, permitindo comparações sem reinstalação. Não existe autoaprendizado nem transferência de dados para serviços externos.
 
 Para comparar visualmente, use uma página clara, uma com tema escuro nativo (ex.: YouTube) e outra com cartões coloridos. Alterne o Motor neural e verifique textos, botões, badges e imagens. **Uma suíte de testes passando não demonstra superioridade ao Dark Reader.**
+
+
+## Estabilidade do motor — P0 (0.3.1)
+
+- Reavalia estilos de elementos e descendentes quando mudam `class`, `style`, `aria-selected`, `aria-pressed`, `aria-current` ou `data-state`. A verificação parte do CSS original do site, preservando mudanças e destaques nativos.
+- Ignora mutações de `style` que a própria extensão acaba de aplicar, evitando loops de observação.
+- Libera referências de elementos removidos do DOM e restaura seus estilos inline antes de uma possível reinserção.
+- Quando muitas subárvores entram na fila, consolida o trabalho em uma varredura do documento em vez de descartar nós. Callbacks ociosos de versões antigas do motor não processam a nova fila.
+- Mantém o motor neural, o treinamento e o GitHub Actions inalterados.
+
+Para conferir os testes sem dependências: `node --test`. A suíte usa DOM simulado; compatibilidade visual em sites reais continua exigindo testes manuais.

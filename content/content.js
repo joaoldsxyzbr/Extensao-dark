@@ -8,7 +8,9 @@
   const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true};
   const SKIP_TAGS = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PATH', 'SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'SOURCE', 'TRACK']);
   const originals = new Map();
+  const styleSnapshots = new WeakMap();
   const work = [];
+  const MAX_PENDING_ROOTS = 40;
   const predictionCache = new Map();
   let settings = DEFAULTS;
   let generation = 0;
@@ -115,16 +117,32 @@
     return null;
   }
 
+  function rememberStyle(element) {
+    // Snapshot da declaração inline para ignorar mutações causadas por nós mesmos.
+    // Não interfere com alterações subsequentes feitas pelo próprio site.
+    styleSnapshots.set(element, element.getAttribute?.('style') ?? '');
+  }
+
   function styleElement(element) {
-    if (!element.isConnected || SKIP_TAGS.has(element.tagName) || element.closest('svg, canvas, picture, video, audio, [data-extensao-dark-ignore]')) return;
-    if (originals.has(element)) return;
+    if (!element.isConnected) return;
+    const previous = originals.get(element);
+    if (previous) {
+      // Reavalia com o CSS do site, não com a cor que aplicamos anteriormente.
+      if (previous.background) restoreProperty(element, 'background-color', previous.background);
+      if (previous.color) restoreProperty(element, 'color', previous.color);
+      originals.delete(element);
+    }
+    if (SKIP_TAGS.has(element.tagName) || element.closest('svg, canvas, picture, video, audio, [data-extensao-dark-ignore]')) {
+      rememberStyle(element);
+      return;
+    }
     const style = getComputedStyle(element);
     // Gradientes/imagens contêm informação visual que CSS background-color não descreve.
-    if (style.backgroundImage && style.backgroundImage !== 'none') return;
+    if (style.backgroundImage && style.backgroundImage !== 'none') {rememberStyle(element); return;}
     const originalBackground = colors.parseColor(style.backgroundColor);
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.
-    if (colors.isVividAccent(originalBackground)) return;
+    if (colors.isVividAccent(originalBackground)) {rememberStyle(element); return;}
     let background = null;
     if (settings.smartEnabled && neural) {
       // Neural-first: o modelo decide se esta superfície será convertida.
@@ -152,7 +170,7 @@
       const outputText = colors.parseColor(foreground || style.color);
       if (colors.contrastRatio(outputBackground, outputText) < 4.5) foreground = 'rgb(235, 239, 245)';
     }
-    if (!background && !foreground) return;
+    if (!background && !foreground) {rememberStyle(element); return;}
     const record = {};
     if (background) {
       record.background = {
@@ -171,20 +189,62 @@
       element.style.setProperty('color', foreground, 'important');
     }
     originals.set(element, record);
+    rememberStyle(element);
   }
 
-  function enqueueSubtree(root) {
-    if (!root || root.nodeType !== Node.ELEMENT_NODE || work.length > 40) return;
+  function cleanupDetachedSubtree(root) {
+    if (!root || root.nodeType !== Node.ELEMENT_NODE || root.isConnected) return;
+    // Liberar referências fortes de elementos que saíram do DOM. Se forem
+    // reutilizados depois, entram novamente na fila como elementos novos.
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    work.push({walker, current: root, generation});
+    let current = root;
+    while (current) {
+      const record = originals.get(current);
+      if (record) {
+        if (record.background) restoreProperty(current, 'background-color', record.background);
+        if (record.color) restoreProperty(current, 'color', record.color);
+        originals.delete(current);
+      }
+      styleSnapshots.delete(current);
+      current = walker.nextNode();
+    }
+  }
+
+  function enqueueSubtree(root, force = false) {
+    if (!root || root.nodeType !== Node.ELEMENT_NODE || !root.isConnected) return;
+    // Reaproveitar tarefas do mesmo nó, evitando trabalho redundante.
+    const existing = work.find(task => task.generation === generation && task.root === root);
+    if (existing) {
+      if (force && !existing.force) {
+        existing.force = true;
+        existing.current = root;
+        existing.walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      }
+      return;
+    }
+    if (work.length >= MAX_PENDING_ROOTS) {
+      // Em vez de descartar novos elementos, consolidar a fila numa varredura
+      // completa. O TreeWalker do documento inclui todos os novos nós.
+      work.length = 0;
+      root = document.documentElement;
+      force = true;
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    work.push({root, walker, current: root, generation, force});
     scheduleWork();
   }
 
   function scheduleWork() {
     if (running || !isActive()) return;
     running = true;
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(flushWork, {timeout: 250});
-    else setTimeout(flushWork, 0);
+    const scheduledGeneration = generation;
+    const callback = () => {
+      // Uma execução antiga não pode consumir a fila de uma nova ativação.
+      if (scheduledGeneration !== generation) return;
+      flushWork();
+    };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(callback, {timeout: 250});
+    else setTimeout(callback, 0);
   }
 
   function flushWork() {
@@ -193,7 +253,7 @@
     let count = 0;
     while (work.length && count < 160) {
       const task = work[0];
-      if (task.generation !== generation || !task.current) {work.shift(); continue;}
+      if (task.generation !== generation || !task.current || !task.root.isConnected) {work.shift(); continue;}
       styleElement(task.current);
       task.current = task.walker.nextNode();
       count++;
@@ -205,6 +265,7 @@
     generation++;
     observer?.disconnect();
     observer = null;
+    running = false;
     work.length = 0;
     if (baseStyle) restoreEverything();
   }
@@ -215,10 +276,23 @@
     installBaseStyle();
     observer = new MutationObserver(records => {
       for (const record of records) {
-        for (const node of record.addedNodes || []) enqueueSubtree(node);
+        if (record.type === 'attributes') {
+          if (record.attributeName === 'style' &&
+              styleSnapshots.has(record.target) &&
+              styleSnapshots.get(record.target) === (record.target.getAttribute?.('style') ?? '')) continue;
+          // Reavaliar o nó e seus descendentes: uma classe pode alterar estilos
+          // herdados e estados de abas/botões, não só o elemento alvo.
+          enqueueSubtree(record.target, true);
+        } else if (record.type === 'childList') {
+          for (const node of record.removedNodes || []) cleanupDetachedSubtree(node);
+          for (const node of record.addedNodes || []) enqueueSubtree(node);
+        }
       }
     });
-    observer.observe(document.documentElement, {childList: true, subtree: true});
+    observer.observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['class', 'style', 'aria-selected', 'aria-pressed', 'aria-current', 'data-state']
+    });
     enqueueSubtree(document.documentElement);
   }
 
