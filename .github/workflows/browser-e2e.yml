@@ -15,20 +15,22 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Baixar repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - name: Validar extração segura antes dos downloads
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Preparar Chrome for Testing e Dark Reader oficial em perfis isolados
         run: python3 scripts/prepare-browser-fixtures.py
       - name: Executar navegador real e comparar capturas
         run: node scripts/browser-e2e.js --output=browser-results --compare-extension="$DARK_READER_TEST_PATH"
       - name: Salvar relatórios e capturas de teste
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: browser-e2e-comparacao
           path: browser-results/

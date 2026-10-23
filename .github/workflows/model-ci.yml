@@ -16,11 +16,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Baixar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Treinar rede neural em CI
@@ -31,6 +31,8 @@ jobs:
         run: node scripts/evaluate-neural.js
       - name: Executar testes de regressão
         run: node --test
+      - name: Validar extração segura de downloads (Python stdlib)
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validar sintaxe JavaScript
         run: |
           for file in content/*.js popup/*.js scripts/*.js tests/*.js; do

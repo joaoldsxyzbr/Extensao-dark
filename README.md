@@ -152,3 +152,8 @@ O modelo local continua pequeno e sem telemetria, mas agora usa **7 atributos**,
 Para reproduzir o treino e validar: `node scripts/train-neural.js && node scripts/evaluate-neural.js && node --test`. A avaliação reserva cenários inteiros, fora do treino, e compara com a heurística anterior. O CI rejeita pesos que não sejam reproduzíveis. Não há aprendizagem online, serviço externo ou dependência de IA de terceiros.
 
 A validação visual com Chrome e Dark Reader continua necessária. O modo neural permanece desligável no popup, mantendo o modo tradicional como fallback. Acurácia em exemplos curados não significa desempenho superior ao Dark Reader nem compatibilidade geral.
+
+
+## P5 — Segurança do GitHub Actions
+
+Actions fixadas por SHA, permissões somente de leitura, downloads versionados e ZIPs com extração segura. Testes JS/Python nativos; sem dependências novas. Auditoria em [docs/p5-seguranca-e-auditoria.md](docs/p5-seguranca-e-auditoria.md).
