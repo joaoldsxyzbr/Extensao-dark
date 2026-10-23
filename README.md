@@ -180,3 +180,26 @@ python3 -m training.train_dark --output data/neural-candidate.json
 Para adotar um candidato **após avaliar os testes**, substitua manualmente `data/neural-model.json`, execute `node scripts/build-neural.js`, `node scripts/evaluate-neural.js` e `node --test`. O comando de treinamento não substitui o modelo em uso por conta própria. O CI valida que o pacote JS e o conjunto de características foram gerados a partir das fontes locais, além de testar a capacidade de treinamento em Python.
 
 A versão versionada do motor só é atualizada por revisão explícita. O processamento no navegador permanece local, sem Python e sem telemetria.
+
+
+## Treinamento contextual com Neural Core — versão 2 (23/10/2026)
+
+O modelo 7–12–1 continua leve e roda **somente no navegador**. O treinamento ocorre no CI em Python, usando a cópia versionada do Neural Core, sem alterar o repositório original.
+
+- Conjunto atual: **132 cenários sintéticos** rotulados (82 treinamento, 18 validação, 32 holdout).
+- Aumento de dados: 2 perturbações pequenas por cenário **apenas no treino**; os dados de validação e holdout não são modificados.
+- Treino determinístico com 220 épocas e semente fixa. O modelo antigo está em `data/neural-model-previous.json` para comparação/retorno.
+- Comparação de aceitação: preservação das decisões anteriores críticas, menos erros nos cenários de validação, nenhuma regressão nos cenários reservados e testes de navegador real.
+- O CI reconstrói os pesos em Python e **exige igualdade exata com o modelo publicado**, impedindo mudanças silenciosas. Para testar outro candidato, altere o treinamento numa branch e revise suas métricas antes da publicação.
+
+**Limite:** não existe coleta de páginas ou treinamento contínuo no navegador. Os cenários são feitos manualmente; o resultado não representa precisão medida em sites reais nem superioridade ao Dark Reader. Essas avaliações dependem de um conjunto diversificado de páginas reais, critérios visuais e aprovação manual.
+
+Para treinar novamente e executar a avaliação:
+
+```bash
+node scripts/export-neural-features.js --check
+python3 -m training.train_dark --output data/neural-ci-candidate.json
+node scripts/verify-neural-model.js
+node scripts/evaluate-neural.js
+node --test
+```

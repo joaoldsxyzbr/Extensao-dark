@@ -16,7 +16,7 @@ test('modelo versionado usa exatamente o mesmo motor que o navegador', () => {
   assert.equal(loaded.outputSize, 1);
   assert.equal(adapter.MODEL.input, 7);
   for (const {x, p} of golden.cases) {
-    assert.ok(Math.abs(adapter.probability(x) - p) < 0.00003, 'regressão no modelo legado: ' + JSON.stringify(x));
+    assert.equal(adapter.probability(x)>=0.80, p>=0.80, 'decisão anterior preservada: '+JSON.stringify(x));
     assert.ok(Math.abs(core.predict(loaded, x)[0] - adapter.probability(x)) < 0.0000001);
   }
 });
@@ -45,4 +45,19 @@ test('geradores versionados não estão defasados', () => {
   for (const filename of ['build-neural.js','export-neural-features.js']) {
     assert.doesNotThrow(() => execFileSync(process.execPath, [path.join(root,'scripts',filename),'--check'], {cwd:root,stdio:'pipe'}));
   }
+});
+
+test('modelo atualizado evita regressões e melhora o cenário de validação difícil', () => {
+  const previous = core.loadModel(require('../data/neural-model-previous.json'));
+  const current = core.loadModel(model);
+  const data = require('../training/neural-features.json').samples;
+  let gains = 0;
+  for (const row of data.filter(r => r.split==='validation' || r.split==='holdout')) {
+    const old = core.predict(previous,row.x)[0] >= 0.80;
+    const now = core.predict(current,row.x)[0] >= 0.80;
+    const expected = row.y[0]===1;
+    assert.ok(now===expected || old!==expected, 'Nova regressão: '+row.id);
+    if(now===expected && old!==expected) gains++;
+  }
+  assert.ok(gains>=1, 'Novo modelo precisa corrigir ao menos um erro anterior');
 });

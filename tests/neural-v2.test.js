@@ -22,8 +22,10 @@ test('modelo evita apagar estado selecionado e preserva cartões não selecionad
 });
 
 test('amostras holdout são independentes das amostras de treino',()=>{
-  const ids=new Set(), train=new Set(), holdout=new Set();
-  for(const row of dataset.cases){assert.ok(!ids.has(row.id),row.id);ids.add(row.id);(row.split==='train'?train:holdout).add(row.id);}
-  assert.ok(train.size>=20 && holdout.size>=10);
-  assert.ok([...holdout].every(id=>!train.has(id)));
+  const ids=new Set(), train=new Set(), validation=new Set(), holdout=new Set();
+  const splits={train,validation,holdout};
+  for(const row of dataset.cases){assert.ok(!ids.has(row.id),row.id);ids.add(row.id);assert.ok(splits[row.split],row.id);splits[row.split].add(row.id);}
+  assert.ok(train.size>=50 && validation.size>=15 && holdout.size>=25);
+  assert.ok([...validation,...holdout].every(id=>!train.has(id)));
+  assert.ok([...holdout].every(id=>!validation.has(id)));
 });

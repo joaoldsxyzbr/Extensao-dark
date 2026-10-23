@@ -7,7 +7,10 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const colors = require('../content/colors.js');
 const dataset = require('../data/neural-cases.json');
+const ids = new Set();
 const samples = dataset.cases.map(row => {
+  if (ids.has(row.id)) throw Error('ID duplicado: ' + row.id);
+  ids.add(row.id);
   const x = colors.neuralFeatures(
     colors.parseColor(row.bg),
     colors.parseColor(row.fg),
@@ -15,7 +18,7 @@ const samples = dataset.cases.map(row => {
     {control: row.control, selected: row.selected}
   );
   if (!x || x.length !== 7 || !x.every(Number.isFinite)) throw Error('Características inválidas: ' + row.id);
-  if (![0, 1].includes(row.label) || !['train', 'holdout'].includes(row.split)) throw Error('Rótulo inválido: ' + row.id);
+  if (![0, 1].includes(row.label) || !['train', 'validation', 'holdout'].includes(row.split)) throw Error('Rótulo inválido: ' + row.id);
   return {id: row.id, split: row.split, x: x.map(value => Number(value.toFixed(12))), y: [row.label]};
 });
 const content = JSON.stringify({formatVersion: 1, samples}, null, 2) + '\n';
