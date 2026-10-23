@@ -69,7 +69,7 @@ A opção **Análise inteligente (beta)** no popup liga/desliga a rede neural lo
 Para treinar novamente o classificador com as amostras sintéticas reproduzíveis (requer Node.js, sem pacotes):
 
 ```bash
-node scripts/train-neural.js
+python3 -m training.train_dark
 node --test
 ```
 
@@ -78,9 +78,9 @@ A extensão continua independente e sem permissões adicionais, bibliotecas ou s
 
 ## CI: treinamento e verificação
 
-O GitHub Actions roda em push na `main`, pull requests e pelo botão **Run workflow** em **Actions → Treinamento e qualidade da extensão**. A pipeline executa o treinamento offline (`node scripts/train-neural.js`), verifica se os pesos gerados são **idênticos** aos versionados (`git diff`), avalia cenários rotulados separados da amostragem e executa todos os testes. Nenhum dado de navegação é coletado ou enviado, o CI não atualiza o modelo automaticamente e não altera a branch.
+O GitHub Actions roda em push na `main`, pull requests e pelo botão **Run workflow** em **Actions → Treinamento e qualidade da extensão**. A pipeline treina um **candidato** offline em Python sem publicar novos pesos, confere os artefatos versionados, avalia o modelo distribuído nos cenários reservados e executa todos os testes. Nenhum dado de navegação é coletado ou enviado, o CI não atualiza o modelo automaticamente e não altera a branch.
 
-Para atualizar pesos deliberadamente, o desenvolvedor executa o treinamento localmente, analisa as métricas e envia o modelo modificado junto dos testes; o CI barra divergências. O classificador de 3 atributos ainda não reconhece semanticamente sites ou interfaces: proteção de acentos visuais, temas nativos e contraste fica por conta do motor determinístico. A amostragem é sintética, portanto **nenhuma métrica de treinamento demonstra ser melhor que o Dark Reader**. É preciso comparar visualmente os dois em sites reais com cenários e critérios idênticos.
+Para atualizar pesos deliberadamente, o desenvolvedor exporta um candidato com Python, revisa as métricas, substitui `data/neural-model.json` manualmente, executa `node scripts/build-neural.js` e envia o modelo junto dos testes; o CI barra divergências de empacotamento. O classificador de 3 atributos ainda não reconhece semanticamente sites ou interfaces: proteção de acentos visuais, temas nativos e contraste fica por conta do motor determinístico. A amostragem é sintética, portanto **nenhuma métrica de treinamento demonstra ser melhor que o Dark Reader**. É preciso comparar visualmente os dois em sites reais com cenários e critérios idênticos.
 
 **Correção 0.2.1:** respeita indicadores saturados e atributos de tema nativo (ex.: `html[dark]` no YouTube), inclusive quando o tema muda depois de a página carregar. O botão de modo inteligente continua opcional.
 
@@ -149,7 +149,7 @@ Se o navegador deste ambiente estiver sob uma política que bloqueia páginas lo
 
 O modelo local continua pequeno e sem telemetria, mas agora usa **7 atributos**, incluindo saturação, luminância do fundo ancestral, controle interativo e estado selecionado. Exemplos documentados em `data/neural-cases.json` têm rótulos curados por intenção visual, em vez de rótulos produzidos apenas por uma regra matemática. São **cenários sintéticos**, não coleta de navegação.
 
-Para reproduzir o treino e validar: `node scripts/train-neural.js && node scripts/evaluate-neural.js && node --test`. A avaliação reserva cenários inteiros, fora do treino, e compara com a heurística anterior. O CI rejeita pesos que não sejam reproduzíveis. Não há aprendizagem online, serviço externo ou dependência de IA de terceiros.
+Para reproduzir o treino e validar: `python3 -m training.train_dark && node scripts/evaluate-neural.js && node --test`. A avaliação reserva cenários inteiros, fora do treino, e compara com a heurística anterior. O CI rejeita pesos que não sejam reproduzíveis. Não há aprendizagem online, serviço externo ou dependência de IA de terceiros.
 
 A validação visual com Chrome e Dark Reader continua necessária. O modo neural permanece desligável no popup, mantendo o modo tradicional como fallback. Acurácia em exemplos curados não significa desempenho superior ao Dark Reader nem compatibilidade geral.
 
@@ -157,3 +157,26 @@ A validação visual com Chrome e Dark Reader continua necessária. O modo neura
 ## P5 — Segurança do GitHub Actions
 
 Actions fixadas por SHA, permissões somente de leitura, downloads versionados e ZIPs com extração segura. Testes JS/Python nativos; sem dependências novas. Auditoria em [docs/p5-seguranca-e-auditoria.md](docs/p5-seguranca-e-auditoria.md).
+
+
+## Integração versionada com Neural Core (2026-10-23)
+
+O motor genérico de inferência JS e o treinamento Python são um **snapshot** do repositório `Base-rede-neural`, fixado no commit `41e8d0ac8eeebd814abbd4782d3c809c3e46773d`, em `vendor/neural_core/`. O projeto de origem **não é alterado**; não há submódulo Git, dependência npm, serviço externo ou atualização automática.
+
+- `vendor/neural_core/src/`: código JavaScript original do motor, copiado sem modificações.
+- `vendor/neural_core/training/`: treinamento Python genérico, copiado sem modificações.
+- `vendor/neural_core/neural-core.js`: pacote local gerado para content scripts clássicos do Manifest V3.
+- `data/neural-model.json`: pesos migrados da rede 7–12–1, preservando a decisão anterior.
+- `content/neural.js`: adaptador compatível com a API já usada pelo navegador e pelos testes.
+- `training/train_dark.py`: treinamento específico da extensão, sem modificar a base genérica.
+
+Fluxo para treinar um **candidato**, sem alterar o modelo publicado:
+
+```bash
+node scripts/export-neural-features.js
+python3 -m training.train_dark --output data/neural-candidate.json
+```
+
+Para adotar um candidato **após avaliar os testes**, substitua manualmente `data/neural-model.json`, execute `node scripts/build-neural.js`, `node scripts/evaluate-neural.js` e `node --test`. O comando de treinamento não substitui o modelo em uso por conta própria. O CI valida que o pacote JS e o conjunto de características foram gerados a partir das fontes locais, além de testar a capacidade de treinamento em Python.
+
+A versão versionada do motor só é atualizada por revisão explícita. O processamento no navegador permanece local, sem Python e sem telemetria.

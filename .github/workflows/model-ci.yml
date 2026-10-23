@@ -23,10 +23,14 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Treinar rede neural em CI
-        run: node scripts/train-neural.js
-      - name: Verificar treinamento reproduzível (não publica pesos automaticamente)
-        run: git diff --exit-code -- content/neural.js
+      - name: Confirmar motor versionado e vetores de treino
+        run: |
+          node scripts/build-neural.js --check
+          node scripts/export-neural-features.js --check
+      - name: Treinar um modelo candidato com Python (sem substituir pesos distribuídos)
+        run: python3 -m training.train_dark
+      - name: Testar treinamento Python da extensão
+        run: python3 -m unittest discover -s training_tests -v
       - name: Avaliar modelo em exemplos separados
         run: node scripts/evaluate-neural.js
       - name: Executar testes de regressão
@@ -35,7 +39,7 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validar sintaxe JavaScript
         run: |
-          for file in content/*.js popup/*.js scripts/*.js tests/*.js; do
+          for file in content/*.js popup/*.js scripts/*.js tests/*.js vendor/neural_core/neural-core.js; do
             node --check "$file"
           done
       - name: Validar manifesto e referência aos ícones
