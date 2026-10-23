@@ -161,7 +161,7 @@ Actions fixadas por SHA, permissões somente de leitura, downloads versionados e
 
 ## Integração versionada com Neural Core (2026-10-23)
 
-O motor genérico de inferência JS e o treinamento Python são um **snapshot** do repositório `Base-rede-neural`, fixado no commit `41e8d0ac8eeebd814abbd4782d3c809c3e46773d`, em `vendor/neural_core/`. O projeto de origem **não é alterado**; não há submódulo Git, dependência npm, serviço externo ou atualização automática.
+O motor genérico de inferência JS e o treinamento Python são um **snapshot** do repositório `Base-rede-neural`, fixado no commit registrado em [UPSTREAM.md](vendor/neural_core/UPSTREAM.md), em `vendor/neural_core/`. O projeto de origem **não é alterado**; não há submódulo Git, dependência npm, serviço externo ou atualização automática.
 
 - `vendor/neural_core/src/`: código JavaScript original do motor, copiado sem modificações.
 - `vendor/neural_core/training/`: treinamento Python genérico, copiado sem modificações.
