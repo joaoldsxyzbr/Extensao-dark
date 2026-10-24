@@ -10,6 +10,8 @@ const root=path.resolve(__dirname,'..');
 const samples=JSON.parse(fs.readFileSync(path.join(root,'training/contextual-features.json'),'utf8'));
 const candidate=core.loadModel(JSON.parse(fs.readFileSync(path.join(root,'data/contextual-ci-candidate.json'),'utf8')));
 const current=core.loadModel(require('../data/neural-model.json'));
+const colors=require('../content/colors.js');
+const legacy=require('../data/neural-cases.json').cases;
 assert.equal(candidate.inputSize,18,'Modelo contextual não tem 18 entradas');
 assert.equal(current.inputSize,7,'Baseline não é o modelo distribuído de sete entradas');
 assert.equal(samples.featureCount,18);
@@ -59,4 +61,34 @@ if(fs.existsSync(metricFile)){
         'Divergência Python / JS em '+split+'.'+key);
   }
 }
+// Amostras legadas são outra distribuição sintética de 7 entradas.
+const legacyScenarios=legacy.filter(row=>['validation','holdout'].includes(row.split));
+function legacyScore(rows,model,extended){
+  let right=0,fp=0,fn=0;
+  for(const row of rows){
+    const bg=colors.parseColor(row.bg),fg=colors.parseColor(row.fg);
+    const parent=colors.parseColor(row.parent);
+    const context={kind:'surface',control:!!row.control,selected:!!row.selected,
+      contrast:colors.contrastRatio(bg,fg),
+      nativeDark:colors.isNativeDarkSurface(row.bg,row.fg),
+      translucent:!!bg&&bg.a>=.12&&bg.a<.95};
+    const features=extended?colors.contextFeatures(bg,fg,parent,context):
+      colors.neuralFeatures(bg,fg,parent,context);
+    const got=predict(model,features);
+    const expected=row.label===1;
+    right+=Number(got===expected);
+    fp+=Number(got&&!expected);
+    fn+=Number(!got&&expected);
+  }
+  return {total:rows.length,right,fp,fn};
+}
+report.legacySynthetic={note:'Diagnóstico de transferência, SEM gate de promoção: os 132 casos legados não têm os novos sinais semânticos.',splits:{}};
+for(const split of ['validation','holdout']){
+  const rows=legacyScenarios.filter(x=>x.split===split);
+  report.legacySynthetic.splits[split]={
+    baseline:legacyScore(rows,current,false),
+    candidate:legacyScore(rows,candidate,true)
+  };
+}
+fs.writeFileSync(path.join(root,'data/contextual-ci-report.json'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
