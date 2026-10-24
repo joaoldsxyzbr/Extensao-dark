@@ -93,8 +93,11 @@
 
   function neuralScore(background, foreground, ancestor, state) {
     if (!neural || !background || !foreground) return 0;
-    const features = colors.neuralFeatures(background, foreground, ancestor, state);
-    if (!features) return 0;
+    const extended = colors.contextFeatures(background, foreground, ancestor, state);
+    const expected = neural.MODEL?.input ?? 7;
+    if (!extended || ![7, colors.CONTEXT_FEATURE_COUNT].includes(expected)) return 0;
+    // Até P2, o modelo publicado utiliza as primeiras sete características.
+    const features = extended.slice(0, expected);
     // Todos os atributos entram na chave: a mesma cor pode ser uma aba ativa
     // ou um cartão comum. Cache global pequeno e sem dados do usuário.
     const key = features.map(n => Math.round(n * 128)).join(':');
@@ -144,21 +147,6 @@
     return parent ? effectiveBackground(parent) : null;
   }
 
-  function isControlElement(element) {
-    return ['INPUT','SELECT','TEXTAREA','BUTTON'].includes(element.tagName) ||
-      /^(button|checkbox|radio|switch|textbox|combobox|searchbox|tab|slider)$/.test(element.getAttribute?.('role') || '');
-  }
-
-  function isSelectedElement(element) {
-    const attr = name => element.getAttribute?.(name);
-    const state = attr('data-state');
-    const current = attr('aria-current');
-    return attr('aria-selected') === 'true' || attr('aria-pressed') === 'true' ||
-      (current != null && current !== 'false') ||
-      state === 'active' || state === 'selected' || state === 'checked' ||
-      /(?:^|\s)(?:active|selected|current)(?:\s|$)/i.test(attr('class') || '');
-  }
-
   function restoreRecord(element, record) {
     if (record.background) restoreProperty(element, 'background-color', record.background);
     if (record.color) restoreProperty(element, 'color', record.color);
@@ -186,12 +174,10 @@
       return;
     }
     const style = getComputedStyle(element);
-    // Máscaras usam background-color como a tinta do ícone, não como um painel.
-    // Escurecer essa cor faz pictogramas e botões desaparecerem em sites dark.
-    const maskedGraphic = [style.maskImage, style.webkitMaskImage].some(value =>
-      typeof value === 'string' && value.trim() !== '' && value.trim() !== 'none');
-    // Gradientes, imagens e máscaras não podem ser interpretados como superfícies.
-    if ((style.backgroundImage && style.backgroundImage !== 'none') || maskedGraphic) {
+    const visual = colors.visualContext(element, style, () => [
+      getComputedStyle(element, '::before'), getComputedStyle(element, '::after')
+    ]);
+    if (visual.action === 'preserve') {
       rememberStyle(element);
       return;
     }
@@ -199,13 +185,13 @@
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.
     const vividBackground = colors.isVividAccent(originalBackground);
-    let background = settings.ignoreNativeDark && !vividBackground ?
+    let background = visual.action === 'convert' && settings.ignoreNativeDark && !vividBackground ?
       colors.mapNativeBackground(originalBackground, originalText, settings.theme) : null;
     // O classificador atual evita fundos semitransparentes. Corrigir apenas
     // painéis claros com texto escuro sobre um fundo já convertido: é um
     // tratamento de compatibilidade que preserva o alpha do site.
     const isTranslucent = originalBackground && originalBackground.a >= .35 && originalBackground.a < .95;
-    if (!background && isTranslucent && !vividBackground) {
+    if (!background && visual.action === 'convert' && isTranslucent && !vividBackground) {
       background = colors.mapTranslucentBackground(originalBackground, originalText,
         inheritedBackground(element), settings.theme);
     }
@@ -213,16 +199,16 @@
       // Painel transparente corrigido por regra conservadora.
     } else if (vividBackground) {
       // Preserva a identidade do destaque, mas ainda avalia a legibilidade do texto.
-    } else if (settings.smartEnabled && neural) {
+    } else if (visual.action === 'convert' && settings.smartEnabled && neural) {
       // Neural-first: o modelo decide se esta superfície será convertida.
       // Limites físicos continuam protegendo cores escuras nativas e transparências.
       if (originalBackground && originalText && !isTranslucent && originalBackground.a >= .82 &&
           colors.luminance(originalBackground) >= .17 &&
           neuralScore(originalBackground, originalText, inheritedBackground(element),
-            {control: isControlElement(element), selected: isSelectedElement(element)}) >= .80) {
+            visual) >= .80) {
         background = colors.mapBackground(originalBackground, settings.theme, true);
       }
-    } else {
+    } else if (visual.action === 'convert') {
       // Modo tradicional disponível no popup e também como fallback seguro.
       if (!isTranslucent) background = colors.mapBackground(originalBackground, settings.theme);
     }
@@ -254,7 +240,7 @@
             !Number.isFinite(borderWidth) || borderWidth <= 0) continue;
         const originalBorder = colors.parseColor(style[`border${side}Color`]);
         let mapped = colors.mapBorder(originalBorder, settings.theme);
-        if (isControlElement(element)) {
+        if (visual.control) {
           const candidate = colors.parseColor(mapped) || originalBorder;
           const contrastFix = colors.ensureContrast(candidate, borderSurface, 3);
           if (contrastFix) mapped = contrastFix;

@@ -232,3 +232,12 @@ node scripts/browser-e2e.js
 reais rotulados nem prova de compatibilidade com qualquer site. O P0 não
 muda o modelo neural e não coleta navegação. Veja
 [`docs/minhas-skills/plans/2026-10-24-p0-corpus-visual.md`](docs/minhas-skills/plans/2026-10-24-p0-corpus-visual.md).
+
+## P1 — Reconhecimento contextual de componentes
+
+O motor classifica elementos como gráfico, controle, texto ou superfície e escolhe preservar, corrigir contraste ou converter.
+Máscaras, clip-path, role=img, wrappers com SVG, imagens de fundo e pseudo-elementos gráficos compactos são protegidos sem exceções por domínio.
+
+O vetor contextual preparado tem **18 dimensões**, mas os pesos publicados ainda usam as **7 entradas** originais. O P2 será responsável pelo treinamento e avaliação de um modelo contextual; não há novos pesos aprovados no P1.
+
+Sem dependências, telemetria, coleta de navegação ou serviços remotos. Veja [documentação P1](docs/minhas-skills/plans/2026-10-24-p1-contexto-semantico.md).
