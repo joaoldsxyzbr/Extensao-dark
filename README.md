@@ -305,3 +305,22 @@ O workflow também executa um segundo cenário **com o modo global forçado**
 (em cópias temporárias, sem alterar a preferência do usuário) para Roblox,
 YouTube e GitHub. Isso permite testar a situação de sites já escuros que
 motivou o recurso. Avisos e resultados inconclusivos aparecem no resumo do CI.
+
+## P4 — Segurança e orçamento da rede neural (v0.6.1)
+
+A camada de decisão neural agora impede conversão de elementos gráficos,
+translúcidos ou já escuros, usa os vetores originais de 7 entradas quando
+necessário e evita colisões de cache provocadas por arredondamentos. O modelo
+atual mantém seu limiar de 80%; o candidato contextual (18 entradas) precisa
+de confiança de pelo menos 90% e preserva controles selecionados/desativados.
+
+O CI também executa microbenchmark de inferência pura e verifica um **gate de
+promoção**: desempenho, métricas sintéticas e legadas, seis páginas públicas
+no modo automático e três com o tema nativo ignorado, capturas e revisão
+manual. Avisos/inconclusões são bloqueadores, não sucessos. O gate escreve
+o veredicto em JSON, mas **nunca substitui pesos nem libera publicação
+automática**, mesmo se todos os testes forem aprovados. A revisão visual
+humana é uma etapa separada.
+
+O modelo 18D segue isolado no laboratório. Para detalhes técnicos e testes,
+veja [P4](docs/minhas-skills/plans/2026-10-24-p4-gates.md).
