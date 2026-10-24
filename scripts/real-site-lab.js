@@ -96,7 +96,9 @@ async function main(){
           capture:candidate.capture||null,...(candidate.reason?{reason:candidate.reason}:{})}
       });
       update(report);
-      console.log('P3',site.id,assessment.status);
+      console.log('P3',site.id,assessment.status,
+        assessment.status==='inconclusive'
+          ? (baseline.reason||candidate.reason||assessment.reason) : '');
     }
     report.promotion=promotionGate(report.results);
     report.completed=true;
