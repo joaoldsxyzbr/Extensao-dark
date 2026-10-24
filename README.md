@@ -300,3 +300,8 @@ node scripts/real-site-lab.js --sites=example,wikipedia,github --output=browser-
 ```
 
 Detalhes: [P3 laboratório](docs/minhas-skills/plans/2026-10-24-p3-laboratorio-sites-reais.md).
+
+O workflow também executa um segundo cenário **com o modo global forçado**
+(em cópias temporárias, sem alterar a preferência do usuário) para Roblox,
+YouTube e GitHub. Isso permite testar a situação de sites já escuros que
+motivou o recurso. Avisos e resultados inconclusivos aparecem no resumo do CI.

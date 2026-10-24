@@ -18,6 +18,9 @@ em páginas públicas reais, com Chrome/Chromium em perfis descartáveis.
 - `scripts/browser-e2e.js`: reaproveitamento do controlador CDP com suporte a URL real.
 - CI `browser-e2e.yml`: treino do candidato offline e avaliação de sites públicos,
   salvando relatório/capturas em artefato de 7 dias.
+- O CI faz também comparação com `--force-native` em Roblox, YouTube e GitHub,
+  alterando somente o padrão das cópias descartáveis para simular a opção
+  global ligada. O original e as preferências do usuário não são modificados.
 - Testes nativos de allowlist, redirecionamento, impossibilidade de promoção
   automática, contraste e proteção de privacidade.
 
@@ -26,6 +29,7 @@ em páginas públicas reais, com Chrome/Chromium em perfis descartáveis.
 node scripts/export-contextual-features.js
 python3 -m training.train_contextual --output data/contextual-ci-candidate.json
 node scripts/real-site-lab.js --sites=example,wikipedia,github --output=browser-results
+node scripts/real-site-lab.js --force-native --sites=roblox,youtube,github --output=browser-results/native-forced
 ```
 O Chrome for Testing precisa estar disponível em `CHROME_BIN`, ou Chromium no PATH.
 Para testar mais páginas públicas, use `--sites=roblox,mdn,youtube`, sempre dentro
@@ -43,6 +47,11 @@ Nenhuma execução classificou regressão mensurável nesses indicadores.
 Isso não implica que o candidato seja visualmente superior aos seis sites
 nem que os ícones problemáticos do Roblox tenham sido corrigidos.
 A verificação de contraste não substitui inspeção humana das screenshots.
+
+Os resultados classificados como `needs-review` e `inconclusive` geram avisos
+no workflow e aparecem no resumo do GitHub Actions. Um workflow verde
+significa que a infraestrutura e testes estruturais funcionaram, não que
+todas as páginas passaram na inspeção visual.
 
 ## Leitura correta dos resultados
 - `observed-no-regression`: nenhum dos indicadores amostrados piorou além do
