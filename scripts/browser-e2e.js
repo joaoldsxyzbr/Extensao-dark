@@ -10,6 +10,8 @@ const http = require('node:http');
 const {spawn, spawnSync} = require('node:child_process');
 const {performance} = require('node:perf_hooks');
 const colors = require('../content/colors.js');
+const {FAMILIES, browserSample, renderFixture} = require('../tests/visual-corpus/catalog.js');
+const visualCorpusFixture = renderFixture();
 
 const ROOT = path.resolve(__dirname, '..');
 const fixture = fs.readFileSync(path.join(ROOT, 'tests/browser-fixture.html'));
@@ -165,18 +167,73 @@ async function scenario(name,extension,url){
     return record;
   }finally{await stop();}
 }
+
+// P0: um recorte representativo do catálogo, em navegador real, não equivale
+// a validar automaticamente todas as 3240 possibilidades ou treinar a rede.
+async function visualCorpusScenario(url) {
+  const {page,stop}=await launch(ROOT);
+  try {
+    await page.navigate(url);
+    await waitFor(async()=>await page.eval('document.documentElement.hasAttribute("data-extensao-dark")'),10000);
+    await sleep(450);
+    const expression=[
+      '(()=>{',
+      'const cases=[...document.querySelectorAll(".visual-case")];',
+      'const families=[...new Set(cases.map(el=>el.dataset.family))];',
+      'const contexts=[...new Set(cases.map(el=>el.dataset.context))];',
+      'const mask=[...document.querySelectorAll(".visual-mask")];',
+      'const images=[...document.querySelectorAll(".visual-image")];',
+      'const shadows=[...document.querySelectorAll("[data-shadow-host]")];',
+      'const canvases=[...document.querySelectorAll("canvas.visual-canvas")];',
+      'const complete=cases.filter(el=>!!el.querySelector(".visual-target")).length;',
+      'return {total:cases.length,uniqueIds:new Set(cases.map(el=>el.id)).size,',
+      'families,contexts,complete,maskColors:mask.map(el=>getComputedStyle(el).backgroundColor),',
+      'maskStyleOverridden:mask.some(el=>el.style.getPropertyPriority("background-color")==="important"),',
+      'imagesValid:images.length===4&&images.every(el=>el.complete&&el.naturalWidth>0),',
+      'shadowRootsValid:shadows.length===4&&shadows.every(el=>!!el.shadowRoot?.querySelector(".item")),',
+      'canvasCount:canvases.length,',
+      'dynamicCount:document.querySelectorAll("[data-dynamic]").length};',
+      '})()'
+    ].join('');
+    const result=await page.eval(expression);
+    assert.equal(result.total,browserSample().length,'quantidade de cenários renderizados');
+    assert.equal(result.total,120);
+    assert.equal(result.uniqueIds,result.total,'IDs únicos');
+    assert.equal(result.complete,result.total,'cada cenário precisa de um componente');
+    assert.equal(result.families.length,FAMILIES.length,'cobertura de famílias');
+    assert.equal(result.contexts.length,4,'cobertura de temas');
+    assert.deepEqual(result.maskColors,Array(4).fill('rgb(240, 240, 240)'),
+      'ícones mascarados não devem escurecer');
+    assert.equal(result.maskStyleOverridden,false,'ícones mascarados não devem receber inline !important');
+    assert.equal(result.imagesValid,true,'imagens locais devem carregar');
+    assert.equal(result.shadowRootsValid,true,'Shadow DOM deve renderizar');
+    assert.equal(result.canvasCount,4);
+    assert.equal(result.dynamicCount,4);
+    const screenshotWarnings=[];
+    try {await page.screenshot(path.join(OUTPUT,'visual-corpus-sample.png'));}
+    catch(error){screenshotWarnings.push(error.message);}
+    await page.eval('window.changeVisualCorpus()');
+    await waitFor(async()=>await page.eval(
+      '[...document.querySelectorAll("[data-dynamic]")].every(el=>el.dataset.state==="updated")'
+    ),5000);
+    return {...result,dynamicUpdated:true,screenshotWarnings};
+  }finally{await stop();}
+}
+
 async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   if(COMPARISON&&!fs.existsSync(path.join(COMPARISON,'manifest.json')))throw Error('Extensão concorrente precisa ser pasta unpacked com manifest.json: '+COMPARISON);
-  const server=http.createServer((req,res)=>{if(req.url.startsWith('/fixture')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(fixture);}else{res.writeHead(404);res.end('not found');}});
+  const server=http.createServer((req,res)=>{if(req.url.startsWith('/fixture')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(fixture);}else if(req.url==='/visual-corpus'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(visualCorpusFixture);}else{res.writeHead(404);res.end('not found');}});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     const url=`http://127.0.0.1:${server.address().port}/fixture`;
     const runs=[await scenario('plain',null,url), await scenario('ours',ROOT,url)];
+    const visualCorpus=await visualCorpusScenario(`http://127.0.0.1:${server.address().port}/visual-corpus`);
     if(COMPARISON)runs.push(await scenario('dark-reader',path.resolve(COMPARISON),url));
-    const output={chromium:spawnSync(browserPath(),['--version'],{encoding:'utf8'}).stdout.trim(),comparisonRequested:Boolean(COMPARISON),benchmarkNote:'Tempo inclui inicialização, carregamento e espera de estabilização; NÃO é benchmark isolado do motor. Capturas dependem do ambiente.',runs};
+    const output={chromium:spawnSync(browserPath(),['--version'],{encoding:'utf8'}).stdout.trim(),comparisonRequested:Boolean(COMPARISON),benchmarkNote:'Tempo inclui inicialização, carregamento e espera de estabilização; NÃO é benchmark isolado do motor. Capturas dependem do ambiente.',visualCorpus,runs};
     fs.writeFileSync(path.join(OUTPUT,'report.json'),JSON.stringify(output,null,2)+'\n');
     console.log(`P3 browser E2E: ${runs.map(r=>r.name).join(', ')} — ${OUTPUT}`);
+    console.log('P0 visual corpus:',visualCorpus.total,'casos renderizados em Chromium,',visualCorpus.families.length,'famílias');
     for(const run of runs){if(run.screenshotWarnings.length)console.warn('Capturas incompletas:',run.name,run.screenshotWarnings.join(' | '));}
     console.log(JSON.stringify(runs.map(r=>({mode:r.name,elapsedMs:r.elapsedMs,card:r.initial.nodes['#card']?.background,contraste:r.initial.contrast['#card'],badge:r.initial.nodes['#badge']?.background,nativeDarkPaused:r.nativeDark.extensionActive===false})),null,2));
   }finally{await new Promise(resolve=>server.close(resolve));}
