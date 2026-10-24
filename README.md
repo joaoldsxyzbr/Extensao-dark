@@ -285,11 +285,11 @@ apenas numa **cópia temporária** da extensão. O laboratório amostra contrast
 de textos e ícones mascarados, mudanças de cor, contagem de elementos e tempo de
 navegação; salva capturas para avaliação humana. A lista aprovada inclui
 Example.com, Wikipedia, MDN, GitHub, Roblox e YouTube; o comando padrão cobre
-Example.com, Wikipedia e GitHub, enquanto o CI verifica os seis sites. Sites inacessíveis são **inconclusivos**, nunca
-aprovados. Não são coletados textos da página, valores, senhas ou dados de conta.
+Example.com, Wikipedia e GitHub, enquanto o CI verifica os seis sites.
+Sites inacessíveis são **inconclusivos**, nunca aprovados. Não são coletados textos da página, valores, senhas ou dados de conta.
 
-Na primeira execução, os três sites padrão foram observados sem pioras detectadas
-nos indicadores amostrados. Isso **não comprova** correção visual global nem
+Em execução ampliada de 24/10/2026, cinco sites foram observados sem piora
+nos indicadores amostrados; **Roblox ficou inconclusivo**. Isso **não comprova** correção visual global nem
 justifica substituir o modelo atual. Os resultados podem variar quando os sites
 mudarem; a revisão das capturas continua obrigatória.
 
@@ -297,6 +297,6 @@ mudarem; a revisão das capturas continua obrigatória.
 node scripts/export-contextual-features.js
 python3 -m training.train_contextual --output data/contextual-ci-candidate.json
 node scripts/real-site-lab.js --sites=example,wikipedia,github --output=browser-results
-``
+```
 
 Detalhes: [P3 laboratório](docs/minhas-skills/plans/2026-10-24-p3-laboratorio-sites-reais.md).
