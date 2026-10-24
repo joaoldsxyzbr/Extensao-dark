@@ -33,6 +33,17 @@ da allowlist. Não forneça URLs privadas ou páginas autenticadas.
 
 A coleta de seis sites acontece a cada execução do workflow de navegador. Sites dinâmicos podem carregar banners ou telas de login e não permitem afirmar qualidade global a partir de poucas amostras.
 
+## Resultado observado no CI (2026-10-24)
+Na execução [40127054338](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40127054338),
+cinco dos seis sites foram observados sem piora nos **indicadores amostrados**:
+Example.com, Wikipedia, GitHub, MDN e YouTube. **Roblox foi inconclusivo** no
+headless do CI, e seu comportamento visual permanece não validado.
+Nenhuma execução classificou regressão mensurável nesses indicadores.
+
+Isso não implica que o candidato seja visualmente superior aos seis sites
+nem que os ícones problemáticos do Roblox tenham sido corrigidos.
+A verificação de contraste não substitui inspeção humana das screenshots.
+
 ## Leitura correta dos resultados
 - `observed-no-regression`: nenhum dos indicadores amostrados piorou além do
   limiar; não equivale a aparência aprovada nem a zero erros.
