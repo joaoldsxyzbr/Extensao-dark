@@ -253,8 +253,15 @@ equivalem a 2.520 páginas reais independentes.
 O fluxo usa o extrator JS de **18 características** do P1, treina
 um candidato Python **18→14→1**, compara com a rede distribuída de
 7 entradas em JavaScript e exige limites de qualidade sem alterar pesos da
-extensão. Também registra métricas no dataset legado como diagnóstico,
-sem interpretá-las como evidência real de compatibilidade.
+extensão. Os **82 exemplos legados de treino** servem de âncoras de
+compatibilidade; os 18 de validação e 32 de holdout antigos continuam
+reservados e agora são um bloqueio obrigatório contra regressão.
+
+Resultado do candidato testado no P2: **98,41% de acerto, zero falsos
+positivos e 8 falsos negativos** no holdout contextual sintético
+(504 variações); baseline no mesmo conjunto: **83,93%**. No holdout legado
+obteve **32/32** contra 32/32 da versão atual. Esses números não são
+resultados em sites reais; não justificam implantação automática.
 
 ```bash
 node scripts/export-contextual-features.js

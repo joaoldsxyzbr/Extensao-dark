@@ -9,7 +9,7 @@ Construir e auditar candidato de 18 entradas, a partir do P0 e P1, preservando o
 - `scripts/export-contextual-features.js`: gera 2.520 variações sintéticas determinísticas (7 paletas × 4 estados × 3 tamanhos × 30 famílias), usando `colors.contextFeatures` do runtime.
 - As variações são relacionadas, não 2.520 exemplos independentes. O código rejeita IDs duplicados, rótulos contraditórios em vetores iguais e políticas inválidas.
 - `training/train_contextual.py`: treino offline com SGD, dimensão 18→14→1, seed fixa; balanceamento de positivos apenas no treino.
-- `scripts/evaluate-contextual.js`: validação de scores em JS, comparação de modelo novo/antigo, paridade Python/JS e relatório da mudança no dataset legado.
+- `scripts/evaluate-contextual.js`: validação em JS, comparação de modelo novo/antigo, paridade Python/JS, bloqueio de regressões na validação e holdout legados, além de relatório de promoção explícito.
 - CI: gera dataset temporário, treina candidato sem alterar `data/neural-model.json`, exige limites e disponibiliza pesos/relatórios em artefato.
 
 ## Critérios e evidência
@@ -17,6 +17,13 @@ Construir e auditar candidato de 18 entradas, a partir do P0 e P1, preservando o
 - Todas as amostras da família translucent ficam exclusivamente no holdout; uma regressão inicial revelou 36 falsos positivos. Para corrigir a lacuna, o treino inclui **cartões/alertas em hover translúcido**, sem mover a família do holdout.
 - O conjunto legado de sete entradas é medido separadamente como diagnóstico, pois não possui os novos sinais semânticos.
 - Ausência de telemetria, novos pacotes, rastreamento ou upload de sites.
+
+## Resultados medidos em CI (somente amostras sintéticas)
+- Candidato P2 com 18 entradas: holdout contextual **496/504 (98,41%)**, 0 falsos positivos e 8 falsos negativos; modelo de 7 entradas **423/504 (83,93%)**.
+- Validação contextual: **496/504 (98,41%)** e zero falsos positivos.
+- Holdout legado: **32/32** para o modelo atual e para o candidato; validação legada: **18/18** para ambos.
+- Os 82 exemplos históricos de **treino**, sem dados antigos de validação/holdout, foram incorporados como âncoras de compatibilidade. Também foi adicionado treino de cartões e alertas translúcidos sem vazar a família translúcida reservada.
+- O CI agora impede piora no legado ou falha dos limites de qualidade sintética. A avaliação em sites reais é bloqueador de promoção.
 
 ## Limitações importantes
 Rótulos são políticas de design sintéticas, e podem ficar longe do CSS real. Amostras correlacionadas e vetores de famílias distintas podem ser idênticos; a separação por família reduz um tipo de vazamento, mas NÃO demonstra generalização para sites.
