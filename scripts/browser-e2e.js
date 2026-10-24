@@ -84,7 +84,7 @@ async function launch(extension) {
     await cdp.command('Runtime.enable',{},sessionId);
     const page={
       async eval(expr){const r=await cdp.command('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true},sessionId);if(r.exceptionDetails)throw Error('Erro em página: '+(r.exceptionDetails.text||JSON.stringify(r.exceptionDetails)));return r.result?.value;},
-      async navigate(url){const result=await cdp.command('Page.navigate',{url},sessionId);if(result.errorText)throw Error('Navegação Chrome bloqueada/falhou: '+result.errorText);await waitFor(async()=>await page.eval('document.readyState === "complete" && window.__fixtureReady === true'),8000);},
+      async navigate(url,{fixtureReady=true}={}){const result=await cdp.command('Page.navigate',{url},sessionId,25000);if(result.errorText)throw Error('Navegação Chrome bloqueada/falhou: '+result.errorText);await waitFor(async()=>await page.eval(fixtureReady?'document.readyState === "complete" && window.__fixtureReady === true':'document.body !== null && (document.readyState === "complete" || document.readyState === "interactive")'),fixtureReady?8000:18000);},
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
@@ -238,4 +238,5 @@ async function main(){
     console.log(JSON.stringify(runs.map(r=>({mode:r.name,elapsedMs:r.elapsedMs,card:r.initial.nodes['#card']?.background,contraste:r.initial.contrast['#card'],badge:r.initial.nodes['#badge']?.background,nativeDarkPaused:r.nativeDark.extensionActive===false})),null,2));
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
-main().catch(err=>{console.error('P3 browser E2E falhou:',err.stack||err);process.exitCode=1;});
+if(require.main===module)main().catch(err=>{console.error('P3 browser E2E falhou:',err.stack||err);process.exitCode=1;});
+module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT});

@@ -276,3 +276,32 @@ com o modelo de sete entradas.** Os novos pesos só deverão ser promovidos apó
 testes visuais e avaliação em páginas reais do P3, evitando publicar um
 classificador que só decorou exemplos gerados. Veja
 [plano P2](docs/minhas-skills/plans/2026-10-24-p2-treinamento-contextual.md).
+
+## P3 — Testes comparativos em sites reais (sem promover pesos)
+
+O CI agora abre **páginas públicas reais** em Chromium, em perfis separados:
+modelo atual de 7 entradas versus candidato contextual de 18 entradas montado
+apenas numa **cópia temporária** da extensão. O laboratório amostra contraste
+de textos e ícones mascarados, mudanças de cor, contagem de elementos e tempo de
+navegação; salva capturas para avaliação humana. A lista aprovada inclui
+Example.com, Wikipedia, MDN, GitHub, Roblox e YouTube; o comando padrão cobre
+Example.com, Wikipedia e GitHub, enquanto o CI verifica os seis sites.
+Sites inacessíveis são **inconclusivos**, nunca aprovados. Não são coletados textos da página, valores, senhas ou dados de conta.
+
+Em execução ampliada de 24/10/2026, cinco sites foram observados sem piora
+nos indicadores amostrados; **Roblox ficou inconclusivo**. Isso **não comprova** correção visual global nem
+justifica substituir o modelo atual. Os resultados podem variar quando os sites
+mudarem; a revisão das capturas continua obrigatória.
+
+```bash
+node scripts/export-contextual-features.js
+python3 -m training.train_contextual --output data/contextual-ci-candidate.json
+node scripts/real-site-lab.js --sites=example,wikipedia,github --output=browser-results
+```
+
+Detalhes: [P3 laboratório](docs/minhas-skills/plans/2026-10-24-p3-laboratorio-sites-reais.md).
+
+O workflow também executa um segundo cenário **com o modo global forçado**
+(em cópias temporárias, sem alterar a preferência do usuário) para Roblox,
+YouTube e GitHub. Isso permite testar a situação de sites já escuros que
+motivou o recurso. Avisos e resultados inconclusivos aparecem no resumo do CI.
