@@ -59,3 +59,12 @@ test('P2: treinamentos candidatos não substituem pesos do modelo distribuído',
     assert.deepEqual(rows,generate(),'vetores do CI precisam refletir o extrator local');
   }
 });
+
+test('P2: treinamento vê sobreposições translúcidas sem acessar família do holdout',()=>{
+  const data=generate();
+  const train=data.samples.filter(r=>r.split==='train'&&r.x[14]===1);
+  assert.ok(train.length>=24);
+  assert.ok(train.every(r=>r.group!=='translucent'&&r.y[0]===0));
+  assert.ok(data.samples.filter(r=>r.group==='translucent')
+    .every(r=>r.split==='holdout'&&r.y[0]===0));
+});
