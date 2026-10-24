@@ -28,10 +28,13 @@ function mockElement(tag, baseBackground, baseText, backgroundImage='none', mask
   };
   return node;
 }
-async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural,childSelected=false,ignoreNativeDark=false,maskImage='none',webkitMaskImage='none'}) {
+async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural,childSelected=false,ignoreNativeDark=false,maskImage='none',webkitMaskImage='none',childRole=null,childClass=null,childWidth='300px',childHeight='120px',childHasSvg=false}) {
   const root=mockElement('HTML',bg,fg),body=mockElement('BODY',bg,fg),child=mockElement('DIV',childBg,childFg,backgroundImage,maskImage,webkitMaskImage);
   body.parentElement=root;child.parentElement=body;root.firstElementChild=body;body.firstElementChild=child;
   if (childSelected) child.attributes['aria-selected']='true';
+  if (childRole) child.attributes.role=childRole;
+  if (childClass) child.attributes.class=childClass;
+  child.querySelector=selector=>childHasSvg&&selector.includes('svg')?{}:null;
   const nodes=[root,body,child];
   const pending=[];
   const d={documentElement:root,body,readyState:'complete',createElement:()=>({textContent:'',remove(){}}),
@@ -44,7 +47,9 @@ async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(15
       backgroundColor:node.style?.getPropertyValue('background-color') || node.sourceBackground,
       color:node.style?.getPropertyValue('color') || node.sourceText,
       backgroundImage:node.backgroundImage||'none',
-      maskImage:node.maskImage||'none',webkitMaskImage:node.webkitMaskImage||'none'
+      maskImage:node.maskImage||'none',webkitMaskImage:node.webkitMaskImage||'none',
+      width:node===child?childWidth:'800px',height:node===child?childHeight:'500px',
+      clipPath:'none',webkitClipPath:'none'
     }),
     MutationObserver:class{observe(){}disconnect(){}},requestIdleCallback:callback=>pending.push(callback),setTimeout:callback=>pending.push(callback)
   };
@@ -135,4 +140,32 @@ test('sem máscara CSS uma superfície clara continua sendo transformada', async
     ignoreNativeDark:true,model:{probability:()=>1}
   });
   assert.match(page.child.style.getPropertyValue('background-color'),/^rgb\(/);
+});
+
+
+test('P1: motor protege ícones semanticamente sem bloquear cartões convencionais',async()=>{
+  const neuralAlways={probability:()=>1};
+  const base={model:neuralAlways,ignoreNativeDark:true,
+    childBg:'rgb(245,245,245)',childFg:'rgb(10,10,10)'};
+  const variants=[
+    {childRole:'img'},
+    {childClass:'sidebar-icon',childWidth:'24px',childHeight:'24px'},
+    {childHasSvg:true,childWidth:'28px',childHeight:'28px'}
+  ];
+  for(const variant of variants){
+    const {child}=await runPage({...base,...variant});
+    assert.equal(child.style.getPropertyValue('background-color'),'',
+      'ícone não pode receber preenchimento escuro');
+    assert.equal(child.style.getPropertyValue('color'),'',
+      'ícone não pode receber cor alterada');
+  }
+  const {child:card}=await runPage(base);
+  assert.match(card.style.getPropertyValue('background-color'),/^rgb\(/,
+    'cartão claro comum continua elegível para conversão');
+});
+
+test('P1: proteções semânticas continuam ativas com rede neural desligada',async()=>{
+  const {child}=await runPage({smartEnabled:false,ignoreNativeDark:true,
+    childRole:'img',childBg:'rgb(245,245,245)',childFg:'rgb(10,10,10)'});
+  assert.equal(child.style.getPropertyValue('background-color'),'');
 });
