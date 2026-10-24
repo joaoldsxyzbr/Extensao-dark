@@ -89,6 +89,16 @@ for(const split of ['validation','holdout']){
     baseline:legacyScore(rows,current,false),
     candidate:legacyScore(rows,candidate,true)
   };
+  const oldScores=report.legacySynthetic.splits[split];
+  assert.ok(oldScores.candidate.right>=oldScores.baseline.right &&
+    oldScores.candidate.fp<=oldScores.baseline.fp,
+    'Regressão nos cenários legados reservados: '+split);
 }
+report.releaseStatus={
+  candidatePassedSyntheticGates:true,
+  deployed:false,
+  readyForProduction:false,
+  blocker:'Falta avaliação independente de sites reais e aprovação visual P3'
+};
 fs.writeFileSync(path.join(root,'data/contextual-ci-report.json'),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
