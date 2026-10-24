@@ -69,10 +69,7 @@
     html[data-extensao-dark="on"] ::selection {
       background-color: #446d9b !important;
       color: #ffffff !important;
-    }
-    ${settings.ignoreNativeDark ? `html[data-extensao-dark="on"] body {
-      background-color: ${backgroundForPalette()} !important;
-    }` : ''}`;
+    }`;
     document.documentElement.appendChild(baseStyle);
     document.documentElement.setAttribute('data-extensao-dark', 'on');
   }
@@ -195,12 +192,13 @@
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.
     const vividBackground = colors.isVividAccent(originalBackground);
-    let background = null;
+    let background = settings.ignoreNativeDark && !vividBackground ?
+      colors.mapNativeBackground(originalBackground, originalText, settings.theme) : null;
     // O classificador atual evita fundos semitransparentes. Corrigir apenas
     // painéis claros com texto escuro sobre um fundo já convertido: é um
     // tratamento de compatibilidade que preserva o alpha do site.
     const isTranslucent = originalBackground && originalBackground.a >= .35 && originalBackground.a < .95;
-    if (isTranslucent && !vividBackground) {
+    if (!background && isTranslucent && !vividBackground) {
       background = colors.mapTranslucentBackground(originalBackground, originalText,
         inheritedBackground(element), settings.theme);
     }

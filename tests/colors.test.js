@@ -42,3 +42,18 @@ test('isEnabledForSite respeita liga/desliga e exceção exata de host', () => {
   assert.equal(colors.isEnabledForSite({...config,enabled:false}, 'other.com'), false);
   assert.equal(colors.isEnabledForSite(config, 'other.com'), true);
 });
+
+test('forçar aparência global converte superfícies nativas sem recolorir destaques', () => {
+  const dark=colors.parseColor('rgb(13,17,23)');
+  const text=colors.parseColor('rgb(235,235,235)');
+  const soft=colors.mapNativeBackground(dark,text,'soft');
+  const deep=colors.mapNativeBackground(dark,text,'deep');
+  const amoled=colors.mapNativeBackground(dark,text,'amoled');
+  for(const tone of [soft,deep,amoled])assert.match(tone,/^rgb\(/);
+  assert.notEqual(soft,deep);
+  assert.notEqual(deep,amoled);
+  assert.ok(colors.luminance(colors.parseColor(soft)) > colors.luminance(colors.parseColor(amoled)));
+  assert.equal(colors.mapNativeBackground(colors.parseColor('rgb(8,115,235)'),text,'deep'),null);
+  assert.equal(colors.mapNativeBackground(colors.parseColor('rgba(10,12,14,0.4)'),text,'deep'),null);
+  assert.equal(colors.mapNativeBackground(colors.parseColor('rgb(255,255,255)'),text,'deep'),null);
+});

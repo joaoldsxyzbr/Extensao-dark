@@ -10,7 +10,16 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 4. Escolha **Carregar sem compactação** e selecione a pasta **`Extensao-dark-main`** que contém o arquivo `manifest.json` diretamente em sua raiz (não selecione o ZIP nem uma pasta acima).
 5. Abra um site `https://` e clique no ícone **Extensão Dark** para alterar as preferências.
 
-> Atualizações de arquivos no disco requerem clicar em **Atualizar** na página de extensões e recarregar o site aberto.
+> **Importante:** baixar arquivos novos do GitHub não atualiza a extensão que já está instalada.
+> Para atualizar sem duplicar a extensão e sem perder preferências, substitua os arquivos
+> na **mesma pasta** que foi carregada anteriormente; em `chrome://extensions`,
+> clique em **Atualizar** na própria extensão e recarregue as abas abertas.
+> A versão instalada agora aparece no rodapé do popup (versão 0.5.1).
+> Se o novo botão não aparecer, o Chrome continua usando a pasta antiga.
+>
+> Sites com tema escuro próprio são preservados por padrão. Para aplicar as
+> paletas **Suave**, **Profundo** ou **Preto** mesmo nesses sites, ative a opção global
+> **Ignorar tema escuro nativo** no popup.
 
 ## Recursos da versão 0.4.0
 

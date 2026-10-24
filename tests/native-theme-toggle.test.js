@@ -40,15 +40,21 @@ function browserHarness(initialDark = false, initialSettings = {}) {
   const doc={documentElement:root,body,readyState:'complete',
     addEventListener(name,cb) {listeners.set(name,cb);},
     createElement() {return {remove(){}};},
-    createTreeWalker() {return {nextNode:()=>null};}
+    createTreeWalker(target) {
+      const nodes = target === root ? [body] : [];
+      let index = 0;
+      return {nextNode:()=>nodes[index++] ?? null};
+    }
   };
   const world={document:doc,location:{hostname:'www.youtube.com',protocol:'https:'},
     DarkExtensionColors:colors,DarkExtensionNeural:neural,
     Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
     chrome:{storage:{local:{get:async defaults=>({...defaults,...initialSettings})},
       onChanged:{addListener(listener){storageChangeListener=listener;}}}},
-    getComputedStyle: el=>({backgroundColor:el.style.getPropertyValue('background-color')||el.sourceBackground,
-      color:el.style.getPropertyValue('color')||el.sourceColor,
+    getComputedStyle: el=>({backgroundColor:el.style.getPropertyValue('background-color') ||
+        (root.hasAttribute('dark') ? 'rgb(18,20,24)' : el.sourceBackground),
+      color:el.style.getPropertyValue('color') ||
+        (root.hasAttribute('dark') ? 'rgb(235,235,235)' : el.sourceColor),
       backgroundImage:'none',colorScheme:'light'}),
     MutationObserver:class {constructor(cb){this.cb=cb;this.active=false;observers.push(this);}
       observe() {this.active=true;} disconnect(){this.active=false;}},
@@ -90,8 +96,9 @@ test('quando o YouTube muda para dark depois de carregar, restaura estilos; volt
 test('preferência global aplica o tema em sites com dark nativo', async () => {
   const page=browserHarness(true,{ignoreNativeDark:true}); await page.settle();
   assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
-  assert.match(page.styles.at(-1).textContent,/html\[data-extensao-dark="on"\] body/);
-  assert.match(page.styles.at(-1).textContent,/#17191c/);
+  assert.doesNotMatch(page.styles.at(-1).textContent,/html\[data-extensao-dark="on"\] body/,
+    'regra CSS no body esconderia a cor original antes do cálculo de contraste');
+  assert.match(page.body.style.getPropertyValue('background-color'),/^rgb\(/);
 });
 
 test('ligar e desligar preferência global em site escuro funciona sem recarregar', async () => {
@@ -119,4 +126,29 @@ test('configuração global respeita exceção do site e a paleta selecionada', 
   await active.settle();
   assert.equal(active.root.hasAttribute('data-extensao-dark'),true);
   assert.match(active.styles.at(-1).textContent,/background-color: #000000 !important/);
+  assert.match(active.body.style.getPropertyValue('background-color'),/^rgb\(/);
+});
+
+test('forçar tema global realmente altera superfícies escuras nativas e restaura depois', async () => {
+  const page=browserHarness(true);
+  await page.settle();
+  assert.equal(page.body.style.getPropertyValue('background-color'),'');
+  await page.updateSettings({ignoreNativeDark:true,theme:'soft'});
+  const soft=page.body.style.getPropertyValue('background-color');
+  assert.match(soft,/^rgb\(/,'não basta trocar o CSS do body: o motor deve converter superfícies nativas');
+  assert.equal(page.body.style.getPropertyPriority('background-color'),'important');
+  await page.updateSettings({theme:'amoled'});
+  const amoled=page.body.style.getPropertyValue('background-color');
+  assert.notEqual(amoled,soft,'as opções de aparência devem funcionar também em páginas nativamente escuras');
+  await page.updateSettings({ignoreNativeDark:false});
+  assert.equal(page.body.style.getPropertyValue('background-color'),'','desligar deve restaurar o estilo original');
+});
+
+test('forçar tema em página clara preserva contraste e não usa fundo CSS precoce no body', async () => {
+  const page=browserHarness(false,{ignoreNativeDark:true});
+  await page.settle();
+  assert.doesNotMatch(page.styles.at(-1).textContent,/html\[data-extensao-dark="on"\] body/);
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
+  assert.match(page.body.style.getPropertyValue('background-color'),/^rgb\(/);
+  assert.match(page.body.style.getPropertyValue('color'),/^rgb\(/);
 });
