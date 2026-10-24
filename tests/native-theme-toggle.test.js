@@ -40,7 +40,11 @@ function browserHarness(initialDark = false, initialSettings = {}) {
   const doc={documentElement:root,body,readyState:'complete',
     addEventListener(name,cb) {listeners.set(name,cb);},
     createElement() {return {remove(){}};},
-    createTreeWalker() {return {nextNode:()=>null};}
+    createTreeWalker(target) {
+      const nodes = target === root ? [body] : [];
+      let index = 0;
+      return {nextNode:()=>nodes[index++] ?? null};
+    }
   };
   const world={document:doc,location:{hostname:'www.youtube.com',protocol:'https:'},
     DarkExtensionColors:colors,DarkExtensionNeural:neural,
