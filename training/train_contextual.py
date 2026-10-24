@@ -98,12 +98,24 @@ def run_training(*, epochs=65, seed=SEED, path=DATA):
     selected = [row for row in groups["train"] if row.get("size") != "large"]
     examples = [(row["x"], row["y"]) for row in selected]
     examples += [(row["x"], row["y"]) for row in selected if row["y"][0]]
+    legacy = json.loads(Path(path).read_text(encoding="utf-8")).get("legacyTrain")
+    if not isinstance(legacy, list) or len(legacy) != 82:
+        raise ValueError("Âncoras legadas não podem incluir validation/holdout")
+    for row in legacy:
+        if (row.get("split") != "train" or row.get("source") != "legacy-train-only" or
+                not isinstance(row.get("x"), list) or len(row["x"]) != 18 or
+                not isinstance(row.get("y"), list) or row["y"][0] not in (0, 1)):
+            raise ValueError("Linha de legado indevida")
+    # Balanceamento de domínio apenas com exemplos LEGADOS do treino.
+    # Os 18+32 casos antigos de avaliação não entram nas atualizações.
+    examples += [(row["x"], row["y"]) for row in legacy] * 3
     network = create_network([18, 14, 1], ["tanh", "sigmoid"], seed=seed)
     loss = train(network, examples, epochs=epochs, learning_rate=.24, seed=seed)
     results = {
         "kind": "synthetic-candidate-not-deployed",
         "seed": seed, "dimensions": [18, 14, 1],
         "trainingFamilies": 18, "trainingUniqueSamples": len(selected),
+        "legacyTrainingAnchors": len(legacy),
         "trainingUpdatesPerEpoch": len(examples),
         "epochs": epochs, "loss": loss,
         "validation": evaluate(network, groups["validation"]),
