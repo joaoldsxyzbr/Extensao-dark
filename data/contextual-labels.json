@@ -1,6 +1,6 @@
 {
   "formatVersion": 2,
-  "description": "Políticas supervisionadas definidas por família visual para laboratório SINTÉTICO. Preservar ou corrigir texto => label 0. Converter superfícies claras => label 1. Nunca inferir acurácia na web real. Holdout separado por família.",
+  "description": "Políticas supervisionadas definidas por família visual para laboratório SINTÉTICO. Preservar ou corrigir texto => label 0. Converter superfícies claras => label 1. Nunca inferir acurácia na web real. Holdout separado por família. A intenção visual é aproximada; casos cujo CSS não é representado nas características não são usados como evidência de generalização.",
   "families": [
     {
       "family": "paragraph",
@@ -85,7 +85,7 @@
     {
       "family": "native-scheme",
       "split": "train",
-      "policy": "preserve"
+      "policy": "convert"
     },
     {
       "family": "iframe",
