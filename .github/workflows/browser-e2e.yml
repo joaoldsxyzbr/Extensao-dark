@@ -34,6 +34,8 @@ jobs:
           python3 -m training.train_contextual --output data/contextual-ci-candidate.json --epochs 65
       - name: Coletar observações em páginas públicas reais com perfis isolados
         run: node scripts/real-site-lab.js --output=browser-results --sites=example,wikipedia,github,mdn,roblox,youtube
+      - name: Comparar modo global em sites com temas nativos
+        run: node scripts/real-site-lab.js --force-native --output=browser-results/native-forced --sites=roblox,youtube,github
       - name: Salvar relatórios e capturas de teste
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
