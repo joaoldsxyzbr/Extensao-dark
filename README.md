@@ -14,7 +14,7 @@ Extensão leve para transformar páginas claras em uma experiência escura, usan
 > Para atualizar sem duplicar a extensão e sem perder preferências, substitua os arquivos
 > na **mesma pasta** que foi carregada anteriormente; em `chrome://extensions`,
 > clique em **Atualizar** na própria extensão e recarregue as abas abertas.
-> A versão instalada agora aparece no rodapé do popup (versão 0.5.1).
+> A versão instalada agora aparece no rodapé do popup (versão 0.5.2).
 > Se o novo botão não aparecer, o Chrome continua usando a pasta antiga.
 >
 > Sites com tema escuro próprio são preservados por padrão. Para aplicar as

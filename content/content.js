@@ -186,8 +186,15 @@
       return;
     }
     const style = getComputedStyle(element);
-    // Gradientes/imagens contêm informação visual que CSS background-color não descreve.
-    if (style.backgroundImage && style.backgroundImage !== 'none') {rememberStyle(element); return;}
+    // Máscaras usam background-color como a tinta do ícone, não como um painel.
+    // Escurecer essa cor faz pictogramas e botões desaparecerem em sites dark.
+    const maskedGraphic = [style.maskImage, style.webkitMaskImage].some(value =>
+      typeof value === 'string' && value.trim() !== '' && value.trim() !== 'none');
+    // Gradientes, imagens e máscaras não podem ser interpretados como superfícies.
+    if ((style.backgroundImage && style.backgroundImage !== 'none') || maskedGraphic) {
+      rememberStyle(element);
+      return;
+    }
     const originalBackground = colors.parseColor(style.backgroundColor);
     const originalText = colors.parseColor(style.color);
     // Não dessaturar o azul de notificações, badges e outros destaques.

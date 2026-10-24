@@ -7,11 +7,11 @@ const path = require('node:path');
 const colors = require('../content/colors.js');
 const neural = require('../content/neural.js');
 
-function mockElement(tag, baseBackground, baseText, backgroundImage='none') {
+function mockElement(tag, baseBackground, baseText, backgroundImage='none', maskImage='none', webkitMaskImage='none') {
   const state=new Map();
   const node = {
     nodeType:1,tagName:tag,isConnected:true,parentElement:null, firstElementChild:null,
-    sourceBackground:baseBackground,sourceText:baseText,backgroundImage,
+    sourceBackground:baseBackground,sourceText:baseText,backgroundImage,maskImage,webkitMaskImage,
     style: {
       getPropertyValue: key=>state.get(key)?.value??'',
       getPropertyPriority: key=>state.get(key)?.priority??'',
@@ -28,8 +28,8 @@ function mockElement(tag, baseBackground, baseText, backgroundImage='none') {
   };
   return node;
 }
-async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural,childSelected=false}) {
-  const root=mockElement('HTML',bg,fg),body=mockElement('BODY',bg,fg),child=mockElement('DIV',childBg,childFg,backgroundImage);
+async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(150,150,150)',childFg='rgb(12,12,12)',backgroundImage='none',smartEnabled=true,model=neural,childSelected=false,ignoreNativeDark=false,maskImage='none',webkitMaskImage='none'}) {
+  const root=mockElement('HTML',bg,fg),body=mockElement('BODY',bg,fg),child=mockElement('DIV',childBg,childFg,backgroundImage,maskImage,webkitMaskImage);
   body.parentElement=root;child.parentElement=body;root.firstElementChild=body;body.firstElementChild=child;
   if (childSelected) child.attributes['aria-selected']='true';
   const nodes=[root,body,child];
@@ -39,11 +39,12 @@ async function runPage({bg='rgb(255,255,255)',fg='rgb(10,10,10)',childBg='rgb(15
   };
   const world={document:d, location:{protocol:'https:',hostname:'test.example'},
     DarkExtensionColors:colors,DarkExtensionNeural:model, Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
-    chrome:{storage:{local:{get: async defaults=>({...defaults,smartEnabled})},onChanged:{addListener(){}}}},
+    chrome:{storage:{local:{get: async defaults=>({...defaults,smartEnabled,ignoreNativeDark})},onChanged:{addListener(){}}}},
     getComputedStyle:node=>({
       backgroundColor:node.style?.getPropertyValue('background-color') || node.sourceBackground,
       color:node.style?.getPropertyValue('color') || node.sourceText,
-      backgroundImage:node.backgroundImage||'none'
+      backgroundImage:node.backgroundImage||'none',
+      maskImage:node.maskImage||'none',webkitMaskImage:node.webkitMaskImage||'none'
     }),
     MutationObserver:class{observe(){}disconnect(){}},requestIdleCallback:callback=>pending.push(callback),setTimeout:callback=>pending.push(callback)
   };
@@ -109,4 +110,29 @@ test('contexto semântico diferencia aba selecionada de botão normal com a mesm
   const selected=await runPage({childBg:'rgb(190,190,190)',model,childSelected:true});
   assert.ok(normal.child.style.getPropertyValue('background-color'));
   assert.equal(selected.child.style.getPropertyValue('background-color'),'');
+});
+
+test('ícones com máscara CSS mantêm a cor original ao forçar modo escuro nativo', async () => {
+  const always={probability:()=>1};
+  for(const kind of ['maskImage','webkitMaskImage']){
+    const page=await runPage({
+      bg:'rgb(22,23,25)',fg:'rgb(235,235,235)',
+      childBg:'rgb(240,240,240)',childFg:'rgb(12,12,12)',
+      ignoreNativeDark:true,model:always,
+      [kind]:'url("data:image/svg+xml,icon")'
+    });
+    assert.equal(page.root.attributes['data-extensao-dark'],'on');
+    assert.equal(page.child.style.getPropertyValue('background-color'),'',
+      `o ícone mascarado em ${kind} não pode receber um fundo escurecido`);
+    assert.equal(page.child.style.getPropertyValue('color'),'',
+      `o ícone mascarado em ${kind} não pode receber nova cor`);
+  }
+});
+
+test('sem máscara CSS uma superfície clara continua sendo transformada', async () => {
+  const page=await runPage({
+    childBg:'rgb(240,240,240)',childFg:'rgb(12,12,12)',
+    ignoreNativeDark:true,model:{probability:()=>1}
+  });
+  assert.match(page.child.style.getPropertyValue('background-color'),/^rgb\(/);
 });

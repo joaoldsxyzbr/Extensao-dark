@@ -91,7 +91,7 @@ async function launch(extension) {
 }
 async function waitFor(fn,timeout=5000){const start=performance.now();while(performance.now()-start<timeout){if(await fn())return;await sleep(60);}throw Error('Condição não atingida em '+timeout+'ms');}
 const metrics = `(()=>{
-  const selectors=['body','#card','#copy','#translucent','#action','#muted-tab','#badge','#inserted','#shadow-host'];
+  const selectors=['body','#card','#copy','#translucent','#action','#muted-tab','#badge','#inserted','#shadow-host','#masked-icon'];
   const nodes=Object.fromEntries(selectors.map(s=>{const el=document.querySelector(s);if(!el)return[s,null];const css=getComputedStyle(el);return[s,{background:css.backgroundColor,color:css.color,border:css.borderTopColor,changedBg:el.style.getPropertyPriority('background-color')==='important'}];}));
   const shadow=document.querySelector('#shadow-host').shadowRoot.querySelector('.shadow-card');
   const cs=getComputedStyle(shadow);
@@ -155,6 +155,10 @@ async function scenario(name,extension,url){
       assert.notEqual(initial.nodes['#card'].background,'rgb(245, 245, 245)','cartão claro deveria escurecer');
       assert.equal(initial.nodes['#badge'].background,dynamic.nodes['#badge'].background,'indicador azul não deve ser perdido');
       assert.equal(initial.imageComplete,true,'imagem deve continuar carregada');
+      assert.equal(initial.nodes['#masked-icon'].background,'rgb(240, 240, 240)',
+        'ícone mascarado deve permanecer claro e visível sobre fundo escuro');
+      assert.equal(dynamic.nodes['#masked-icon'].background,'rgb(240, 240, 240)',
+        'ícone mascarado não deve mudar com alterações de página');
       assert.equal(initial.nodes['#muted-tab'].background,'rgb(180, 180, 182)','rede contextual deve preservar aba neutra selecionada');
       assert.equal(nativeDark.extensionActive,false,'modo escuro nativo deve pausar a extensão');
     }
