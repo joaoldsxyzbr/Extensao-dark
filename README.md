@@ -212,3 +212,23 @@ node scripts/verify-neural-model.js
 node scripts/evaluate-neural.js
 node --test
 ```
+
+## P0 — Catálogo de componentes visuais
+
+O catálogo em `tests/visual-corpus/catalog.js` gera **3.240 combinações
+sintéticas e determinísticas** de 30 famílias (texto, formulários, ícones,
+máscaras CSS, SVG, Shadow DOM, iframes isolados, etc.). O CI valida a
+integridade da matriz e renderiza **120 cenários representativos** em Chromium
+para um primeiro smoke test, incluindo máscaras, imagens e componentes
+dinâmicos. O relatório e a captura ficam nos artefatos do workflow de navegador.
+
+```bash
+node scripts/visual-corpus-report.js --check
+node --test tests/visual-corpus.test.js
+node scripts/browser-e2e.js
+```
+
+**Importante:** são variações geradas de casos-base, **não** 3.240 exemplos
+reais rotulados nem prova de compatibilidade com qualquer site. O P0 não
+muda o modelo neural e não coleta navegação. Veja
+[`docs/minhas-skills/plans/2026-10-24-p0-corpus-visual.md`](docs/minhas-skills/plans/2026-10-24-p0-corpus-visual.md).
