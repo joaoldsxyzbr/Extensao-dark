@@ -7,10 +7,12 @@ const path = require('node:path');
 const colors = require('../content/colors.js');
 const neural = require('../content/neural.js');
 
-function browserHarness(initialDark = false) {
+function browserHarness(initialDark = false, initialSettings = {}) {
   const listeners = new Map();
   const timers = [];
   const observers = [];
+  const styles = [];
+  let storageChangeListener;
   function element(tag, bg, fg) {
     const attributes = new Map();
     const css = new Map();
@@ -27,7 +29,7 @@ function browserHarness(initialDark = false) {
       removeAttribute(key) {attributes.delete(key);},
       hasAttribute: key => attributes.has(key),
       getAttribute: key => attributes.get(key) ?? null,
-      appendChild() {}, closest: () => null
+      appendChild(node) {styles.push(node);}, closest: () => null
     };
   }
   const root = element('HTML','rgb(250,250,250)','rgb(12,12,12)');
@@ -43,7 +45,8 @@ function browserHarness(initialDark = false) {
   const world={document:doc,location:{hostname:'www.youtube.com',protocol:'https:'},
     DarkExtensionColors:colors,DarkExtensionNeural:neural,
     Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
-    chrome:{storage:{local:{get:async defaultSettings=>defaultSettings},onChanged:{addListener(){}}}},
+    chrome:{storage:{local:{get:async defaults=>({...defaults,...initialSettings})},
+      onChanged:{addListener(listener){storageChangeListener=listener;}}}},
     getComputedStyle: el=>({backgroundColor:el.style.getPropertyValue('background-color')||el.sourceBackground,
       color:el.style.getPropertyValue('color')||el.sourceColor,
       backgroundImage:'none',colorScheme:'light'}),
@@ -59,7 +62,13 @@ function browserHarness(initialDark = false) {
     for(const observer of observers.filter(o=>o.active)) observer.cb([{type:'attributes',target:root,attributeName:key,addedNodes:[]}]);
     await settle();
   }
-  return {root,body,settle,updateAttribute};
+  async function updateSettings(values) {
+    storageChangeListener(Object.fromEntries(
+      Object.entries(values).map(([key, newValue]) => [key, {newValue}])
+    ), 'local');
+    await settle();
+  }
+  return {root,body,styles,settle,updateAttribute,updateSettings};
 }
 
 test('YouTube em tema nativo escuro desde o início não recebe CSS da extensão', async () => {
@@ -76,4 +85,38 @@ test('quando o YouTube muda para dark depois de carregar, restaura estilos; volt
   assert.equal(page.body.style.getPropertyValue('color'),'');
   await page.updateAttribute('dark',null);
   assert.equal(page.root.hasAttribute('data-extensao-dark'),true,'ativa novamente quando volta ao tema claro');
+});
+
+test('preferência global aplica o tema em sites com dark nativo', async () => {
+  const page=browserHarness(true,{ignoreNativeDark:true}); await page.settle();
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
+  assert.match(page.styles.at(-1).textContent,/html\[data-extensao-dark="on"\] body/);
+  assert.match(page.styles.at(-1).textContent,/#17191c/);
+});
+
+test('ligar e desligar preferência global em site escuro funciona sem recarregar', async () => {
+  const page=browserHarness(true);await page.settle();
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),false);
+  await page.updateSettings({ignoreNativeDark:true});
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
+  await page.updateSettings({ignoreNativeDark:false});
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),false);
+});
+
+test('alterar tema nativo não suspende a extensão ao ignorá-lo', async () => {
+  const page=browserHarness(false,{ignoreNativeDark:true});await page.settle();
+  await page.updateAttribute('dark','');
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
+  await page.updateAttribute('dark',null);
+  assert.equal(page.root.hasAttribute('data-extensao-dark'),true);
+});
+
+test('configuração global respeita exceção do site e a paleta selecionada', async () => {
+  const blocked=browserHarness(true,{ignoreNativeDark:true,disabledHosts:['www.youtube.com']});
+  await blocked.settle();
+  assert.equal(blocked.root.hasAttribute('data-extensao-dark'),false);
+  const active=browserHarness(true,{ignoreNativeDark:true,theme:'amoled'});
+  await active.settle();
+  assert.equal(active.root.hasAttribute('data-extensao-dark'),true);
+  assert.match(active.styles.at(-1).textContent,/background-color: #000000 !important/);
 });

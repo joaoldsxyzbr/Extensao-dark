@@ -5,7 +5,7 @@
   const neural = globalThis.DarkExtensionNeural;
   if (!colors || !/^https?:$/.test(location.protocol)) return;
 
-  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true};
+  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true, ignoreNativeDark: false};
   const SKIP_TAGS = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PATH', 'SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'SOURCE', 'TRACK']);
   const originals = new Map();
   const styleSnapshots = new WeakMap();
@@ -69,7 +69,10 @@
     html[data-extensao-dark="on"] ::selection {
       background-color: #446d9b !important;
       color: #ffffff !important;
-    }`;
+    }
+    ${settings.ignoreNativeDark ? `html[data-extensao-dark="on"] body {
+      background-color: ${backgroundForPalette()} !important;
+    }` : ''}`;
     document.documentElement.appendChild(baseStyle);
     document.documentElement.setAttribute('data-extensao-dark', 'on');
   }
@@ -403,7 +406,7 @@
   }
 
   function startStyling() {
-    if (baseStyle || hasNativeDarkTheme()) return;
+    if (baseStyle || (!settings.ignoreNativeDark && hasNativeDarkTheme())) return;
     generation++;
     installBaseStyle();
     observer = new MutationObserver(records => {
@@ -452,7 +455,7 @@
       attributeFilter: ['dark', 'dark-theme', 'class', 'style', 'data-theme', 'data-color-scheme', 'data-bs-theme']
     };
     themeObserver = new MutationObserver(records => {
-      if (!records.some(record => record.type === 'attributes')) return;
+      if (!records.some(record => record.type === 'attributes') || settings.ignoreNativeDark) return;
       if (hasExplicitDarkTheme()) {
         if (baseStyle) stopStyling();
       } else if (isActive() && !baseStyle && !hasNativeDarkTheme()) {
@@ -473,7 +476,7 @@
       return;
     }
     observeNativeTheme();
-    if (!hasNativeDarkTheme()) startStyling();
+    if (settings.ignoreNativeDark || !hasNativeDarkTheme()) startStyling();
   }
 
   function deactivate() {
@@ -483,7 +486,7 @@
   }
 
   function update(next) {
-    const shouldRebuild = isActive() && (next.theme !== settings.theme || next.smartEnabled !== settings.smartEnabled);
+    const shouldRebuild = isActive() && (next.theme !== settings.theme || next.smartEnabled !== settings.smartEnabled || next.ignoreNativeDark !== settings.ignoreNativeDark);
     if (baseStyle && (shouldRebuild || !colors.isEnabledForSite(next, location.hostname))) deactivate();
     settings = next;
     if (isActive()) activate();
@@ -496,9 +499,9 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!['enabled', 'theme', 'disabledHosts', 'smartEnabled'].some(key => Object.hasOwn(changes, key))) return;
+    if (!['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark'].some(key => Object.hasOwn(changes, key))) return;
     const next = {...settings};
-    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled']) {
+    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark']) {
       if (changes[key]) next[key] = changes[key].newValue ?? DEFAULTS[key];
     }
     update(next);
