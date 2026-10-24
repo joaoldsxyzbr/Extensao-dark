@@ -7,6 +7,8 @@
   const smartInput = $('smart-enabled');
   const nativeDarkInput = $('ignore-native-dark');
   const notice = $('notice');
+  const version = chrome.runtime?.getManifest?.().version;
+  if (version) $('extension-version').textContent = ` · v${version}`;
   let settings = {...DEFAULTS};
   let hostname = null;
 

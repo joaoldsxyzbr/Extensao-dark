@@ -57,6 +57,18 @@
     return hslToCss(h, Math.min(s * 0.48, 0.30), targetL);
   }
 
+  function mapNativeBackground(background, foreground, theme = 'deep') {
+    // Ao forçar a aparência, harmonizar superfícies que já são escuras.
+    // Nunca normalizar acentos coloridos, transparências ou textos escuros.
+    if (!background || !foreground || background.a < .95 || foreground.a < .7 ||
+        luminance(background) > .12 || luminance(foreground) < .45 ||
+        isVividAccent(background)) return null;
+    const {s, l} = rgbToHsl(background);
+    const base = PALETTE[theme] ?? PALETTE.deep;
+    const variation = Math.max(-.04, Math.min(.09, (l - .09) * .6));
+    return hslToCss(210, Math.min(.12, s * .35), Math.max(0, Math.min(.28, base + variation)));
+  }
+
   function mapTranslucentBackground(color, text, backdrop, theme = 'deep') {
     // Corrige apenas superfícies claramente claras com texto escuro sobre
     // um fundo escuro conhecido. Mantém o alpha e ignora overlays decorativos.
@@ -166,7 +178,7 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);
