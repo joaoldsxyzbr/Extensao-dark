@@ -93,14 +93,16 @@
 
   function neuralScore(background, foreground, ancestor, state) {
     if (!neural || !background || !foreground) return 0;
-    const extended = colors.contextFeatures(background, foreground, ancestor, state);
     const expected = neural.MODEL?.input ?? 7;
-    if (!extended || ![7, colors.CONTEXT_FEATURE_COUNT].includes(expected)) return 0;
-    // Até P2, o modelo publicado utiliza as primeiras sete características.
-    const features = extended.slice(0, expected);
-    // Todos os atributos entram na chave: a mesma cor pode ser uma aba ativa
-    // ou um cartão comum. Cache global pequeno e sem dados do usuário.
-    const key = features.map(n => Math.round(n * 128)).join(':');
+    // P4: não calcula as 11 dimensões adicionais para o modelo legado.
+    const features = expected === 7 ?
+      colors.neuralFeatures(background,foreground,ancestor,state) :
+      expected === colors.CONTEXT_FEATURE_COUNT ?
+      colors.contextFeatures(background,foreground,ancestor,state) : null;
+    if (!features) return 0;
+    // Chave sem arredondamento: duas superfícies com contraste diferente
+    // jamais compartilham acidentalmente a mesma previsão.
+    const key = features.join(':');
     if (predictionCache.has(key)) return predictionCache.get(key);
     const score = neural.probability(features);
     if (predictionCache.size >= 256) predictionCache.clear();
@@ -204,8 +206,9 @@
       // Limites físicos continuam protegendo cores escuras nativas e transparências.
       if (originalBackground && originalText && !isTranslucent && originalBackground.a >= .82 &&
           colors.luminance(originalBackground) >= .17 &&
-          neuralScore(originalBackground, originalText, inheritedBackground(element),
-            visual) >= .80) {
+          colors.neuralDecision(
+            neuralScore(originalBackground, originalText, inheritedBackground(element), visual),
+            visual, neural.MODEL?.input ?? 7).convert) {
         background = colors.mapBackground(originalBackground, settings.theme, true);
       }
     } else if (visual.action === 'convert') {
