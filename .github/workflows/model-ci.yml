@@ -51,6 +51,7 @@ jobs:
           path: |
             data/contextual-ci-candidate.json
             data/contextual-ci-metrics.json
+            data/contextual-ci-report.json
           if-no-files-found: ignore
           retention-days: 7
       - name: Executar testes de regressão

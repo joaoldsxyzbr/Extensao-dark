@@ -42,6 +42,9 @@ class ContextualTrainingTests(unittest.TestCase):
         model_path=DATA.parent.parent/"data/neural-model.json"
         original=model_path.read_bytes()
         model,metrics=run_training(epochs=2)
+        repeated,repeated_metrics=run_training(epochs=2)
+        self.assertEqual(export_model(model),export_model(repeated))
+        self.assertEqual(metrics,repeated_metrics)
         self.assertEqual(export_model(model)["layers"][0]["inputSize"],18)
         self.assertLess(metrics["loss"]["finalLoss"],metrics["loss"]["initialLoss"])
         self.assertEqual(model_path.read_bytes(),original)
