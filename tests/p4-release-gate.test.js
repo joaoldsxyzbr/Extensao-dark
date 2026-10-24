@@ -18,7 +18,7 @@ const synthetic={
 const benchmark={formatVersion:1,baselineMedianUs:18,candidateMedianUs:32,
   ratio:1.78,candidateBytes:5400,inputs:{baseline:7,candidate:18},iterations:4000};
 function real(ids,mode){
- return {completed:true,mode,results:ids.map(site=>({site,
+ return {completed:true,mode,candidateDeployed:false,results:ids.map(site=>({site,
   assessment:{status:'observed-no-regression'},
   baseline:{kind:'observed',capture:site+'-baseline.png'},
   candidate:{kind:'observed',capture:site+'-candidate.png'}}))};
