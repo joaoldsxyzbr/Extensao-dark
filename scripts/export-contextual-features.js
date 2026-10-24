@@ -100,9 +100,25 @@ function generate(policies=labels.families){
       vectors.set(key,row.y[0]);
       samples.push(row);
     }
+  // Âncoras de compatibilidade: APENAS linhas 'train' do corpus legado.
+  // Os conjuntos antigos validation/holdout permanecem reservados.
+  const legacy=require('../data/neural-cases.json').cases;
+  const legacyTrain=legacy.filter(row=>row.split==='train').map(row=>{
+    const bg=rgb(row.bg),fg=rgb(row.fg),parent=rgb(row.parent);
+    const state={kind:row.control?'control':'surface',control:!!row.control,
+      selected:!!row.selected,disabled:false,masked:false,pseudo:false,
+      clipped:false,backgroundImage:false,translucent:bg.a>=.12&&bg.a<.95,
+      nativeDark:colors.isNativeDarkSurface(row.bg,row.fg),
+      compact:false,contrast:colors.contrastRatio(bg,fg)};
+    const x=colors.contextFeatures(bg,fg,parent,state);
+    if(!x || x.length!==18)throw Error('Falha na compatibilidade legado: '+row.id);
+    return {id:'legacy:'+row.id,split:'train',source:'legacy-train-only',
+      x:x.map(n=>Number(n.toFixed(12))),y:[row.label]};
+  });
+  if(legacyTrain.length!==82)throw Error('Split train legado alterado');
   return {formatVersion:2,featureCount:18,origin:'curated-synthetic-policy',
-    note:'Variações geradas de famílias, NÃO observações reais independentes; split por família.',
-    samples};
+    note:'Variações geradas de famílias, NÃO observações reais independentes; split por família. Âncoras legadas SOMENTE do treino.',
+    samples,legacyTrain};
 }
 function main(){
   const data=generate();
