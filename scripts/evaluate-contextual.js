@@ -35,6 +35,10 @@ for(const split of ['validation','holdout']){
   const rows=samples.samples.filter(row=>row.split===split);
   const baseline=measure(rows,current,7),trained=measure(rows,candidate,18);
   report[split]={baseline,trained};
+  const failingFamilies=Object.entries(rows.filter(row=>
+    predict(candidate,row.x)!==(row.y[0]===1)).reduce((totals,row)=>
+    (totals[row.group]=(totals[row.group]||0)+1,totals),{}));
+  console.log(split+': '+JSON.stringify({baseline,trained,failingFamilies}));
   assert.ok(trained.accuracy>=.90,
     split+': precisão geral insuficiente no conjunto sintético: '+trained.accuracy);
   assert.ok(trained.precision>=.90 && trained.recall>=.80,
