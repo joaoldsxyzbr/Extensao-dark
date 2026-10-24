@@ -47,8 +47,10 @@ function browserHarness(initialDark = false, initialSettings = {}) {
     Node:{ELEMENT_NODE:1},NodeFilter:{SHOW_ELEMENT:1},
     chrome:{storage:{local:{get:async defaults=>({...defaults,...initialSettings})},
       onChanged:{addListener(listener){storageChangeListener=listener;}}}},
-    getComputedStyle: el=>({backgroundColor:el.style.getPropertyValue('background-color')||el.sourceBackground,
-      color:el.style.getPropertyValue('color')||el.sourceColor,
+    getComputedStyle: el=>({backgroundColor:el.style.getPropertyValue('background-color') ||
+        (root.hasAttribute('dark') ? 'rgb(18,20,24)' : el.sourceBackground),
+      color:el.style.getPropertyValue('color') ||
+        (root.hasAttribute('dark') ? 'rgb(235,235,235)' : el.sourceColor),
       backgroundImage:'none',colorScheme:'light'}),
     MutationObserver:class {constructor(cb){this.cb=cb;this.active=false;observers.push(this);}
       observe() {this.active=true;} disconnect(){this.active=false;}},
@@ -119,4 +121,19 @@ test('configuração global respeita exceção do site e a paleta selecionada', 
   await active.settle();
   assert.equal(active.root.hasAttribute('data-extensao-dark'),true);
   assert.match(active.styles.at(-1).textContent,/background-color: #000000 !important/);
+});
+
+test('forçar tema global realmente altera superfícies escuras nativas e restaura depois', async () => {
+  const page=browserHarness(true);
+  await page.settle();
+  assert.equal(page.body.style.getPropertyValue('background-color'),'');
+  await page.updateSettings({ignoreNativeDark:true,theme:'soft'});
+  const soft=page.body.style.getPropertyValue('background-color');
+  assert.match(soft,/^rgb\(/,'não basta trocar o CSS do body: o motor deve converter superfícies nativas');
+  assert.equal(page.body.style.getPropertyPriority('background-color'),'important');
+  await page.updateSettings({theme:'amoled'});
+  const amoled=page.body.style.getPropertyValue('background-color');
+  assert.notEqual(amoled,soft,'as opções de aparência devem funcionar também em páginas nativamente escuras');
+  await page.updateSettings({ignoreNativeDark:false});
+  assert.equal(page.body.style.getPropertyValue('background-color'),'','desligar deve restaurar o estilo original');
 });
