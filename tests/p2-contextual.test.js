@@ -68,3 +68,19 @@ test('P2: treinamento vê sobreposições translúcidas sem acessar família do 
   assert.ok(data.samples.filter(r=>r.group==='translucent')
     .every(r=>r.split==='holdout'&&r.y[0]===0));
 });
+
+test('P2: dados legados adicionados apenas do split treino',()=>{
+  const source=require('../data/neural-cases.json').cases;
+  const train=new Set(source.filter(r=>r.split==='train').map(r=>'legacy:'+r.id));
+  const reserved=new Set(source.filter(r=>r.split!=='train').map(r=>'legacy:'+r.id));
+  const data=generate();
+  assert.equal(data.legacyTrain.length,82);
+  for(const row of data.legacyTrain){
+    assert.ok(train.has(row.id));
+    assert.ok(!reserved.has(row.id));
+    assert.equal(row.source,'legacy-train-only');
+    assert.equal(row.split,'train');
+    assert.equal(row.x.length,18);
+  }
+  assert.equal(data.samples.length,2520);
+});
