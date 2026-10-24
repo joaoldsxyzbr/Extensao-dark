@@ -284,8 +284,8 @@ modelo atual de 7 entradas versus candidato contextual de 18 entradas montado
 apenas numa **cópia temporária** da extensão. O laboratório amostra contraste
 de textos e ícones mascarados, mudanças de cor, contagem de elementos e tempo de
 navegação; salva capturas para avaliação humana. A lista aprovada inclui
-Example.com, Wikipedia, MDN, GitHub, Roblox e YouTube; a execução padrão cobre
-Example.com, Wikipedia e GitHub. Sites inacessíveis são **inconclusivos**, nunca
+Example.com, Wikipedia, MDN, GitHub, Roblox e YouTube; o comando padrão cobre
+Example.com, Wikipedia e GitHub, enquanto o CI verifica os seis sites. Sites inacessíveis são **inconclusivos**, nunca
 aprovados. Não são coletados textos da página, valores, senhas ou dados de conta.
 
 Na primeira execução, os três sites padrão foram observados sem pioras detectadas

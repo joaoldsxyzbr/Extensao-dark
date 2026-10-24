@@ -7,7 +7,7 @@ em páginas públicas reais, com Chrome/Chromium em perfis descartáveis.
 
 ## Escopo implementado
 - `scripts/real-site-audit.js`: allowlist fixa de 6 sites públicos (example.com,
-  Wikipedia, MDN, GitHub, Roblox, YouTube) com amostra padrão `example,wikipedia,github`.
+  Wikipedia, MDN, GitHub, Roblox, YouTube) com amostra padrão no CLI `example,wikipedia,github` e os seis sites no CI.
 - `scripts/real-site-snapshot.js`: analisa apenas cores CSS e contagens de componentes
   visíveis; calcula contraste nominal do texto (3:1 para texto grande, 4,5:1 para normal)
   e de ícones com máscara CSS (3:1). Não inclui textos ou valores de formulários.
@@ -30,6 +30,8 @@ node scripts/real-site-lab.js --sites=example,wikipedia,github --output=browser-
 O Chrome for Testing precisa estar disponível em `CHROME_BIN`, ou Chromium no PATH.
 Para testar mais páginas públicas, use `--sites=roblox,mdn,youtube`, sempre dentro
 da allowlist. Não forneça URLs privadas ou páginas autenticadas.
+
+A coleta de seis sites acontece a cada execução do workflow de navegador. Sites dinâmicos podem carregar banners ou telas de login e não permitem afirmar qualidade global a partir de poucas amostras.
 
 ## Leitura correta dos resultados
 - `observed-no-regression`: nenhum dos indicadores amostrados piorou além do
