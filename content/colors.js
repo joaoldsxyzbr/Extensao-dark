@@ -236,11 +236,29 @@
       bit(context.nativeDark),bit(context.compact));
   }
 
+  // P4: separa confiança do modelo de autorização para modificar um
+  // componente. Nunca converte grafismos, transparências ou superfícies
+  // já escuras. O candidato contextual exige margem extra de confiança.
+  function neuralDecision(score, context, modelInputs=7) {
+    if (!context || !Number.isFinite(score) || score<0 || score>1 ||
+        ![7,18].includes(modelInputs)) return {convert:false,reason:'invalid'};
+    if (context.action!=='convert' || context.kind==='graphic' ||
+        context.masked || context.clipped || context.backgroundImage ||
+        context.pseudo || context.translucent || context.nativeDark) {
+      return {convert:false,reason:'protected'};
+    }
+    if (modelInputs===18 && context.control && (context.selected || context.disabled))
+      return {convert:false,reason:'control-state'};
+    const threshold=modelInputs===18?.90:.80;
+    return {convert:score>=threshold,
+      reason:score>=threshold?'approved':'low-confidence'};
+  }
+
   function isEnabledForSite(settings, hostname) {
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, neuralDecision, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);

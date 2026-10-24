@@ -169,3 +169,22 @@ test('P1: proteções semânticas continuam ativas com rede neural desligada',as
     childRole:'img',childBg:'rgb(245,245,245)',childFg:'rgb(10,10,10)'});
   assert.equal(child.style.getPropertyValue('background-color'),'');
 });
+
+test('P4: confiança de 0.85 só permite conversão no modelo legado',async()=>{
+  const base={childBg:'rgb(200,200,200)',childFg:'rgb(12,12,12)'};
+  const legacy={MODEL:{input:7},probability:()=>.85};
+  const candidate={MODEL:{input:18},probability:()=>.85};
+  const oldPage=await runPage({...base,model:legacy});
+  const newPage=await runPage({...base,model:candidate});
+  assert.match(oldPage.child.style.getPropertyValue('background-color'),/^rgb\(/);
+  assert.equal(newPage.child.style.getPropertyValue('background-color'),'');
+  const strong=await runPage({...base,model:{MODEL:{input:18},probability:()=>.96}});
+  assert.match(strong.child.style.getPropertyValue('background-color'),/^rgb\(/);
+});
+
+test('P4: candidato não modifica estados selecionados de controles',async()=>{
+  const candidate={MODEL:{input:18},probability:()=>1};
+  const page=await runPage({childBg:'rgb(220,220,220)',childFg:'rgb(12,12,12)',
+    childRole:'tab',childSelected:true,model:candidate});
+  assert.equal(page.child.style.getPropertyValue('background-color'),'');
+});
