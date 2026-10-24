@@ -174,11 +174,73 @@
       luminance(bg) <= 0.12 && luminance(fg) >= 0.45);
   }
 
+
+  // P1: contexto visual usado pelo motor ANTES de transformar qualquer cor.
+  // Não consulta texto da página, valores de formulário ou qualquer URL externa.
+  function visualContext(element, style={}, readPseudo) {
+    const tag=String(element?.tagName||'').toUpperCase();
+    const attr=name=>element?.getAttribute?.(name)??null;
+    const role=String(attr('role')||'').toLowerCase();
+    const cls=String(attr('class')||'');
+    const present=value=>typeof value==='string'&&value.trim()!==''&&value.trim()!=='none';
+    const masked=present(style.maskImage)||present(style.webkitMaskImage);
+    const backgroundImage=present(style.backgroundImage);
+    const clipped=present(style.clipPath)||present(style.webkitClipPath);
+    const control=['INPUT','SELECT','TEXTAREA','BUTTON','PROGRESS','METER'].includes(tag)||
+      /^(button|checkbox|radio|switch|textbox|combobox|searchbox|tab|slider)$/.test(role);
+    const state=attr('data-state'),current=attr('aria-current');
+    const selected=attr('aria-selected')==='true'||attr('aria-pressed')==='true'||
+      (current!=null&&current!=='false')||['active','selected','checked'].includes(state)||
+      /(?:^|\s)(?:active|selected|current)(?:\s|$)/i.test(cls);
+    const disabled=element?.hasAttribute?.('disabled')===true||attr('aria-disabled')==='true';
+    const w=parseFloat(style.width),h=parseFloat(style.height);
+    const compact=Number.isFinite(w)&&w>0&&w<=72&&Number.isFinite(h)&&h>0&&h<=72;
+    const graphicRole=['img','presentation','none'].includes(role);
+    const iconName=/(?:^|[-_\s])(icon|glyph|sprite|pictogram|symbol|pseudo)(?:$|[-_\s])/i.test(cls);
+    const wrapper=compact&&['SPAN','I','B','EM','A','BUTTON','DIV'].includes(tag);
+    const hasGraphicChild=wrapper&&element?.querySelector?.('svg, img, canvas, picture')!=null;
+    let pseudo=false;
+    if(wrapper&&(graphicRole||iconName)&&!masked&&!backgroundImage&&typeof readPseudo==='function'){
+      try {
+        pseudo=Boolean(readPseudo()?.some(s=>s&&(
+          present(s.maskImage)||present(s.webkitMaskImage)||
+          present(s.backgroundImage)||(present(s.content)&&iconName))));
+      }catch { /* Pseudo-elementos podem ser indisponíveis no ambiente. */ }
+    }
+    const graphic=masked||backgroundImage||clipped||graphicRole||
+      ['SVG','PATH','IMG','PICTURE','CANVAS','VIDEO','AUDIO','SOURCE'].includes(tag)||
+      (compact&&iconName)||hasGraphicChild||pseudo;
+    const bg=parseColor(style.backgroundColor),fg=parseColor(style.color);
+    const text=['P','H1','H2','H3','H4','H5','H6','SMALL','LABEL','STRONG',
+      'EM','A','SPAN','CODE','PRE','LI'].includes(tag);
+    const kind=graphic?'graphic':control?'control':text&&(!bg||bg.a<.12)?'text':'surface';
+    const action=graphic?'preserve':kind==='text'?'contrast':'convert';
+    return Object.freeze({kind,action,control,selected,disabled,masked,backgroundImage,
+      clipped,compact,pseudo,translucent:Boolean(bg&&bg.a>=.12&&bg.a<.95),
+      nativeDark:isNativeDarkSurface(style.backgroundColor,style.color),
+      contrast:contrastRatio(bg,fg)});
+  }
+
+  // P1: vetor preparado para treino contextual futuro; as 7 primeiras dimensões
+  // continuam idênticas às do modelo versionado existente.
+  const CONTEXT_FEATURE_COUNT=18;
+  function contextFeatures(background,foreground,ancestor,context={}) {
+    const base=neuralFeatures(background,foreground,ancestor,context);
+    if(!base)return null;
+    const bit=value=>value?1:0;
+    return base.concat([
+      context.kind==='graphic',context.backgroundImage,context.masked,
+      context.pseudo,context.clipped,context.control,context.disabled,
+      context.translucent
+    ].map(bit),Math.max(0,Math.min(1,(Number(context.contrast)||1)/21)),
+      bit(context.nativeDark),bit(context.compact));
+  }
+
   function isEnabledForSite(settings, hostname) {
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, isEnabledForSite});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, isEnabledForSite});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);
