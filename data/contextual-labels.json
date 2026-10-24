@@ -1,0 +1,156 @@
+{
+  "formatVersion": 2,
+  "description": "Políticas supervisionadas definidas por família visual para laboratório SINTÉTICO. Preservar ou corrigir texto => label 0. Converter superfícies claras => label 1. Nunca inferir acurácia na web real. Holdout separado por família.",
+  "families": [
+    {
+      "family": "paragraph",
+      "split": "train",
+      "policy": "contrast"
+    },
+    {
+      "family": "button",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "input",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "checkbox",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "tab",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "menu",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "badge",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "alert",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "card",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "table",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "svg-icon",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "image",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "canvas",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "video",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "gradient",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "shadow-dom",
+      "split": "train",
+      "policy": "convert"
+    },
+    {
+      "family": "native-scheme",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "iframe",
+      "split": "train",
+      "policy": "preserve"
+    },
+    {
+      "family": "link",
+      "split": "validation",
+      "policy": "contrast"
+    },
+    {
+      "family": "textarea",
+      "split": "validation",
+      "policy": "convert"
+    },
+    {
+      "family": "radio",
+      "split": "validation",
+      "policy": "convert"
+    },
+    {
+      "family": "tooltip",
+      "split": "validation",
+      "policy": "convert"
+    },
+    {
+      "family": "pseudo-icon",
+      "split": "validation",
+      "policy": "preserve"
+    },
+    {
+      "family": "dynamic",
+      "split": "validation",
+      "policy": "convert"
+    },
+    {
+      "family": "muted-text",
+      "split": "holdout",
+      "policy": "contrast"
+    },
+    {
+      "family": "select",
+      "split": "holdout",
+      "policy": "convert"
+    },
+    {
+      "family": "progress",
+      "split": "holdout",
+      "policy": "convert"
+    },
+    {
+      "family": "dialog",
+      "split": "holdout",
+      "policy": "convert"
+    },
+    {
+      "family": "masked-icon",
+      "split": "holdout",
+      "policy": "preserve"
+    },
+    {
+      "family": "translucent",
+      "split": "holdout",
+      "policy": "preserve"
+    }
+  ]
+}
