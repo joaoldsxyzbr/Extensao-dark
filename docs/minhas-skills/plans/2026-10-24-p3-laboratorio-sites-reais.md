@@ -53,6 +53,18 @@ no workflow e aparecem no resumo do GitHub Actions. Um workflow verde
 significa que a infraestrutura e testes estruturais funcionaram, não que
 todas as páginas passaram na inspeção visual.
 
+## Modo global forçado (2026-10-24)
+Na execução [40127702557](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40127702557),
+o laboratório comparou os modelos em instalações descartáveis com a opção
+**ignorar tema nativo** forçada: Roblox, YouTube e GitHub foram observados
+sem piora nos indicadores amostrados (3 de 3). A detecção automática,
+por sua vez, registrou Roblox como inconclusivo. Esse contraste reforça a
+necessidade de testar separadamente ambos os modos.
+
+As observações automáticas **não comprovam** correção completa dos ícones
+no Roblox. A revisão das capturas ainda precisa avaliar os componentes
+da interface e os estados de interação.
+
 ## Leitura correta dos resultados
 - `observed-no-regression`: nenhum dos indicadores amostrados piorou além do
   limiar; não equivale a aparência aprovada nem a zero erros.
