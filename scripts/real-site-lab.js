@@ -16,21 +16,34 @@ const OUTPUT=path.resolve(opt('output')||path.join(os.tmpdir(),'extensao-dark-re
 const CANDIDATE=path.resolve(opt('candidate')||path.join(ROOT,'data/contextual-ci-candidate.json'));
 const SITES=chooseSites(opt('sites'));
 const REPORT=path.join(OUTPUT,'real-sites-report.json');
-function candidateExtension(candidate,folder){
+const FORCE_NATIVE=process.argv.includes('--force-native');
+function copyExtension(folder,{forceNativeDark=false}={}){
+  for(const sub of ['content','vendor','icons','popup'])
+    fs.cpSync(path.join(ROOT,sub),path.join(folder,sub),{recursive:true});
+  fs.copyFileSync(path.join(ROOT,'manifest.json'),path.join(folder,'manifest.json'));
+  if(forceNativeDark){
+    const file=path.join(folder,'content/content.js');
+    const before=fs.readFileSync(file,'utf8');
+    assert.equal(before.split('ignoreNativeDark: false').length,2,
+      'Contrato de preferência global mudou: revisão obrigatória no laboratório');
+    fs.writeFileSync(file,before.replace('ignoreNativeDark: false','ignoreNativeDark: true'),'utf8');
+  }
+}
+function baselineExtension(folder,options={}){
+  copyExtension(folder,options);
+}
+function candidateExtension(candidate,folder,options={}){
   const loaded=core.loadModel(candidate);
   assert.equal(loaded.inputSize,18,'Candidato deve usar o contexto P1 de 18 entradas');
   assert.equal(loaded.outputSize,1,'Modelo sem saída de classificação');
   const baseline=core.loadModel(JSON.parse(fs.readFileSync(path.join(ROOT,'data/neural-model.json'),'utf8')));
   assert.equal(baseline.inputSize,7,'O modelo publicado foi alterado inesperadamente');
-  for(const sub of ['content','vendor','icons','popup'])
-    fs.cpSync(path.join(ROOT,sub),path.join(folder,sub),{recursive:true});
-  fs.copyFileSync(path.join(ROOT,'manifest.json'),path.join(folder,'manifest.json'));
+  copyExtension(folder,options);
   const adapter=path.join(folder,'content/neural.js');
   const source=fs.readFileSync(adapter,'utf8');
   const regex=/const definition = [^\n]+;\nlet loaded;/;
   assert.match(source,regex,'Adaptador neural mudou: revisar montagem isolada');
-  const rewritten=source.replace(regex,'const definition = '+JSON.stringify(candidate)+';\nlet loaded;');
-  fs.writeFileSync(adapter,rewritten,'utf8');
+  fs.writeFileSync(adapter,source.replace(regex,'const definition = '+JSON.stringify(candidate)+';\nlet loaded;'),'utf8');
   assert.doesNotMatch(fs.readFileSync(path.join(ROOT,'content/neural.js'),'utf8'),
     /"inputSize":18,"outputSize":14/,'não alterar o modelo distribuído');
 }
@@ -72,19 +85,24 @@ async function main(){
   browserPath();
   fs.mkdirSync(OUTPUT,{recursive:true});
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-p3-model-'));
+  const baselineDir=path.join(temp,'baseline');
+  const candidateDir=path.join(temp,'candidate');
   const report={
     formatVersion:1,mode:'public-sites-observational',siteIds:SITES.map(s=>s.id),
     comparison:'deployed-7d-versus-ephemeral-candidate-18d',
+    mode:FORCE_NATIVE?'global-ignore-native-dark':'automatic-native-detection',
     measurements:'public-landing-page-dom-colors-and-masked-icons',
     noPersonalData:true,
     candidateDeployed:false,results:[]
   };
   try {
-    candidateExtension(JSON.parse(fs.readFileSync(CANDIDATE,'utf8')),temp);
+    baselineExtension(baselineDir,{forceNativeDark:FORCE_NATIVE});
+    candidateExtension(JSON.parse(fs.readFileSync(CANDIDATE,'utf8')),candidateDir,
+      {forceNativeDark:FORCE_NATIVE});
     update(report);
     for(const site of SITES){
-      const baseline=await observe(site,'baseline',ROOT);
-      const candidate=await observe(site,'candidate',temp);
+      const baseline=await observe(site,'baseline',baselineDir);
+      const candidate=await observe(site,'candidate',candidateDir);
       const assessment=baseline.kind==='observed'&&candidate.kind==='observed'
         ?assessPair(site,baseline.summary,candidate.summary)
         :{status:'inconclusive',reason:'página não carregou nos dois perfis'};
@@ -103,6 +121,24 @@ async function main(){
     report.promotion=promotionGate(report.results);
     report.completed=true;
     update(report);
+    const warnings=report.results.filter(item=>item.assessment.status!=='observed-no-regression');
+    for(const item of warnings) console.warn(
+      '::warning title=P3 '+item.site+'::'+item.assessment.status);
+    if(process.env.GITHUB_STEP_SUMMARY){
+      const lines=[
+        '### Laboratório P3 — '+report.mode,
+        '',
+        '| Site | Resultado |',
+        '|---|---|',
+        ...report.results.map(item=>'| '+item.site+' | '+item.assessment.status+' |'),
+        '',
+        '**Promoção do modelo: bloqueada.** Revisão visual ainda obrigatória.',
+        ''
+      ];
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('
+')+'
+');
+    }
     console.log('P3 evidência registrada:',REPORT,JSON.stringify(report.promotion));
     if(report.promotion.observed===0 && report.promotion.needsReview===0)
       console.warn('P3: nenhum site comparável; relatório INCONCLUSIVO, não aprovado.');
@@ -116,4 +152,4 @@ if(require.main===module)main().catch(error=>{
   console.error('Falha estrutural do laboratório P3:',error.stack||error);
   process.exitCode=1;
 });
-module.exports={candidateExtension,observe,main};
+module.exports={candidateExtension,baselineExtension,observe,main};
