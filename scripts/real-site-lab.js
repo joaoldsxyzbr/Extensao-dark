@@ -18,6 +18,7 @@ const SITES=chooseSites(opt('sites'));
 const REPORT=path.join(OUTPUT,'real-sites-report.json');
 const FORCE_NATIVE=process.argv.includes('--force-native');
 function copyExtension(folder,{forceNativeDark=false}={}){
+  fs.mkdirSync(folder,{recursive:true});
   for(const sub of ['content','vendor','icons','popup'])
     fs.cpSync(path.join(ROOT,sub),path.join(folder,sub),{recursive:true});
   fs.copyFileSync(path.join(ROOT,'manifest.json'),path.join(folder,'manifest.json'));
