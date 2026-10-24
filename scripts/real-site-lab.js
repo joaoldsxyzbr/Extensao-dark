@@ -136,9 +136,7 @@ async function main(){
         '**Promoção do modelo: bloqueada.** Revisão visual ainda obrigatória.',
         ''
       ];
-      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('
-')+'
-');
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
     }
     console.log('P3 evidência registrada:',REPORT,JSON.stringify(report.promotion));
     if(report.promotion.observed===0 && report.promotion.needsReview===0)
