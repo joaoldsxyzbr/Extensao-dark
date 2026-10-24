@@ -241,3 +241,38 @@ Máscaras, clip-path, role=img, wrappers com SVG, imagens de fundo e pseudo-elem
 O vetor contextual preparado tem **18 dimensões**, mas os pesos publicados ainda usam as **7 entradas** originais. O P2 será responsável pelo treinamento e avaliação de um modelo contextual; não há novos pesos aprovados no P1.
 
 Sem dependências, telemetria, coleta de navegação ou serviços remotos. Veja [documentação P1](docs/minhas-skills/plans/2026-10-24-p1-contexto-semantico.md).
+
+## P2 — Treinamento supervisionado contextual (candidato, não publicado)
+
+O P2 acrescenta políticas sintéticas explícitas em `data/contextual-labels.json`:
+30 famílias separadas em **18 treino, 6 validação e 6 holdout**, sem misturar
+famílias entre as etapas. As variações de sete paletas, quatro estados e
+três tamanhos produzem **2.520 exemplos sintéticos correlacionados**; não
+equivalem a 2.520 páginas reais independentes.
+
+O fluxo usa o extrator JS de **18 características** do P1, treina
+um candidato Python **18→14→1**, compara com a rede distribuída de
+7 entradas em JavaScript e exige limites de qualidade sem alterar pesos da
+extensão. Os **82 exemplos legados de treino** servem de âncoras de
+compatibilidade; os 18 de validação e 32 de holdout antigos continuam
+reservados e agora são um bloqueio obrigatório contra regressão.
+
+Resultado do candidato testado no P2: **98,41% de acerto, zero falsos
+positivos e 8 falsos negativos** no holdout contextual sintético
+(504 variações); baseline no mesmo conjunto: **83,93%**. No holdout legado
+obteve **32/32** contra 32/32 da versão atual. Esses números não são
+resultados em sites reais; não justificam implantação automática.
+
+```bash
+node scripts/export-contextual-features.js
+python3 -m training.train_contextual --output data/contextual-ci-candidate.json --metrics data/contextual-ci-metrics.json
+node scripts/evaluate-contextual.js
+node --test tests/p2-contextual.test.js
+python3 -m unittest discover -s training_tests -v
+```
+
+O GitHub Actions arquiva modelo e métricas por sete dias. **A produção continua
+com o modelo de sete entradas.** Os novos pesos só deverão ser promovidos após
+testes visuais e avaliação em páginas reais do P3, evitando publicar um
+classificador que só decorou exemplos gerados. Veja
+[plano P2](docs/minhas-skills/plans/2026-10-24-p2-treinamento-contextual.md).
