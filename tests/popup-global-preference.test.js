@@ -23,7 +23,7 @@ test('botão global salva a preferência mesmo numa aba sem domínio HTTP', asyn
     chrome:{
       storage:{local:{get:async defaults=>defaults,set:async data=>saved.push(data)},onChanged:{addListener(){}}},
       tabs:{query:async()=>[{url:'chrome://extensions'}]},
-      runtime:{getManifest:()=>({version:'0.5.1'})}
+      runtime:{getManifest:()=>({version:'0.5.2'})}
     }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../popup/popup.js'),'utf8'),world);
@@ -31,7 +31,7 @@ test('botão global salva a preferência mesmo numa aba sem domínio HTTP', asyn
   const toggle=element('ignore-native-dark');
   assert.equal(toggle.checked,false);
   assert.equal(toggle.disabled,false);
-  assert.equal(element('extension-version').textContent,' · v0.5.1');
+  assert.equal(element('extension-version').textContent,' · v0.5.2');
   toggle.checked=true;
   toggle.listeners.get('change')();
   for(let i=0;i<5;i++)await Promise.resolve();
