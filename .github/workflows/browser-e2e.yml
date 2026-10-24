@@ -28,6 +28,12 @@ jobs:
         run: python3 scripts/prepare-browser-fixtures.py
       - name: Executar navegador real e comparar capturas
         run: node scripts/browser-e2e.js --output=browser-results --compare-extension="$DARK_READER_TEST_PATH"
+      - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
+        run: |
+          node scripts/export-contextual-features.js
+          python3 -m training.train_contextual --output data/contextual-ci-candidate.json --epochs 65
+      - name: Coletar observações em páginas públicas reais com perfis isolados
+        run: node scripts/real-site-lab.js --output=browser-results --sites=example,wikipedia,github
       - name: Salvar relatórios e capturas de teste
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
