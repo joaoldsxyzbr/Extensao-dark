@@ -63,6 +63,10 @@ function makeRow(p,palette,state,size){
     clipPath:'none',webkitClipPath:'none'
   };
   if(p.policy==='contrast')style.backgroundColor='rgba(0,0,0,0)';
+  // Exemplos de cartões temporariamente translúcidos no TREINO, sem usar
+  // a família "translucent" (reservada inteira no holdout).
+  if(['card','alert'].includes(p.family)&&state==='hover')
+    style.backgroundColor=palette.type==='light'?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.45)';
   if(p.family==='translucent')style.backgroundColor=palette.type==='light'?'rgba(255,255,255,0.55)':'rgba(255,255,255,0.45)';
   if(p.family==='iframe')style.backgroundColor='rgba(0,0,0,0)';
   if(p.family==='badge')style.backgroundColor='rgb(8,115,235)';
@@ -74,7 +78,7 @@ function makeRow(p,palette,state,size){
   const x=colors.contextFeatures(background,foreground,rgb(palette.parent),context);
   if(!x || x.length!==colors.CONTEXT_FEATURE_COUNT || !x.every(Number.isFinite))
     throw Error('Falha no vetor contextual: '+p.family);
-  const label=Number(p.policy==='convert'&&palette.type==='light');
+  const label=Number(p.policy==='convert'&&palette.type==='light'&&!context.translucent);
   // Um gráfico nunca pode se tornar uma superfície por engano na curadoria.
   if(p.policy==='preserve' && label!==0)throw Error('Gráfico rotulado para recolorir');
   return {id:[p.family,palette.id,state,size].join(':'),group:p.family,split:p.split,
