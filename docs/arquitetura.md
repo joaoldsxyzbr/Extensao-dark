@@ -60,3 +60,15 @@ O avaliador calcula a cor aparente da superfície por composição alfa de fundo
 ## Experimento P4: modelo de contexto 7–12–1
 
 As sete entradas normalizadas são: luminância do fundo, luminância do texto, opacidade do fundo, saturação, luminância do ancestral, indicador de controle e indicador de estado selecionado. Extrator único `colors.neuralFeatures` é usado tanto no treinamento quanto na extensão para evitar discrepância. O treino determinístico usa cenários rotulados manualmente mais pequenas variações de cor; exemplos reservados por **cenário** avaliam erros, com comparação à heurística original. Os dados continuam sintéticos. Regras determinísticas mantêm a responsabilidade pela composição de transparências, contraste, mídias e temas escuros nativos. O modelo não produz cores RGB, não coleta dados e não se atualiza automaticamente.
+
+## Atualização v0.6.2 — Estado atual
+
+As notas de versões 0.2–0.4 acima são histórico, não representam o motor vigente.
+O motor distribuído usa 7 entradas neurais mais reconhecimento semântico antes
+da conversão. O candidato de 18 entradas só é treinado e avaliado no CI,
+com limiar de 90% e gate conservador; **não é publicado** automaticamente.
+Em páginas com modo nativo comprovado, a extensão é corretamente pausada
+por padrão. O laboratório registra esse caso em categoria própria, e não
+confunde uma falha sem evidência com preservação intencional. Iframes HTTP(S)
+agora podem receber o motor; `about:blank`, `srcdoc` e raízes Shadow DOM
+fechadas não são cobertos.
