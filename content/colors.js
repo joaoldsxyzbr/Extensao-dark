@@ -195,7 +195,7 @@
     const disabled=element?.hasAttribute?.('disabled')===true||attr('aria-disabled')==='true';
     const w=parseFloat(style.width),h=parseFloat(style.height);
     const compact=Number.isFinite(w)&&w>0&&w<=72&&Number.isFinite(h)&&h>0&&h<=72;
-    const graphicRole=['img','presentation','none'].includes(role);
+    const graphicRole=role==='img';
     const iconName=/(?:^|[-_\s])(icon|glyph|sprite|pictogram|symbol|pseudo)(?:$|[-_\s])/i.test(cls);
     const wrapper=compact&&['SPAN','I','B','EM','A','BUTTON','DIV'].includes(tag);
     const hasGraphicChild=wrapper&&element?.querySelector?.('svg, img, canvas, picture')!=null;
