@@ -20,8 +20,12 @@
   let observedShadowRoots = new WeakSet();
   let baseStyle = null;
 
+  const ancestorOrigins=Array.from(location.ancestorOrigins || []);
+  function isEnabledInFrame(value) {
+    return colors.isEnabledForFrame(value, location.hostname, ancestorOrigins);
+  }
   function isActive() {
-    return colors.isEnabledForSite(settings, location.hostname);
+    return isEnabledInFrame(settings);
   }
 
   function hasExplicitDarkTheme() {
@@ -481,7 +485,7 @@
 
   function update(next) {
     const shouldRebuild = isActive() && (next.theme !== settings.theme || next.smartEnabled !== settings.smartEnabled || next.ignoreNativeDark !== settings.ignoreNativeDark);
-    if (baseStyle && (shouldRebuild || !colors.isEnabledForSite(next, location.hostname))) deactivate();
+    if (baseStyle && (shouldRebuild || !isEnabledInFrame(next))) deactivate();
     settings = next;
     if (isActive()) activate();
   }
