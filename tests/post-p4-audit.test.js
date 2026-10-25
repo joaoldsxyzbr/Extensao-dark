@@ -23,7 +23,7 @@ test('Auditoria: aria presentation/none não transforma um cartão em imagem',()
     assert.equal(context.kind,'surface',role);
     assert.equal(context.action,'convert',role);
   }
-  const icon=colors.visualContext(mock('img',{},{tagName:'SPAN'}),{...defaultStyle,width:'24px',height:'24px'});
+  const icon=colors.visualContext(mock('img',{},'SPAN'),{...defaultStyle,width:'24px',height:'24px'});
   assert.equal(icon.action,'preserve');
   const masked=colors.visualContext(mock('none'),{...defaultStyle,maskImage:'url(icon.svg)'});
   assert.equal(masked.action,'preserve');
