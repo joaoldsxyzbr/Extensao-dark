@@ -47,7 +47,12 @@ function assessPair(site,baseline,candidate){
     return {status:'inconclusive',reason:'Sem amostras suficientes, URL mudou ou carregamento bloqueado'};
   }
   if(!baseline.extensionActive||!candidate.extensionActive){
-    return {status:'inconclusive',reason:'Extensão não ativou em ambas as execuções (possível tema escuro nativo)'};
+    if(!baseline.extensionActive&&!candidate.extensionActive&&
+       baseline.nativeDarkDetected===true&&candidate.nativeDarkDetected===true){
+      return {status:'expected-native-dark-skip',evidence:'native-dark-both-models',
+        reason:'As duas versões preservaram o tema nativo detectado'};
+    }
+    return {status:'inconclusive',reason:'Extensão inativa sem evidência consistente de tema escuro nativo'};
   }
   const ratio=(snapshot,key,base)=>snapshot[base]?snapshot[key]/snapshot[base]:0;
   const oldText=ratio(baseline,'weakText','sampledText');
@@ -77,6 +82,7 @@ function promotionGate(results){
   // humana de capturas, rótulos independentes e teste de UX em sites reais.
   return {ready:false,reason:'Revisão visual manual e validação externa ainda são obrigatórias',
     observed:pairs.filter(a=>a.status==='observed-no-regression').length,
+    expectedSkips:pairs.filter(a=>a.status==='expected-native-dark-skip').length,
     needsReview:pairs.filter(a=>a.status==='needs-review').length,
     inconclusive:pairs.filter(a=>a.status==='inconclusive').length};
 }

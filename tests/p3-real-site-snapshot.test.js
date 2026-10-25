@@ -26,3 +26,11 @@ test('P3: texto grande e ícones claros aprovam contraste sem inventar mediçõe
   assert.equal(summary.weakIcons,0);
   assert.throws(()=>summarize({}),/inválida/);
 });
+
+test('Auditoria: evidência de tema nativo é resumida sem capturar atributos privados',()=>{
+  const r=summarize({landingUrl:'https://example.com/',totalElements:20,
+    extensionActive:false,nativeDarkDetected:true,changedBackgrounds:0,
+    sampled:[{fg:'rgb(200,200,200)',bg:'rgb(12,12,12)',font:'14px',weight:'400'}],masked:[]});
+  assert.equal(r.nativeDarkDetected,true);
+  assert.equal(r.extensionActive,false);
+});

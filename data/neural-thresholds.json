@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "baseline": 0.8,
+  "candidate": 0.9,
+  "description": "Limiar de inferência: baseline 7D e candidato 18D. CI verifica paridade com runtime."
+}
