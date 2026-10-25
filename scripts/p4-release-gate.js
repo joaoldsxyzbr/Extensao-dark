@@ -39,7 +39,11 @@ function siteCoverage(report,required,mode){
   const sites=new Set();
   for(const row of report.results){
     if(!row||!required.includes(row.site)||sites.has(row.site)||
-      row.assessment?.status!=='observed-no-regression'||row.baseline?.kind!=='observed'||
+      !(row.assessment?.status==='observed-no-regression'||(
+        mode==='automatic-native-detection'&&
+        row.assessment?.status==='expected-native-dark-skip'&&
+        row.assessment?.evidence==='native-dark-both-models'))||
+      row.baseline?.kind!=='observed'||
       row.candidate?.kind!=='observed'||
       typeof row.baseline.capture!=='string'||!row.baseline.capture.endsWith('.png')||
       typeof row.candidate.capture!=='string'||!row.candidate.capture.endsWith('.png'))
