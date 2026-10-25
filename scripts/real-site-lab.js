@@ -122,7 +122,7 @@ async function main(){
     report.promotion=promotionGate(report.results);
     report.completed=true;
     update(report);
-    const warnings=report.results.filter(item=>item.assessment.status!=='observed-no-regression');
+    const warnings=report.results.filter(item=>!['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status));
     for(const item of warnings) console.warn(
       '::warning title=P3 '+item.site+'::'+item.assessment.status);
     if(process.env.GITHUB_STEP_SUMMARY){
