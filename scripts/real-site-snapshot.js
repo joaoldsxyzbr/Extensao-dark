@@ -37,10 +37,30 @@ function snapshotExpression(){
     const bg=backdrop(el.parentElement);
     if(bg)icons.push({fg:css.backgroundColor,bg});
   }
+  // Evidência independente do content script: explícita ou nas superfícies raiz.
+  // Não é classificação visual universal: só distingue skip esperado de falha.
+  const roots=[document.documentElement,document.body].filter(Boolean);
+  const explicitDark=roots.some(el=>{
+    if(el.hasAttribute('dark')||el.hasAttribute('dark-theme'))return true;
+    for(const key of ['data-theme','data-color-scheme','data-bs-theme'])
+      if(el.getAttribute(key)?.toLowerCase()==='dark')return true;
+    return /(?:^|\s)(?:dark|dark-mode|theme-dark|dark-theme)(?:\s|$)/i.test(el.getAttribute('class')||'');
+  });
+  const mainDark=roots.some(el=>{
+    const css=getComputedStyle(el);
+    const bg=css.backgroundColor,fg=css.color;
+    const rgb=s=>{
+      const match=/^rgba?\(\s*(\d+(?:\.\d+)?)(?:[, ]+)(\d+(?:\.\d+)?)(?:[, ]+)(\d+(?:\.\d+)?)/i.exec(s||'');
+      return match?match.slice(1,4).map(Number):null;
+    };
+    const b=rgb(bg),f=rgb(fg);
+    return b&&f&&b.every(v=>v<=48)&&f.every(v=>v>=170);
+  });
   const ownBackgrounds=[...document.querySelectorAll('[style]')].slice(0,1500)
     .filter(el=>el.style.getPropertyPriority('background-color')==='important').length;
   return {landingUrl:location.href,totalElements:document.querySelectorAll('*').length,
     extensionActive:document.documentElement.getAttribute('data-extensao-dark')==='on',
+    nativeDarkDetected:Boolean(explicitDark||mainDark),
     sampled:samples,masked:icons,changedBackgrounds:ownBackgrounds};
 }
 const EXPRESSION='('+snapshotExpression.toString()+')()';
@@ -69,6 +89,7 @@ function summarize(raw){
     landingUrl:String(raw.landingUrl||''),
     totalElements:Number(raw.totalElements),
     extensionActive:raw.extensionActive===true,
+    nativeDarkDetected:raw.nativeDarkDetected===true,
     sampledText:raw.sampled.length,weakText,maskedIcons:raw.masked.length,
     weakIcons,changedBackgrounds:Number(raw.changedBackgrounds)
   };
