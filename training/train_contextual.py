@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "training" / "contextual-features.json"
 SPLITS = ("train", "validation", "holdout")
 SEED = 20261024
-THRESHOLD = .80
+# Política compartilhada (runtime e auditoria verificam os mesmos limites).
+THRESHOLD = json.loads((ROOT / "data/neural-thresholds.json").read_text(encoding="utf-8"))["candidate"]
 
 
 def load_cases(path=DATA):
