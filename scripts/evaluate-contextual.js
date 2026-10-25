@@ -16,12 +16,13 @@ assert.equal(candidate.inputSize,18,'Modelo contextual não tem 18 entradas');
 assert.equal(current.inputSize,7,'Baseline não é o modelo distribuído de sete entradas');
 assert.equal(samples.featureCount,18);
 assert.equal(samples.samples.length,2520);
-const predict=(model,features)=>core.predict(model,features)[0]>=.80;
+const thresholds=require('../data/neural-thresholds.json');
+const predict=(model,features,threshold)=>core.predict(model,features)[0]>=threshold;
 function measure(rows, model, dimensions) {
   let tp=0,tn=0,fp=0,fn=0;
   const errors=[];
   for(const row of rows){
-    const predicted=predict(model,row.x.slice(0,dimensions));
+    const predicted=predict(model,row.x.slice(0,dimensions),dimensions===18?thresholds.candidate:thresholds.baseline);
     const expected=row.y[0]===1;
     if(predicted&&expected)tp++;
     else if(!predicted&&!expected)tn++;
@@ -32,13 +33,13 @@ function measure(rows, model, dimensions) {
     precision:+(tp/(tp+fp)||0).toFixed(4),
     recall:+(tp/(tp+fn)||0).toFixed(4),errors:errors.slice(0,12)};
 }
-const report={source:'curated-synthetic-policy-not-real-sites',candidate:'not-deployed'};
+const report={source:'curated-synthetic-policy-not-real-sites',candidate:'not-deployed',thresholds};
 for(const split of ['validation','holdout']){
   const rows=samples.samples.filter(row=>row.split===split);
   const baseline=measure(rows,current,7),trained=measure(rows,candidate,18);
   report[split]={baseline,trained};
   const failingFamilies=Object.entries(rows.filter(row=>
-    predict(candidate,row.x)!==(row.y[0]===1)).reduce((totals,row)=>
+    predict(candidate,row.x,thresholds.candidate)!==(row.y[0]===1)).reduce((totals,row)=>
     (totals[row.group]=(totals[row.group]||0)+1,totals),{}));
   console.log(split+': '+JSON.stringify({baseline,trained,failingFamilies}));
   assert.ok(trained.accuracy>=.90,
@@ -74,7 +75,7 @@ function legacyScore(rows,model,extended){
       translucent:!!bg&&bg.a>=.12&&bg.a<.95};
     const features=extended?colors.contextFeatures(bg,fg,parent,context):
       colors.neuralFeatures(bg,fg,parent,context);
-    const got=predict(model,features);
+    const got=predict(model,features,extended?thresholds.candidate:thresholds.baseline);
     const expected=row.label===1;
     right+=Number(got===expected);
     fp+=Number(got&&!expected);
