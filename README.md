@@ -337,7 +337,8 @@ veja [P4](docs/minhas-skills/plans/2026-10-24-p4-gates.md).
   de falha de ativação. Evidência insuficiente continua inconclusiva.
 - A extensão passa a injetar scripts também em **iframes HTTP(S)**; frames
   `about:blank` e `srcdoc` continuam fora do escopo. Os controles por site
-  operam pelo hostname de cada frame (incluindo domínios de terceiros).
+  respeitam também os domínios dos frames e de seus ancestrais HTTP(S),
+  evitando que um iframe de terceiro ignore a desativação da aba principal.
 - Chromium valida injeção no iframe e processamento de **800 elementos** num
   cenário de carga (tempo registrado no relatório, sem promessa de SLA universal).
 
