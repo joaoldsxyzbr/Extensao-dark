@@ -258,7 +258,21 @@
     return settings.enabled !== false && !(Array.isArray(settings.disabledHosts) && settings.disabledHosts.includes(hostname));
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, neuralDecision, isEnabledForSite});
+  // Com all_frames=true, desabilitar a aba superior deve prevalecer também
+  // sobre iframes em domínios de terceiros (Chrome location.ancestorOrigins).
+  function isEnabledForFrame(settings,hostname,ancestorOrigins=[]) {
+    if(!isEnabledForSite(settings,hostname))return false;
+    for(const origin of ancestorOrigins){
+      try {
+        const parent=new URL(origin);
+        if(['http:','https:'].includes(parent.protocol)&&
+          !isEnabledForSite(settings,parent.hostname))return false;
+      } catch { /* ancestorOrigin opaca/desconhecida: não inferir host */ }
+    }
+    return true;
+  }
+
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, neuralDecision, isEnabledForSite, isEnabledForFrame});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);
