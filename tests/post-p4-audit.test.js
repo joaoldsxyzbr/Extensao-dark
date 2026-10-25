@@ -69,3 +69,12 @@ test('Auditoria: injetar scripts somente em frames HTTP(S), sem ativar páginas 
   assert.equal(script.match_about_blank,undefined);
   assert.deepEqual(script.matches,['http://*/*','https://*/*']);
 });
+
+test('Auditoria: site desativado prevalece em iframes com outro hostname',()=>{
+  const settings={enabled:true,disabledHosts:['example.com']};
+  assert.equal(colors.isEnabledForFrame(settings,'media.cdn.test',['https://example.com']),false);
+  assert.equal(colors.isEnabledForFrame(settings,'media.cdn.test',['https://third.test','https://example.com']),false);
+  assert.equal(colors.isEnabledForFrame(settings,'media.cdn.test',['https://allowed.test']),true);
+  assert.equal(colors.isEnabledForFrame({enabled:false,disabledHosts:[]},'media.cdn.test',[]),false);
+  assert.equal(colors.isEnabledForFrame({enabled:true,disabledHosts:['media.cdn.test']},'media.cdn.test',['https://allowed.test']),false);
+});
