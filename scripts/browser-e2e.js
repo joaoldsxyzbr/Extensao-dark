@@ -220,17 +220,37 @@ async function visualCorpusScenario(url) {
   }finally{await stop();}
 }
 
+
+// Auditoria pós-P4: frame HTTP(S) e 800 nós dinâmicos com Chromium real.
+// about:blank e srcdoc continuam fora de escopo (match_about_blank=false).
+async function frameAndDomLoadScenario(url){
+  const {page,stop}=await launch(ROOT);
+  try {
+    await page.navigate(url);
+    await waitFor(async()=>page.eval('document.documentElement.hasAttribute("data-extensao-dark")'),10000);
+    await page.eval('(()=>{const frame=document.createElement("iframe");frame.id="audit-light-frame";frame.title="iframe HTTP";frame.src="/embedded-light";document.body.appendChild(frame);})()');
+    await waitFor(async()=>page.eval('(()=>{const doc=document.querySelector("#audit-light-frame")?.contentDocument;return doc?.documentElement?.getAttribute("data-extensao-dark")==="on"&&doc.querySelector("#inner-card")?.style.getPropertyPriority("background-color")==="important";})()'),15000);
+    const frameActive=await page.eval('(()=>{const doc=document.querySelector("#audit-light-frame").contentDocument;return {active:doc.documentElement.getAttribute("data-extensao-dark")==="on",innerBackground:getComputedStyle(doc.querySelector("#inner-card")).backgroundColor};})()');
+    assert.notEqual(frameActive.innerBackground,'rgb(245, 245, 245)');
+    await page.eval('(()=>{const box=document.createElement("section");box.id="audit-dom-load";const fragment=document.createDocumentFragment();for(let i=0;i<800;i++){const el=document.createElement("div");el.textContent="item "+i;el.style.cssText="background-color:rgb(245,245,245);color:rgb(12,12,12)";el.className="audit-item";fragment.appendChild(el);}box.appendChild(fragment);window.__auditStart=performance.now();document.body.appendChild(box);})()');
+    await waitFor(async()=>page.eval('(()=>{const nodes=document.querySelectorAll(".audit-item");return nodes.length===800&&[...nodes].every(el=>el.style.getPropertyValue("background-color")!=="rgb(245, 245, 245)");})()'),17000);
+    const elapsedMs=await page.eval('Math.round(performance.now()-window.__auditStart)');
+    return {frameActive,domNodes:800,domElapsedMs:elapsedMs,kind:'dom-time-includes-idle-scheduling'};
+  }finally{await stop();}
+}
+
 async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   if(COMPARISON&&!fs.existsSync(path.join(COMPARISON,'manifest.json')))throw Error('Extensão concorrente precisa ser pasta unpacked com manifest.json: '+COMPARISON);
-  const server=http.createServer((req,res)=>{if(req.url.startsWith('/fixture')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(fixture);}else if(req.url==='/visual-corpus'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(visualCorpusFixture);}else{res.writeHead(404);res.end('not found');}});
+  const server=http.createServer((req,res)=>{if(req.url==='/embedded-light'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end('<!doctype html><html><body style="background:rgb(250,250,250);color:#121212"><div id="inner-card" style="background-color:rgb(245,245,245);color:rgb(15,15,15)">Conteúdo iframe HTTP</div></body></html>');}else if(req.url.startsWith('/fixture')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(fixture);}else if(req.url==='/visual-corpus'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(visualCorpusFixture);}else{res.writeHead(404);res.end('not found');}});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     const url=`http://127.0.0.1:${server.address().port}/fixture`;
     const runs=[await scenario('plain',null,url), await scenario('ours',ROOT,url)];
     const visualCorpus=await visualCorpusScenario(`http://127.0.0.1:${server.address().port}/visual-corpus`);
+    const frameAndDomLoad=await frameAndDomLoadScenario(url);
     if(COMPARISON)runs.push(await scenario('dark-reader',path.resolve(COMPARISON),url));
-    const output={chromium:spawnSync(browserPath(),['--version'],{encoding:'utf8'}).stdout.trim(),comparisonRequested:Boolean(COMPARISON),benchmarkNote:'Tempo inclui inicialização, carregamento e espera de estabilização; NÃO é benchmark isolado do motor. Capturas dependem do ambiente.',visualCorpus,runs};
+    const output={chromium:spawnSync(browserPath(),['--version'],{encoding:'utf8'}).stdout.trim(),comparisonRequested:Boolean(COMPARISON),benchmarkNote:'Tempo inclui inicialização, carregamento e espera de estabilização; NÃO é benchmark isolado do motor. Capturas dependem do ambiente.',visualCorpus,frameAndDomLoad,runs};
     fs.writeFileSync(path.join(OUTPUT,'report.json'),JSON.stringify(output,null,2)+'\n');
     console.log(`P3 browser E2E: ${runs.map(r=>r.name).join(', ')} — ${OUTPUT}`);
     console.log('P0 visual corpus:',visualCorpus.total,'casos renderizados em Chromium,',visualCorpus.families.length,'famílias');
