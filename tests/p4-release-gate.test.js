@@ -66,3 +66,11 @@ test('P4: nenhuma aprovação falsa permite publicação automática',()=>{
   screenshotReview:true,approval:'yes'});
  assert.equal(r.autoPromote,false);
 });
+
+test('Auditoria: modelo reprovado permanece bloqueado mesmo quando navegação é positiva',()=>{
+  const result=assessPromotion({synthetic:{...synthetic,releaseStatus:{...synthetic.releaseStatus,candidatePassedSyntheticGates:false}},
+    benchmark,automatic,forced});
+  assert.equal(result.readyForReview,false);
+  assert.equal(result.autoPromote,false);
+  assert.ok(result.blockers.some(x=>x.includes('sintéticos')));
+});
