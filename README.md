@@ -324,3 +324,21 @@ humana é uma etapa separada.
 
 O modelo 18D segue isolado no laboratório. Para detalhes técnicos e testes,
 veja [P4](docs/minhas-skills/plans/2026-10-24-p4-gates.md).
+
+## Pós-P4 — Correções da auditoria (v0.6.2)
+
+- Corrige a classificação de `role="presentation"`/`role="none"` em cartões;
+  gráficos declarados como `role="img"`, máscaras CSS e SVG seguem protegidos.
+- Usa **90%** como limiar do candidato 18D e **80%** para o modelo publicado
+  7D, no runtime, no treino e nos relatórios. Se um candidato piorar em qualquer
+  teste reservado, o CI marca o **modelo como não elegível**; não é motivo para
+  ignorar o bloqueio nem derrubar os testes estruturais. Os pesos não mudaram.
+- O laboratório diferencia um tema escuro nativo deliberadamente preservado
+  de falha de ativação. Evidência insuficiente continua inconclusiva.
+- A extensão passa a injetar scripts também em **iframes HTTP(S)**; frames
+  `about:blank` e `srcdoc` continuam fora do escopo. Os controles por site
+  operam pelo hostname de cada frame (incluindo domínios de terceiros).
+- Chromium valida injeção no iframe e processamento de **800 elementos** num
+  cenário de carga (tempo registrado no relatório, sem promessa de SLA universal).
+
+Documentação: [Auditoria pós-P4](docs/minhas-skills/plans/2026-10-25-auditoria-pos-p4.md).
