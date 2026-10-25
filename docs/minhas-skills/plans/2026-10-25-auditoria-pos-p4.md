@@ -13,7 +13,7 @@ O runtime de 7 entradas usa 0.80, o candidato de 18 entradas usa 0.90. Um arquiv
 O laboratório registra `expected-native-dark-skip` apenas quando ambas as versões permaneceram inativas e o DOM do site fornece evidência de tema nativo escuro. Uma versão inativa sem essa evidência segue inconclusiva. O gate aceita skip esperado somente no modo automático; o modo global precisa executar a extensão.
 
 ### Iframes
-O Manifest V3 declara `all_frames: true`. A injeção se limita a URLs HTTP(S) dos matches originais; não inclui `about:blank` nem `srcdoc`. Em frames de terceiro domínio, regras de desativação por hostname se aplicam ao hostname do **frame**, não ao da aba superior. A extensão não adicionou novas permissões.
+O Manifest V3 declara `all_frames: true`. A injeção se limita a URLs HTTP(S) dos matches originais; não inclui `about:blank` nem `srcdoc`. Em frames de terceiro domínio, a extensão respeita as regras por hostname do frame **e dos ancestrais** recuperados via `location.ancestorOrigins` no Chromium. Desabilitar a aba superior também desabilita esses iframes. A extensão não adicionou novas permissões.
 
 ### Validação de carga
 `scripts/browser-e2e.js` abre um iframe HTTP e confirma a transformação de um cartão no frame. Adiciona 800 elementos em uma mesma atualização, verifica o processamento e registra a duração total (inclui agendamento de tarefas do navegador). Tempo medido em CI não equivale a benchmark universal.
