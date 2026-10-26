@@ -109,15 +109,16 @@ function applyPage(action,operations){
       if(!el)throw Error('P12: DOM modificado');
       revert(el,row.style);
     }
-    const surfaceMatch=surface.getAttribute('style')===before.surface;
-    const mismatches=before.children.filter(row=>nodes.find(el=>el.id===row.id)
-      ?.getAttribute('style')!==row.style).map(row=>row.id);
+    // Chromium pode serializar atributo ausente como style="" após uso
+    // da API CSSOM; ambos significam zero declarações inline. A comparação
+    // posterior de CSS computado garante que a aparência foi restaurada.
+    const same=(now,previous)=>now===previous||(previous===null&&now==='');
+    const surfaceMatch=same(surface.getAttribute('style'),before.surface);
+    const mismatches=before.children.filter(row=>!same(
+      nodes.find(el=>el.id===row.id)?.getAttribute('style'),row.style));
     delete window.__p12Restore;
-    const first=before.children[0];
     return {restored:before.children.length,
-      ok:surfaceMatch&&mismatches.length===0,surfaceMatch,badIds:mismatches,
-      diagnostic:{surfaceBefore:before.surface,surfaceAfter:surface.getAttribute('style'),
-        textBefore:first.style,textAfter:nodes.find(el=>el.id===first.id)?.getAttribute('style')}};
+      ok:surfaceMatch&&mismatches.length===0};
   }
   throw Error('P12: acao inválida');
 }
