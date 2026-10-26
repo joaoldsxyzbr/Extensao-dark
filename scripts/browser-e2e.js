@@ -20,6 +20,11 @@ const compareArg = process.argv.find(a=>a.startsWith('--compare-extension='));
 const OUTPUT = path.resolve(outArg?.slice('--output='.length) || path.join(os.tmpdir(),'extensao-dark-browser-results'));
 const COMPARISON = compareArg?.slice('--compare-extension='.length);
 const sleep = ms => new Promise(resolve=>setTimeout(resolve,ms));
+function cleanupProfile(profile,remove=fs.rmSync) {
+  // Chromium pode criar arquivos depois de receber SIGTERM. O Node repete
+  // ENOTEMPTY/EBUSY/EPERM por um prazo limitado, sem ocultar falhas reais.
+  remove(profile,{recursive:true,force:true,maxRetries:12,retryDelay:100});
+}
 
 function browserPath() {
   const choices = [process.env.CHROME_BIN, '/usr/bin/chromium', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', 'chromium', 'google-chrome'];
@@ -88,8 +93,8 @@ async function launch(extension) {
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
-    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});}};
-  }catch(err){child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});throw err;}
+    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');cleanupProfile(profile);}};
+  }catch(err){child.kill('SIGKILL');cleanupProfile(profile);throw err;}
 }
 async function waitFor(fn,timeout=5000){const start=performance.now();while(performance.now()-start<timeout){if(await fn())return;await sleep(60);}throw Error('Condição não atingida em '+timeout+'ms');}
 const metrics = `(()=>{
@@ -259,4 +264,4 @@ async function main(){
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
 if(require.main===module)main().catch(err=>{console.error('P3 browser E2E falhou:',err.stack||err);process.exitCode=1;});
-module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT});
+module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT,cleanupProfile});
