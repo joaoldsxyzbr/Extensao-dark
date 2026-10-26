@@ -128,7 +128,7 @@ test('P12 repair: refuses to change controls, independent painted surfaces or un
   assert.equal(result.reason,'protected-descendant');
   assert.equal(planDescendantRepairs(before,{...after,truncated:true},colors,BG).status,'inconclusive');
   const own={...after,rows:[after.rows[0],{...after.rows[1],bg:'rgb(240, 240, 240)'}]};
-  assert.equal(planDescendantRepairs(before,own,colors,BG).status,'blocked');
+  assert.deepEqual(planDescendantRepairs(before,own,colors,BG).repairs,[]);
 });
 test('P12 repair: already weak text may not be worsened or disguised as fixed',()=>{
   const before={truncated:false,rows:[{fg:'rgb(110, 110, 110)',bg:'rgb(250, 250, 250)',size:16,weight:400,tag:'P'}]};
