@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const colors=require('../content/colors.js');
-const {CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment}
+const {CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast}
   =require('../scripts/p12-public-render-p11.js');
 
 const capture={status:'ready',sourceBackground:'rgb(250, 250, 250)',rows:[
@@ -51,4 +51,46 @@ test('P12 render: salvos apenas relatorios no sandbox do workflow',()=>{
     path.join(root,'browser-results/p12-public-rendered'));
   assert.throws(()=>allowedOutput(path.join(root,'data')),/disposable/);
   assert.equal(require('../manifest.json').content_scripts[0].js.some(p=>p.includes('p12')),false);
+});
+
+
+test('P12 whole-surface: untouched descendant going dark-on-dark blocks candidate',()=>{
+  const before={rows:[
+    {fg:'rgb(30, 33, 38)',bg:'rgb(250, 250, 250)',size:16,weight:400},
+    {fg:'rgb(25, 76, 145)',bg:'rgb(248, 248, 248)',size:16,weight:400},
+    {fg:'rgb(20, 20, 20)',bg:'rgb(255, 255, 255)',size:16,weight:400}
+  ],truncated:false};
+  const after={rows:[
+    {fg:'rgb(245, 246, 248)',bg:'rgb(26, 32, 40)',size:16,weight:400},
+    {fg:'rgb(240, 242, 245)',bg:'rgb(26, 32, 40)',size:16,weight:400},
+    {fg:'rgb(20, 20, 20)',bg:'rgb(26, 32, 40)',size:16,weight:400}
+  ],truncated:false};
+  const result=assessSurfaceContrast(before,after,colors);
+  assert.equal(result.status,'blocked');
+  assert.equal(result.newWeak,1);
+  assert.equal(result.audited,3);
+});
+test('P12 whole-surface: preserves independent painted child and allows safe palette',()=>{
+  const before={rows:[
+    {fg:'rgb(25, 25, 25)',bg:'rgb(255, 255, 255)',size:16,weight:400},
+    {fg:'rgb(22, 25, 33)',bg:'rgb(239, 246, 250)',size:18,weight:700}
+  ],truncated:false};
+  const after={rows:[
+    {fg:'rgb(240, 242, 245)',bg:'rgb(26, 32, 40)',size:16,weight:400},
+    {fg:'rgb(22, 25, 33)',bg:'rgb(239, 246, 250)',size:18,weight:700}
+  ],truncated:false};
+  const result=assessSurfaceContrast(before,after,colors);
+  assert.equal(result.newWeak,0);
+  assert.equal(result.status,'safe-in-sample');
+});
+test('P12 whole-surface: truncation, unknown backgrounds and DOM instability never pass',()=>{
+  const stable={rows:[
+    {fg:'rgb(240, 240, 240)',bg:'rgb(26, 32, 40)',size:16,weight:400}
+  ],truncated:false};
+  assert.equal(assessSurfaceContrast(stable,{...stable,truncated:true},colors).status,'inconclusive');
+  assert.equal(assessSurfaceContrast(stable,{rows:[null],truncated:false},colors).status,'inconclusive');
+  assert.equal(assessSurfaceContrast(stable,{rows:[],truncated:false},colors).status,'inconclusive');
+  assert.equal(assessSurfaceContrast({...stable,rows:[null]},stable,colors).status,'inconclusive');
+  assert.equal(assessSurfaceContrast(stable,{rows:[{...stable.rows[0],fg:'rgb(2, 2, 2)'}],
+    truncated:false},colors).status,'blocked');
 });
