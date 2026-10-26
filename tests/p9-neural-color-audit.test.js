@@ -28,6 +28,8 @@ test('P9: rejeita duplicatas, entradas inválidas e rótulos ausentes',()=>{
   assert.throws(()=>compileCase({...fixture.samples[0],theme:'desconhecido'}),/tema|theme/i);
   assert.throws(()=>compileCase({...fixture.samples[0],background:'javascript:invalid'}),/cor/i);
   assert.throws(()=>validateManualCorpus({...fixture,origin:'training-data'}),/origem|contrato/i);
+  assert.throws(()=>compileCase({...fixture.samples[0],style:{...fixture.samples[0].style,
+    backgroundColor:'rgb(0, 0, 0)'}}),/sobrescrita/);
 });
 
 test('P9: avaliação conta falsos positivos e negativos e bloqueia promoção',()=>{
@@ -48,6 +50,7 @@ test('P9: saídas do relatório não podem substituir arquivos distribuídos',()
   assert.throws(()=>readOnlyOutput(path.join(root,'data/neural-model.json')),/protegido/);
   assert.throws(()=>readOnlyOutput(path.join(root,'manifest.json')),/protegido/);
   assert.throws(()=>readOnlyOutput(path.join(root,'content/neural.js')),/protegido/);
+  assert.throws(()=>readOnlyOutput(path.join(root,'training/neural-color-features.json')),/protegido/);
   assert.equal(typeof core.loadModel,'function');
   assert.equal(typeof experimental.predictColors,'function');
 });
