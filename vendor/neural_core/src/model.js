@@ -1,11 +1,19 @@
-import { forward } from './network.js';
+import { forward, forwardBatch, SUPPORTED_ACTIVATIONS } from './network.js';
 
 const FORMAT_VERSION = 1;
 const MAX_MODEL_CHARS = 25_000_000;
 const MAX_LAYERS = 16;
 const MAX_NEURONS = 4096;
 const MAX_PARAMETERS = 250_000;
-const ACTIVATIONS = new Set(['linear', 'sigmoid', 'tanh']);
+const ACTIVATIONS = new Set(SUPPORTED_ACTIVATIONS);
+const CAPABILITIES = Object.freeze({
+  formatVersions: Object.freeze([FORMAT_VERSION]),
+  operators: Object.freeze(['dense']),
+  activations: SUPPORTED_ACTIVATIONS,
+  limits: Object.freeze({
+    maxLayers: MAX_LAYERS, maxWidth: MAX_NEURONS, maxParameters: MAX_PARAMETERS
+  })
+});
 const internalLayers = new WeakMap();
 
 function positiveSize(value, label) {
@@ -50,6 +58,9 @@ export function loadModel(source) {
     if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
       throw new TypeError(`Camada ${index} inválida`);
     }
+    if (Object.hasOwn(layer, 'operator') && layer.operator !== 'dense') {
+      throw new TypeError(`Camada ${index}: operador desconhecido`);
+    }
     const inputSize = positiveSize(layer.inputSize, `Camada ${index}: entrada`);
     const outputSize = positiveSize(layer.outputSize, `Camada ${index}: saída`);
     if (previousOutput !== null && previousOutput !== inputSize) {
@@ -57,6 +68,9 @@ export function loadModel(source) {
     }
     if (!ACTIVATIONS.has(layer.activation)) {
       throw new TypeError(`Camada ${index}: ativação inválida`);
+    }
+    if (layer.activation === 'softmax' && (index !== source.layers.length - 1 || outputSize < 2)) {
+      throw new RangeError('softmax exige camada de saída com pelo menos duas unidades');
     }
     const weightCount = inputSize * outputSize;
     totalParameters += weightCount + outputSize;
@@ -93,6 +107,47 @@ export function assertLoadedModel(model) {
 export function predict(model, input) {
   assertLoadedModel(model);
   return forward(internalLayers.get(model), input);
+}
+
+export function predictBatch(model, inputs) {
+  assertLoadedModel(model);
+  return forwardBatch(internalLayers.get(model), inputs);
+}
+
+/**
+ * Contrato de compatibilidade: apenas as capacidades realmente executáveis.
+ * O resultado é somente leitura e não representa operadores futuros.
+ */
+export function getCapabilities() {
+  return CAPABILITIES;
+}
+
+/**
+ * Retorna metadados de um modelo carregado, sem copiar as matrizes de pesos.
+ * Útil para um consumidor decidir dimensões e custo antes de executar.
+ */
+export function describeModel(model) {
+  assertLoadedModel(model);
+  const layers = internalLayers.get(model);
+  let parameterCount = 0;
+  const summary = layers.map(layer => {
+    const count = layer.inputSize * layer.outputSize + layer.outputSize;
+    parameterCount += count;
+    return Object.freeze({
+      inputSize: layer.inputSize,
+      outputSize: layer.outputSize,
+      activation: layer.activation,
+      parameterCount: count
+    });
+  });
+  return Object.freeze({
+    formatVersion: FORMAT_VERSION,
+    inputSize: layers[0].inputSize,
+    outputSize: layers[layers.length - 1].outputSize,
+    layerCount: layers.length,
+    parameterCount,
+    layers: Object.freeze(summary)
+  });
 }
 
 export function serializeModel(model) {
