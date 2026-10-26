@@ -180,7 +180,8 @@ function renderVisualPage(action,operations=[],colorTools,repairText){
       delete globalThis.__extDarkP9OperationCount;
       throw error;
     }
-    return {applied:operations.length,descendantRepairs};
+    return descendantRepairs ? {applied:operations.length,descendantRepairs} :
+      {applied:operations.length};
   }
   if(action==='restore'){
     const backup=globalThis[backupKey];
