@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-// Empacota o snapshot JS do Neural Core para content scripts clássicos MV3.
-// O motor upstream é copiado literalmente em vendor/neural_core/src/.
+// Empacota o motor neural local para content scripts clássicos MV3.
+// Preserva o identificador histórico da origem para compatibilidade do bundle.
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -24,13 +24,13 @@ function output(filename, content) {
   if (check) assert.equal(get(filename), content, filename + ' desatualizado: execute node scripts/build-neural.js');
   else fs.writeFileSync(target, content);
 }
-// UPSTREAM.md é a fonte única da revisão fixada, evitando divergência com o bundle.
+// UPSTREAM.md registra a proveniência histórica, sem dependência do repositório antigo.
 const upstream = get('vendor/neural_core/UPSTREAM.md');
-const revisionMatch = /^Commit fixado: `([a-f0-9]{40})`/m.exec(upstream);
-if (!revisionMatch) throw Error('Referência do Neural Core inválida em UPSTREAM.md');
+const revisionMatch = /^- Commit de origem: `([a-f0-9]{40})`/m.exec(upstream);
+if (!revisionMatch) throw Error('Commit de origem do motor local inválido em UPSTREAM.md');
 const revision = revisionMatch[1];
 const prefix = '/* Neural Core reutilizável - snapshot ' + revision + '; gerado localmente, sem rede. */';
-// Falhar explicitamente quando a API pública do upstream mudar.
+// Falhar explicitamente quando a API pública do motor local mudar.
 const exposed = "export { loadModel, serializeModel, predict, predictBatch, getCapabilities, describeModel } from './model.js';";
 assert.equal(get('vendor/neural_core/src/index.js').trim(), exposed, 'API pública upstream alterada: revisar empacotamento');
 const bundled = [
