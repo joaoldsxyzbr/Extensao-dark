@@ -41,7 +41,7 @@ function probePage(){
 }
 function plans(original,predict){
   if(!original||!Array.isArray(original.texts)||original.texts.length<4||
-    original.texts.length>30||typeof predict!=='function)throw TypeError('P12: dados inválidos');
+    original.texts.length>30||typeof predict!=='function')throw TypeError('P12: dados inválidos');
   const teacher=[],neural=[],ids=new Set();
   let accepted=0,rejected=0;
   const bg=colors.parseColor(DARK_BG);
