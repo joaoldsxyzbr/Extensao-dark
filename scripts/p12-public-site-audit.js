@@ -13,7 +13,10 @@ const {featuresFor,loadCandidate,predictText}=require('../training/p11-descendan
 const SITES=Object.freeze([
   Object.freeze({id:'python-docs',url:'https://docs.python.org/3/tutorial/'}),
   Object.freeze({id:'w3c-wcag',url:'https://www.w3.org/TR/WCAG22/'}),
-  Object.freeze({id:'gnu-license',url:'https://www.gnu.org/licenses/gpl-3.0.en.html'})
+  Object.freeze({id:'gnu-license',url:'https://www.gnu.org/licenses/gpl-3.0.en.html'}),
+  Object.freeze({id:'rfc-editor',url:'https://www.rfc-editor.org/rfc/rfc9110.html'}),
+  Object.freeze({id:'iana-reserved',url:'https://www.iana.org/domains/reserved'}),
+  Object.freeze({id:'postgres-docs',url:'https://www.postgresql.org/docs/current/tutorial.html'})
 ]);
 const TARGET_BG='rgb(26, 32, 40)';
 const OUTPUT_DIR=path.join(ROOT,'browser-results/p12-public-sites');
