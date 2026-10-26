@@ -1,0 +1,386 @@
+{
+  "formatVersion": 1,
+  "origin": "hand-authored-independent-css-fixtures-not-real-sites",
+  "note": "Casos CSS inventados manualmente, fora dos geradores de treino P7/P8; não correspondem a websites e não permitem publicação. Labels são expectativas editoriais e NÃO anotação visual humana independente.",
+  "modelInputs": 57,
+  "samples": [
+    {
+      "id": "portal-reading-panel",
+      "group": "editorial",
+      "expected": "convert",
+      "theme": "soft",
+      "tag": "ARTICLE",
+      "background": "rgb(239, 244, 248)",
+      "text": "rgb(34, 41, 48)",
+      "parent": "rgb(255, 255, 255)",
+      "style": {
+        "width": "610px",
+        "height": "180px",
+        "display": "grid",
+        "fontSize": "17px",
+        "lineHeight": "27px",
+        "borderTopLeftRadius": "10px"
+      }
+    },
+    {
+      "id": "billing-form-field",
+      "group": "form",
+      "expected": "convert",
+      "theme": "deep",
+      "tag": "INPUT",
+      "background": "rgb(248, 251, 253)",
+      "text": "rgb(24, 31, 38)",
+      "parent": "rgb(243, 246, 250)",
+      "style": {
+        "width": "310px",
+        "height": "48px",
+        "borderTopWidth": "1px",
+        "fontSize": "16px"
+      }
+    },
+    {
+      "id": "kanban-task-tile",
+      "group": "workspace",
+      "expected": "convert",
+      "theme": "amoled",
+      "tag": "SECTION",
+      "background": "rgb(230, 236, 242)",
+      "text": "rgb(27, 33, 39)",
+      "parent": "rgb(248, 249, 250)",
+      "style": {
+        "width": "275px",
+        "height": "145px",
+        "display": "flex",
+        "boxShadow": "0 3px 9px rgba(0,0,0,.1)",
+        "borderTopLeftRadius": "14px"
+      }
+    },
+    {
+      "id": "calendar-event-detail",
+      "group": "calendar",
+      "expected": "convert",
+      "theme": "soft",
+      "tag": "DIV",
+      "background": "rgb(252, 249, 239)",
+      "text": "rgb(33, 31, 27)",
+      "parent": "rgb(241, 241, 241)",
+      "style": {
+        "width": "390px",
+        "height": "130px",
+        "position": "sticky",
+        "fontSize": "15px"
+      }
+    },
+    {
+      "id": "checkout-dialog-surface",
+      "group": "commerce",
+      "expected": "convert",
+      "theme": "deep",
+      "tag": "DIALOG",
+      "background": "rgb(255, 253, 248)",
+      "text": "rgb(42, 36, 30)",
+      "parent": "rgb(210, 215, 219)",
+      "style": {
+        "width": "420px",
+        "height": "310px",
+        "position": "fixed",
+        "zIndex": "40",
+        "boxShadow": "0 12px 28px rgba(0,0,0,.18)",
+        "borderTopLeftRadius": "18px"
+      }
+    },
+    {
+      "id": "search-results-row",
+      "group": "search",
+      "expected": "convert",
+      "theme": "amoled",
+      "tag": "LI",
+      "background": "rgb(247, 248, 252)",
+      "text": "rgb(31, 37, 48)",
+      "parent": "rgb(245, 245, 248)",
+      "style": {
+        "width": "590px",
+        "height": "58px",
+        "display": "flex",
+        "overflowX": "hidden"
+      }
+    },
+    {
+      "id": "documentation-callout",
+      "group": "docs",
+      "expected": "convert",
+      "theme": "deep",
+      "tag": "ASIDE",
+      "background": "rgb(242, 249, 247)",
+      "text": "rgb(24, 44, 41)",
+      "parent": "rgb(253, 253, 253)",
+      "style": {
+        "width": "550px",
+        "height": "160px",
+        "borderTopWidth": "2px",
+        "fontSize": "18px"
+      }
+    },
+    {
+      "id": "mobile-settings-card",
+      "group": "mobile",
+      "expected": "convert",
+      "theme": "soft",
+      "tag": "DIV",
+      "background": "rgb(237, 239, 244)",
+      "text": "rgb(28, 30, 37)",
+      "parent": "rgb(251, 250, 249)",
+      "style": {
+        "width": "340px",
+        "height": "96px",
+        "borderTopLeftRadius": "24px"
+      }
+    },
+    {
+      "id": "saturated-primary-action",
+      "group": "controls",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "BUTTON",
+      "background": "rgb(5, 104, 229)",
+      "text": "rgb(255, 255, 255)",
+      "parent": "rgb(245, 246, 248)",
+      "style": {
+        "width": "165px",
+        "height": "50px",
+        "cursor": "pointer",
+        "fontWeight": "700"
+      }
+    },
+    {
+      "id": "selected-palette-tab",
+      "group": "controls",
+      "expected": "preserve",
+      "theme": "soft",
+      "tag": "BUTTON",
+      "attrs": {
+        "role": "tab",
+        "aria-selected": "true"
+      },
+      "background": "rgb(17, 121, 218)",
+      "text": "rgb(255, 255, 255)",
+      "parent": "rgb(244, 246, 250)",
+      "style": {
+        "width": "140px",
+        "height": "44px",
+        "display": "inline-flex",
+        "cursor": "pointer"
+      }
+    },
+    {
+      "id": "native-dark-terminal",
+      "group": "native-dark",
+      "expected": "preserve",
+      "theme": "amoled",
+      "tag": "PRE",
+      "background": "rgb(22, 26, 33)",
+      "text": "rgb(233, 238, 245)",
+      "parent": "rgb(18, 22, 28)",
+      "style": {
+        "width": "650px",
+        "height": "235px",
+        "colorScheme": "dark",
+        "fontSize": "15px"
+      }
+    },
+    {
+      "id": "semialpha-overlay",
+      "group": "translucency",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "DIV",
+      "background": "rgba(255, 255, 255, 0.47)",
+      "text": "rgb(19, 23, 29)",
+      "parent": "rgb(23, 29, 36)",
+      "style": {
+        "width": "380px",
+        "height": "160px",
+        "position": "absolute",
+        "backdropFilter": "blur(8px)"
+      }
+    },
+    {
+      "id": "profile-photo",
+      "group": "media",
+      "expected": "preserve",
+      "theme": "soft",
+      "tag": "IMG",
+      "attrs": {
+        "role": "img"
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "text": "rgb(0, 0, 0)",
+      "parent": "rgb(246, 248, 250)",
+      "style": {
+        "width": "160px",
+        "height": "160px"
+      }
+    },
+    {
+      "id": "css-masked-toolbar-icon",
+      "group": "icons",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "SPAN",
+      "attrs": {
+        "role": "img",
+        "class": "toolbar-icon"
+      },
+      "background": "rgb(241, 241, 241)",
+      "text": "rgb(33, 33, 33)",
+      "parent": "rgb(25, 28, 31)",
+      "style": {
+        "width": "26px",
+        "height": "26px",
+        "maskImage": "linear-gradient(#000, #000)"
+      }
+    },
+    {
+      "id": "hero-background-gradient",
+      "group": "media",
+      "expected": "preserve",
+      "theme": "amoled",
+      "tag": "HEADER",
+      "background": "rgb(250, 250, 250)",
+      "text": "rgb(22, 22, 22)",
+      "parent": "rgb(255, 255, 255)",
+      "style": {
+        "width": "1200px",
+        "height": "390px",
+        "backgroundImage": "linear-gradient(135deg, #f1c3d0, #aabde4)"
+      }
+    },
+    {
+      "id": "disabled-switch-control",
+      "group": "controls",
+      "expected": "preserve",
+      "theme": "soft",
+      "tag": "BUTTON",
+      "attrs": {
+        "role": "switch",
+        "aria-disabled": "true"
+      },
+      "background": "rgb(207, 209, 211)",
+      "text": "rgb(65, 67, 69)",
+      "parent": "rgb(250, 251, 252)",
+      "style": {
+        "width": "64px",
+        "height": "35px",
+        "pointerEvents": "none",
+        "opacity": ".45"
+      }
+    },
+    {
+      "id": "canvas-data-plot",
+      "group": "media",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "CANVAS",
+      "attrs": {
+        "role": "img"
+      },
+      "background": "rgb(248, 250, 251)",
+      "text": "rgb(40, 40, 40)",
+      "parent": "rgb(247, 248, 250)",
+      "style": {
+        "width": "690px",
+        "height": "340px"
+      }
+    },
+    {
+      "id": "svg-symbol",
+      "group": "icons",
+      "expected": "preserve",
+      "theme": "amoled",
+      "tag": "SVG",
+      "attrs": {
+        "role": "img"
+      },
+      "background": "rgb(255, 255, 255)",
+      "text": "rgb(21, 21, 21)",
+      "parent": "rgb(230, 232, 234)",
+      "style": {
+        "width": "44px",
+        "height": "44px"
+      }
+    },
+    {
+      "id": "status-green-badge",
+      "group": "accent",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "SPAN",
+      "attrs": {
+        "class": "status-badge"
+      },
+      "background": "rgb(14, 144, 89)",
+      "text": "rgb(255, 255, 255)",
+      "parent": "rgb(244, 246, 247)",
+      "style": {
+        "width": "95px",
+        "height": "30px",
+        "display": "inline-block"
+      }
+    },
+    {
+      "id": "aria-selected-field",
+      "group": "controls",
+      "expected": "preserve",
+      "theme": "soft",
+      "tag": "INPUT",
+      "attrs": {
+        "aria-selected": "true"
+      },
+      "background": "rgb(244, 246, 249)",
+      "text": "rgb(39, 41, 44)",
+      "parent": "rgb(255, 255, 255)",
+      "style": {
+        "width": "280px",
+        "height": "42px",
+        "borderTopWidth": "1px"
+      }
+    },
+    {
+      "id": "background-image-graphic",
+      "group": "media",
+      "expected": "preserve",
+      "theme": "deep",
+      "tag": "DIV",
+      "attrs": {
+        "role": "img"
+      },
+      "background": "rgb(240, 240, 240)",
+      "text": "rgb(15, 15, 15)",
+      "parent": "rgb(255, 255, 255)",
+      "style": {
+        "width": "360px",
+        "height": "230px",
+        "backgroundImage": "url(data:image/svg+xml;base64,PHN2Zy8+)"
+      }
+    },
+    {
+      "id": "form-disabled-textarea",
+      "group": "controls",
+      "expected": "preserve",
+      "theme": "amoled",
+      "tag": "TEXTAREA",
+      "attrs": {
+        "aria-disabled": "true"
+      },
+      "background": "rgb(250, 250, 249)",
+      "text": "rgb(50, 50, 50)",
+      "parent": "rgb(253, 253, 253)",
+      "style": {
+        "width": "540px",
+        "height": "165px",
+        "pointerEvents": "none",
+        "opacity": ".65"
+      }
+    }
+  ]
+}
