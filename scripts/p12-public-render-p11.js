@@ -90,12 +90,15 @@ function pageExperiment(action, operations=[]){
     for(const el of surface.querySelectorAll(
       'p,a,li,td,th,label,small,strong,em,code,span,h1,h2,h3,h4,h5,h6,button'
     )){
-      if(++inspected>1600){auditTruncated=true;break;}
+      if(++inspected>12000){auditTruncated=true;break;}
       if(el.closest('svg,canvas,picture,script,style,video'))continue;
-      const st=css(el),r=el.getBoundingClientRect();
-      if(st.display==='none'||st.visibility==='hidden'||Number(st.opacity)<.95||
-        r.width<3||r.height<3||r.right<=0||r.bottom<=0||
+      // Skip off-screen boxes before expensive computed-style reads. A large
+      // documentation page can have thousands of elements but few in viewport.
+      const r=el.getBoundingClientRect();
+      if(r.width<3||r.height<3||r.right<=0||r.bottom<=0||
         r.top>=innerHeight||r.left>=innerWidth)continue;
+      const st=css(el);
+      if(st.display==='none'||st.visibility==='hidden'||Number(st.opacity)<.95)continue;
       if(auditNodes.length>=360){auditTruncated=true;break;}
       auditNodes.push(el);
     }
