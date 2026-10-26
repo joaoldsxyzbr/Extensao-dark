@@ -185,3 +185,25 @@ test('P10: render de superficie neural corrige descendente e restaura ambos exat
     delete globalThis.__extDarkP9VisualNodes;
   }
 });
+
+
+test('P10: arvore de descendentes excessiva e rejeitada sem mudar o CSS',()=>{
+  const rootStyle=styleFixture();
+  const root={style:rootStyle,isConnected:true,
+    querySelectorAll:()=>Array(301).fill({})};
+  globalThis.__extDarkP9VisualNodes=[root];
+  try{
+    const r=renderVisualPage('apply',[{
+      index:0,background:'rgb(22, 26, 31)',
+      color:'rgb(239, 242, 245)',repairDescendants:true
+    }]);
+    assert.deepEqual(r,{applied:0,blocked:'descendant-limit'});
+    assert.equal(rootStyle.getPropertyValue('background-color'),'rgb(250, 250, 250)');
+    assert.equal(Object.hasOwn(globalThis,'__extDarkP9SavedStyles'),false);
+    assert.deepEqual(renderVisualPage('close'),{closed:true});
+  }finally{
+    delete globalThis.__extDarkP9SavedStyles;
+    delete globalThis.__extDarkP9OperationCount;
+    delete globalThis.__extDarkP9VisualNodes;
+  }
+});
