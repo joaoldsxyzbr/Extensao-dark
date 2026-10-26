@@ -1,0 +1,18 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>QA independente — vitrine</title>
+<style>
+body{background:rgb(255,255,255);color:rgb(24,24,24);font:16px/1.5 system-ui;padding:28px}
+#qa-panel,#qa-live{background:rgb(247,247,247);color:rgb(24,24,24);border:1px solid #ccc;padding:18px;margin:18px 0}
+#qa-accent{background:rgb(12,108,220);color:white;padding:14px;border:0}
+#qa-mask{display:inline-block;width:26px;height:26px;background:rgb(240,240,240);mask-image:linear-gradient(black,black);-webkit-mask-image:linear-gradient(black,black)}
+.dark-strip{background:#202124;padding:12px;width:max-content}
+html[dark] body{background:#17191b;color:#ededed}html[dark] #qa-panel,html[dark] #qa-live{background:#303236;color:#ededed;border-color:#555}
+</style></head><body><main><h1>Vitrine de produtos</h1><section id="qa-panel"><h2>Frete e disponibilidade</h2><p>Entrega expressa em regiões selecionadas.</p></section>
+<button id="qa-accent" role="tab" aria-selected="false">Selecionar oferta</button>
+<div class="dark-strip"><span id="qa-mask" role="img" aria-label="ícone decorativo"></span></div>
+<img id="qa-image" alt="amostra gráfica" width="42" height="42" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Crect width='42' height='42' rx='8' fill='%23ff8c23'/%3E%3C/svg%3E">
+<div id="feed"></div></main>
+<script>
+window.qaMutate=()=>{document.querySelector('#qa-accent').setAttribute('aria-selected','true');document.querySelector('#feed').innerHTML='<article id="qa-live">Atualização de estoque</article>';};
+window.qaNativeDark=()=>document.documentElement.setAttribute('dark','');
+window.__fixtureReady=true;
+</script></body></html>
