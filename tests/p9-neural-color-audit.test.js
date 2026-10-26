@@ -31,7 +31,7 @@ test('P9: rejeita duplicatas, entradas inválidas e rótulos ausentes',()=>{
 });
 
 test('P9: avaliação conta falsos positivos e negativos e bloqueia promoção',()=>{
-  const samples=fixture.samples.slice(0,3);
+  const samples=[fixture.samples[0],fixture.samples[8],fixture.samples[1]];
   const opinions=samples.map(s=>({id:s.id,expected:s.expected,
     p7:{action:s.expected==='convert'?'preserve':'convert',confidence:0.7,background:'rgb(0, 0, 0)',color:'rgb(20, 20, 20)'},
     p8:{action:s.expected,confidence:0.75,
