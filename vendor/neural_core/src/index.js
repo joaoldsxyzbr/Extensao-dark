@@ -1,1 +1,1 @@
-export { loadModel, serializeModel, predict } from './model.js';
+export { loadModel, serializeModel, predict, predictBatch, getCapabilities, describeModel } from './model.js';

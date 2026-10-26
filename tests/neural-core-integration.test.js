@@ -61,3 +61,38 @@ test('modelo atualizado evita regressões e melhora o cenário de validação di
   }
   assert.ok(gains>=1, 'Novo modelo precisa corrigir ao menos um erro anterior');
 });
+
+test('P15: APIs do Neural Core estão disponíveis no bundle MV3 sem alterar o modelo atual', () => {
+  const loaded = core.loadModel(model);
+  const capabilities = core.getCapabilities();
+  assert.deepEqual([...capabilities.operators], ['dense']);
+  assert.deepEqual([...capabilities.activations], ['linear', 'relu', 'sigmoid', 'softmax', 'tanh']);
+  const info = core.describeModel(loaded);
+  assert.equal(info.inputSize, 7);
+  assert.equal(info.outputSize, 1);
+  assert.equal(info.layerCount, 2);
+  assert.equal(info.parameterCount, model.layers.reduce((n, layer) => n + layer.weights.length + layer.biases.length, 0));
+  const inputs = golden.cases.slice(0, 3).map(sample => sample.x);
+  const outputs = core.predictBatch(loaded, inputs);
+  assert.equal(outputs.length, inputs.length);
+  outputs.forEach((output, i) => assert.ok(Math.abs(output[0] - core.predict(loaded, inputs[i])[0]) < 1e-7));
+  const preserved = outputs[1][0];
+  outputs[0][0] = -1;
+  assert.equal(outputs[1][0], preserved, 'saídas do lote não podem compartilhar buffers');
+  assert.equal(core.predict(loaded, inputs[0])[0], core.predictBatch(loaded, [inputs[0]])[0][0]);
+  assert.deepEqual(core.predictBatch(loaded, []), []);
+  assert.throws(() => core.predictBatch(loaded, Array.from({length: 4097}, () => inputs[0])), /limite/);
+  assert.throws(() => core.loadModel({...model, layers: [{...model.layers[0], operator: 'attention'}, model.layers[1]]}), /operador/);
+});
+
+test('P15: softmax e entrada por lote funcionam no script clássico', () => {
+  const definition = {formatVersion: 1, layers: [{
+    inputSize: 2, outputSize: 2, activation: 'softmax',
+    weights: [1, 0, 0, 1], biases: [0, 0]
+  }]};
+  const classifier = core.loadModel(definition);
+  const predictions = core.predictBatch(classifier, [[3, 1], [1, 3]]);
+  assert.ok(predictions[0][0] > predictions[0][1]);
+  assert.ok(predictions[1][1] > predictions[1][0]);
+  assert.ok(Math.abs(predictions[0][0] + predictions[0][1] - 1) < 1e-6);
+});

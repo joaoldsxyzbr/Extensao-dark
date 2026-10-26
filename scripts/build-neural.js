@@ -11,11 +11,11 @@ const check = process.argv.includes('--check');
 
 function strip(code, importsForward) {
   if (importsForward) {
-    const statement = "import { forward } from './network.js';";
+    const statement = "import { forward, forwardBatch, SUPPORTED_ACTIVATIONS } from './network.js';";
     if (!code.includes(statement)) throw Error('Import do motor alterado: atualize o empacotador com revisão');
     code = code.replace(statement, '');
   }
-  code = code.replace(/^export function /gm, 'function ');
+  code = code.replace(/^export (function|const) /gm, '$1 ');
   if (/^\s*(import|export)\b/m.test(code)) throw Error('API do Neural Core mudou: revisão manual obrigatória');
   return code.trimEnd();
 }
@@ -30,13 +30,16 @@ const revisionMatch = /^Commit fixado: `([a-f0-9]{40})`/m.exec(upstream);
 if (!revisionMatch) throw Error('Referência do Neural Core inválida em UPSTREAM.md');
 const revision = revisionMatch[1];
 const prefix = '/* Neural Core reutilizável - snapshot ' + revision + '; gerado localmente, sem rede. */';
+// Falhar explicitamente quando a API pública do upstream mudar.
+const exposed = "export { loadModel, serializeModel, predict, predictBatch, getCapabilities, describeModel } from './model.js';";
+assert.equal(get('vendor/neural_core/src/index.js').trim(), exposed, 'API pública upstream alterada: revisar empacotamento');
 const bundled = [
   prefix,
   '(function(root) {',
   "'use strict';",
   strip(get('vendor/neural_core/src/network.js'), false),
   strip(get('vendor/neural_core/src/model.js'), true),
-  'const api = Object.freeze({loadModel, predict, serializeModel});',
+  'const api = Object.freeze({loadModel, predict, predictBatch, serializeModel, getCapabilities, describeModel});',
   "if (typeof module !== 'undefined' && module.exports) module.exports = api;",
   'else root.NeuralCore = api;',
   '})(globalThis);',

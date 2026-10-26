@@ -168,7 +168,9 @@ A validação visual com Chrome e Dark Reader continua necessária. O modo neura
 Actions fixadas por SHA, permissões somente de leitura, downloads versionados e ZIPs com extração segura. Testes JS/Python nativos; sem dependências novas. Auditoria em [docs/p5-seguranca-e-auditoria.md](docs/p5-seguranca-e-auditoria.md).
 
 
-## Integração versionada com Neural Core (2026-10-23)
+## Integração versionada com Neural Core (atualizado em 2026-10-25)
+
+**Atualização P15:** snapshot fixado em `5dc938747b64d6b5c5a7a8c442062006c51e1532`. O bundle MV3 expõe inferência em lote e descritores de capacidades/modelos, e o módulo Python oferece otimizadores e verificações adicionais. Os pesos da extensão continuam os mesmos: atualizar a biblioteca **não é retreinar nem ativar** um modelo novo. Consulte [UPSTREAM.md](vendor/neural_core/UPSTREAM.md).
 
 O motor genérico de inferência JS e o treinamento Python são um **snapshot** do repositório `Base-rede-neural`, fixado no commit registrado em [UPSTREAM.md](vendor/neural_core/UPSTREAM.md), em `vendor/neural_core/`. O projeto de origem **não é alterado**; não há submódulo Git, dependência npm, serviço externo ou atualização automática.
 
