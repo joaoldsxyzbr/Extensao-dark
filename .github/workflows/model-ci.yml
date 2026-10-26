@@ -38,6 +38,23 @@ jobs:
           path: training/css-advanced-features.json
           if-no-files-found: error
           retention-days: 7
+      - name: Gerar exemplos sintéticos P7 de cores neurais (não publicados)
+        run: node scripts/export-neural-color-features.js
+      - name: Treinar candidato P7 de previsão RGB com Neural Core P15
+        run: python3 -m training.train_neural_colors --output data/neural-color-ci-candidate.json --metrics data/neural-color-ci-metrics.json --epochs 5
+      - name: Avaliar candidato neural RGB sem implantar pesos
+        run: node scripts/evaluate-neural-colors.js
+      - name: Arquivar somente candidato experimental P7
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p7-neural-color-candidate-not-deployed
+          path: |
+            data/neural-color-ci-candidate.json
+            data/neural-color-ci-metrics.json
+            data/neural-color-ci-evaluation.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Treinar um modelo candidato com Python (sem substituir pesos distribuídos)
         run: python3 -m training.train_dark --output data/neural-ci-candidate.json
       - name: Verificar pesos distribuídos reproduzíveis em Python e JS
