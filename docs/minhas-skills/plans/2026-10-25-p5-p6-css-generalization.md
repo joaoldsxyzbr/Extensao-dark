@@ -14,6 +14,7 @@ Reduzir correções específicas por site treinando no futuro com padrões de CS
 - `scripts/generate-css-lab.js` expande **2.520 bases sintéticas × 8 perfis** = **20.160 variações CSS sintéticas**.
 - Sete perfis usam os splits por **família de componente** de P2: treino (10.584), validação (3.528), holdout (3.528). Um oitavo `css-stress-unseen` (2.520 linhas) fica reservado em separado para desafio de propriedades CSS. Ele **não** deve entrar no treino.
 - Perfis mudam layout, bordas, fontes, sombras, scroll e visibilidade. As primeiras 18 dimensões continuam idênticas aos 2.520 exemplos-base.
+- Variações determinísticas de dimensões e tipografia por caso aumentam a diversidade efetiva; o teste requer pelo menos **15 mil vetores distintos** entre as 20.160 linhas. Vetores repetidos não podem ser vendidos como evidência extra de generalização.
 - A rotulagem continua herdada das 30 famílias curadas no P2; **20.160 variações não significam 20.160 exemplos rotulados independentemente**. Não afirmamos generalização em sites reais com estes dados.
 - `verifyDataset` rejeita split/família impróprios, duplicatas, rótulos contraditórios para vetores iguais, números inválidos e perfis de estresse vazados.
 - O workflow de treinamento gera `training/css-advanced-features.json` e arquiva o arquivo por 7 dias como **artefato exploratório**, sem criar um candidato 48D nem modificar `data/neural-model.json`.
