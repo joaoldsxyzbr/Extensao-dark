@@ -1,0 +1,18 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>QA independente — painel de trabalho</title>
+<style>
+:root{--pane:rgb(246,246,246)}*{box-sizing:border-box}
+body{background:rgb(251,251,251);color:rgb(22,22,22);font:16px/1.5 system-ui;padding:24px}
+header{background:#252932;color:#f1f1f1;padding:16px}#qa-panel,#qa-live{background:var(--pane);color:rgb(24,24,24);border:1px solid #ddd;padding:20px;margin:20px 0}
+#qa-accent{background:rgb(8,115,235);color:white;padding:12px;border:0}
+#qa-mask{display:block;width:24px;height:24px;background:rgb(240,240,240);mask-image:linear-gradient(black,black);-webkit-mask-image:linear-gradient(black,black)}
+.icon-wrap{display:inline-block;background:#252932;padding:10px}
+html[dark] body{background:#191b1e;color:#f0f0f0}html[dark] #qa-panel,html[dark] #qa-live{background:#35373b;color:#f0f0f0;border-color:#555}
+</style></head><body><header><h1>Área de trabalho</h1></header><main><section id="qa-panel"><h2>Relatório</h2><p>Resumo com indicadores e ações.</p></section>
+<button id="qa-accent" role="tab" aria-selected="false">Selecionar filtro</button><div class="icon-wrap"><span id="qa-mask" role="img" aria-label="ícone"></span></div>
+<img id="qa-image" alt="imagem ilustrativa" width="42" height="42" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Ccircle cx='21' cy='21' r='19' fill='%230a9f75'/%3E%3C/svg%3E">
+<div id="updates"></div></main>
+<script>
+window.qaMutate=()=>{document.querySelector('#qa-accent').setAttribute('aria-selected','true');document.querySelector('#updates').innerHTML='<section id="qa-live">Indicador atualizado</section>';};
+window.qaNativeDark=()=>document.documentElement.setAttribute('dark','');
+window.__fixtureReady=true;
+</script></body></html>
