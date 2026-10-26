@@ -236,6 +236,82 @@
       bit(context.nativeDark),bit(context.compact));
   }
 
+  // P5: extrator avançado compartilhado entre corpus e futura inferência.
+  // As 18 dimensões do P2 nunca mudam. Estes sinais são somente CSS computado;
+  // não consultam DOM, strings de texto, URLs, campos ou estado do usuário.
+  const ADVANCED_FEATURE_NAMES=Object.freeze([
+    'backgroundLuminance','foregroundLuminance','backgroundAlpha',
+    'backgroundSaturation','ancestorLuminance','control','selected',
+    'graphic','backgroundImage','mask','pseudo','clip','isControl','disabled',
+    'translucent','contrast','nativeDark','compact',
+    'displayGrid','displayFlex','displayInline','positionOverlay','positionSticky',
+    'opacity','fontSize','fontWeight','lineHeight','borderRadius','borderWidth',
+    'outlineWidth','boxShadow','textShadow','filter','backdropFilter',
+    'mixBlend','isolation','overflowHidden','overflowScroll','pointerNone',
+    'pointerCursor','zIndex','width','height','aspect','gradient','rasterImage',
+    'pseudoContent','colorSchemeDark'
+  ]);
+  const ADVANCED_FEATURE_COUNT=ADVANCED_FEATURE_NAMES.length;
+  function advancedStyleFeatures(style={}) {
+    const s=style||{};
+    const text=(key,fallback='')=>String(s[key]??fallback).trim().toLowerCase();
+    const numeric=(value,fallback=0)=>{
+      const n=parseFloat(value);
+      return Number.isFinite(n)?n:fallback;
+    };
+    const clamp=(v,min,max)=>Math.max(0,Math.min(1,(v-min)/(max-min)));
+    const visible=key=>!['','none','normal','initial','unset'].includes(text(key));
+    const contains=(key,re)=>re.test(text(key));
+    const px=(key,scale)=>clamp(numeric(text(key)),0,scale);
+    const weight=text('fontWeight','normal');
+    const weightValue=weight==='bold'||weight==='bolder'?700:
+      weight==='normal'||weight==='lighter'?400:numeric(weight,400);
+    const bg=text('backgroundImage','none');
+    const w=numeric(text('width')),h=numeric(text('height'));
+    const z=text('zIndex');
+    const zNum=numeric(z);
+    const border=Math.max(...['borderTopWidth','borderRightWidth',
+      'borderBottomWidth','borderLeftWidth'].map(key=>numeric(text(key))));
+    const overflow=[text('overflowX'),text('overflowY'),text('overflow')];
+    const output=[
+      contains('display',/^(inline-)?grid$/)?1:0,
+      contains('display',/^(inline-)?flex$/)?1:0,
+      contains('display',/^inline(?:-block|-table)?$/)?1:0,
+      contains('position',/^(absolute|fixed)$/)?1:0,
+      text('position')==='sticky'?1:0,
+      clamp(numeric(text('opacity','1'),1),0,1),
+      px('fontSize',72),
+      clamp(weightValue,100,900),
+      px('lineHeight',96),
+      px('borderTopLeftRadius',80),
+      clamp(border,0,16),
+      px('outlineWidth',16),
+      visible('boxShadow')?1:0,
+      visible('textShadow')?1:0,
+      visible('filter')?1:0,
+      visible('backdropFilter')||visible('webkitBackdropFilter')?1:0,
+      !['','normal'].includes(text('mixBlendMode'))?1:0,
+      text('isolation')==='isolate'?1:0,
+      overflow.includes('hidden')||overflow.includes('clip')?1:0,
+      overflow.some(x=>['auto','scroll'].includes(x))?1:0,
+      text('pointerEvents')==='none'?1:0,
+      contains('cursor',/^(pointer|grab|grabbing)$/)?1:0,
+      z==='auto'||!z?0:clamp(zNum,-10,100),
+      clamp(w,0,1600),
+      clamp(h,0,1200),
+      w>0&&h>0?clamp(w/h,0,5):0,
+      /(linear|radial|conic)-gradient\(/.test(bg)?1:0,
+      /url\(/.test(bg)?1:0,
+      !['','normal','none'].includes(text('content'))?1:0,
+      contains('colorScheme',/(?:^|\s)dark(?:$|\s)/)?1:0
+    ];
+    return output.map(n=>Number.isFinite(n)?Math.max(0,Math.min(1,n)):0);
+  }
+  function advancedContextFeatures(background,foreground,ancestor,context={},style={}) {
+    const base=contextFeatures(background,foreground,ancestor,context);
+    return base ? base.concat(advancedStyleFeatures(style)) : null;
+  }
+
   // P4: separa confiança do modelo de autorização para modificar um
   // componente. Nunca converte grafismos, transparências ou superfícies
   // já escuras. O candidato contextual exige margem extra de confiança.
@@ -272,7 +348,7 @@
     return true;
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, neuralDecision, isEnabledForSite, isEnabledForFrame});
+  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, advancedStyleFeatures, advancedContextFeatures, ADVANCED_FEATURE_NAMES, ADVANCED_FEATURE_COUNT, neuralDecision, isEnabledForSite, isEnabledForFrame});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);
