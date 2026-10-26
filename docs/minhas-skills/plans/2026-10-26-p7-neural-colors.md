@@ -4,8 +4,8 @@
 
 ## Contrato
 - Entradas: 48 sinais atuais de CSS/contexto + 6 canais RGB da superfície/texto + 3 indicadores one-hot do tema = **57** números em [0,1]. A inclusão de RGB é necessária: as 48 características anteriores resumem luminância/saturação, mas não codificam integralmente o matiz original.
-- Saídas: **7** valores sigmoid em [0,1]: probabilidade de aplicar; R, G e B do novo fundo; R, G e B do novo texto. Os nomes e a ordem estão em \`scripts/export-neural-color-features.js\`.
-- \`training/neural-color-runtime.js\` usa somente \`NeuralCore.predict\` para decidir a ação e os seis canais RGB. Não existe fallback algorítmico de cores nesse módulo. Ausência de confiança retorna *preserve*. Validação estrutural rejeita vetores inválidos.
+- Saídas: **7** valores sigmoid em [0,1]: probabilidade de aplicar; R, G e B do novo fundo; R, G e B do novo texto. Os nomes e a ordem estão em `scripts/export-neural-color-features.js`.
+- `training/neural-color-runtime.js` usa somente `NeuralCore.predict` para decidir a ação e os seis canais RGB. Não existe fallback algorítmico de cores nesse módulo. Ausência de confiança retorna *preserve*. Validação estrutural rejeita vetores inválidos.
 - O protótipo não contempla ainda contornos, sombras, gradientes, transparências finais, imagem de fundo ou composição visual com outros elementos. Tais pontos exigem saídas e validações próprias antes de ativá-lo na extensão.
 
 ## Dados e avaliação
@@ -16,12 +16,18 @@
 - A avaliação reporta precisão de conversão, taxa de falso positivo, erro médio dos RGB alvo e taxa de contraste. Medidas sintéticas não são prova de uso em sites reais; a publicação continua bloqueada.
 
 ## Comandos
-\`\`\`bash
+```bash
 node scripts/export-neural-color-features.js
 python3 -m training.train_neural_colors --output data/neural-color-ci-candidate.json --metrics data/neural-color-ci-metrics.json
 node scripts/evaluate-neural-colors.js
 node --test tests/p7-neural-colors.test.js
-\`\`\`
+```
+
+## Primeiro ciclo de CI — 26/10/2026
+
+Na execução inicial do PR #14, o treinamento sintético de 5 épocas reduziu a perda de 0,76529 para 0,00931. O relatório mediu **0 falsos positivos no treino**, **0 na validação**, mas **18 no holdout de famílias** e **12 no perfil CSS stress**. O RGB MAE do holdout positivo foi aproximadamente **0,04030** em escala normalizada [0,1]. Os 144 testes JavaScript passaram.
+
+**A qualidade ainda é insuficiente para publicação**: o laboratório não representa páginas reais, os dados compartilham regras artificiais de cores e existem falsos positivos em casos não vistos. Esses números são observações do primeiro modelo, não metas ou evidência de superioridade ao Dark Reader. Não usar holdout ou stress para ajuste de hiperparâmetros; testar novas abordagens em validação e guardar avaliações futuras independentes.
 
 ## Próximas decisões técnicas
 1. Recolher e rotular amostras de componentes de páginas reais de forma consentida, com domínios/templates não vistos em holdout e sem dados de formulários ou credenciais.
