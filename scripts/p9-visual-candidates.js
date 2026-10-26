@@ -10,6 +10,7 @@ const core=require('../vendor/neural_core/neural-core.js');
 const {launch,sleep,ROOT}=require('./browser-e2e.js');
 const {chooseSites,isAllowedLanding}=require('./real-site-audit.js');
 const {VISUAL_EXPRESSION}=require('./p9-live-feature-snapshot.js');
+const {EXPRESSION:CONTRAST_EXPRESSION,summarize}=require('./real-site-snapshot.js');
 const {validateSample}=require('./p9-real-site-shadow.js');
 const {decode:decodeP7}=require('../training/neural-color-runtime.js');
 const {loadCandidate,predictColors}=require('../training/neural-color-p8-runtime.js');
@@ -55,6 +56,21 @@ function buildPlan(samples,predict){
   }
   stats.guarded=operations.length;
   return {operations,stats};
+}
+
+// Medicoes aproximadas em CSS computado, nao um veredito visual automatizado.
+function reviewContrast(baseline,candidate){
+  const counts=[baseline,candidate].every(item=>item&&
+    Number.isSafeInteger(item.sampledText)&&Number.isSafeInteger(item.weakText)&&
+    item.sampledText>0&&item.weakText>=0&&item.weakText<=item.sampledText);
+  if(!counts)return {status:'inconclusive',reason:'contrast-samples-unavailable'};
+  const difference=candidate.weakText-baseline.weakText;
+  const oldRate=baseline.weakText/baseline.sampledText;
+  const newRate=candidate.weakText/candidate.sampledText;
+  return {status:difference>=2&&newRate>oldRate+.03?'needs-review':'observed-no-clear-regression',
+    baselineWeakText:baseline.weakText,baselineSampledText:baseline.sampledText,
+    candidateWeakText:candidate.weakText,candidateSampledText:candidate.sampledText,
+    note:'Amostra CSS, nao certificacao WCAG nem comparacao visual humana'};
 }
 
 // Executado SOMENTE dentro de uma aba efemera de Chromium sem extensao instalada.
@@ -141,6 +157,7 @@ async function inspect(site,models){
     // restaurando exatamente os estilos inline antes de mudar de candidato.
     await browser.page.screenshot(path.join(OUTPUT,site.id+'-original.png'));
     snapshots.original=site.id+'-original.png';
+    const baselineContrast=summarize(await browser.page.eval(CONTRAST_EXPRESSION));
     for(const name of ['p7','p8']){
       const plan=buildPlan(observed.samples,models[name]);
       const applied=await browser.page.eval(command('apply',plan.operations));
@@ -150,6 +167,8 @@ async function inspect(site,models){
         await sleep(100);
         await browser.page.screenshot(path.join(OUTPUT,site.id+'-'+name+'-rendered.png'));
         snapshots[name]=site.id+'-'+name+'-rendered.png';
+        plan.stats.contrastReview=reviewContrast(baselineContrast,
+          summarize(await browser.page.eval(CONTRAST_EXPRESSION)));
       }finally{
         const restored=await browser.page.eval(command('restore'));
         restoreRequired=false;
@@ -159,7 +178,10 @@ async function inspect(site,models){
       modelsReport[name]=plan.stats;
     }
     await browser.page.eval(command('close'));
-    return {site:site.id,status:'observed',sampled:observed.samples.length,
+    const quality=Object.values(modelsReport).some(model=>model.contrastReview?.status==='needs-review')
+      ?'needs-review':Object.values(modelsReport).some(model=>model.contrastReview?.status==='inconclusive')
+      ?'inconclusive':'observed-no-clear-regression';
+    return {site:site.id,status:'observed',quality,sampled:observed.samples.length,
       models:modelsReport,screenshots:snapshots,restorationVerified:true};
   }catch(error){
     if(error instanceof TypeError||error.code==='ERR_ASSERTION')throw error;
@@ -201,22 +223,23 @@ async function main(){
   report.completed=true;
   report.observed=report.results.filter(row=>row.status==='observed').length;
   report.inconclusive=report.results.length-report.observed;
+  report.needsReview=report.results.filter(row=>row.quality==='needs-review').length;
   fs.writeFileSync(path.join(OUTPUT,'visual-comparison.json'),JSON.stringify(report,null,2)+'\n');
   if(report.observed===0)throw Error('P9: nenhuma pagina renderizada — inconclusivo');
   if(process.env.GITHUB_STEP_SUMMARY){
     const lines=['### P9 — capturas experimentais P7/P8 em paginas publicas','',
-      '| Site | Resultado | P7 estilizados | P8 estilizados | Restauracao |',
-      '|---|---|---:|---:|---|',
-      ...report.results.map(r=>'| '+r.site+' | '+r.status+' | '+
+      '| Site | Resultado | Revisao de contraste | P7 estilizados | P8 estilizados | Restauracao |',
+      '|---|---|---|---:|---:|---|',
+      ...report.results.map(r=>'| '+r.site+' | '+r.status+' | '+(r.quality??'—')+' | '+
         (r.models?.p7.guarded??'—')+' | '+(r.models?.p8.guarded??'—')+' | '+
         (r.restorationVerified?'ok':'inconclusiva')+' |'),'',
       '**Revisao humana obrigatoria:** capturas apenas de uma parcela do DOM; nao e extensao MV3 integrada nem autorizacao de promocao.',''];
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
   }
   console.log('P9 visual summary',JSON.stringify({observed:report.observed,
-    inconclusive:report.inconclusive,promotionEligible:false}));
+    inconclusive:report.inconclusive,needsReview:report.needsReview,promotionEligible:false}));
 }
 if(require.main===module)main().catch(err=>{
   console.error('P9 visual falhou:',err.message);process.exitCode=1;
 });
-module.exports=Object.freeze({buildPlan,renderVisualPage,outputFolder,command,inspect});
+module.exports=Object.freeze({buildPlan,renderVisualPage,outputFolder,command,inspect,reviewContrast});
