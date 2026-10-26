@@ -28,6 +28,8 @@ jobs:
         run: python3 scripts/prepare-browser-fixtures.py
       - name: Executar navegador real e comparar capturas
         run: node scripts/browser-e2e.js --output=browser-results --compare-extension="$DARK_READER_TEST_PATH"
+      - name: Validar paginas independentes de QA em Chromium
+        run: node scripts/qa-site-browser.js --output=browser-results/qa-pages
       - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
         run: |
           node scripts/export-contextual-features.js
