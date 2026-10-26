@@ -182,7 +182,7 @@ function pageExperiment(action, operations=[]){
           '[aria-selected="true"],[disabled]')||
         st.backgroundImage!=='none'||st.maskImage!=='none'||
         st.webkitMaskImage!=='none'||
-        !/^rgba?\\(/.test(st.backgroundColor)||
+        !/^rgba?\(/.test(st.backgroundColor)||
         st.backgroundColor.startsWith('rgb('))
         throw Error('P12: descendant protection blocked repair');
     }
