@@ -86,7 +86,7 @@ async function inspect(site,predict){
     const observed=await session.page.eval(EXPRESSION);
     if(!observed||!Number.isSafeInteger(observed.scanned)||
       !Number.isSafeInteger(observed.visible)||!Array.isArray(observed.samples)||
-      observed.samples.length<Math.min(2,site.minSamples)||
+      observed.samples.length<Math.min(8,site.minSamples)||
       observed.samples.length>140)
       return {site:site.id,status:'inconclusive',reason:'insufficient-valid-css-samples'};
     const metrics=analyze(observed.samples,predict);
@@ -97,8 +97,10 @@ async function inspect(site,predict){
     return {site:site.id,status:'observed',scanned:observed.scanned,
       sampled:metrics.samples,screenshot:screenshotAvailable?screenshot:null,
       ...metrics};
-  }catch{
-    // Erro de rede ou CDP nao pode virar aprovacao; nao exportar URLs/dados da pagina.
+  }catch(error){
+    // Saida neural estruturalmente invalida reprova a auditoria, nao vira falta de rede.
+    if(error instanceof TypeError)throw error;
+    // Erro de rede/CDP nao pode virar aprovacao; nao exportar URLs/dados da pagina.
     return {site:site.id,status:'inconclusive',reason:'navigation-or-browser-error'};
   }finally{if(session)await session.stop();}
 }
