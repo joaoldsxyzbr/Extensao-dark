@@ -149,23 +149,42 @@ function renderVisualPage(action,operations=[],colorTools,repairText){
       saveOriginal(nodes[op.index]);
     }
     Object.defineProperty(globalThis,backupKey,{value:backup,configurable:true});
+    Object.defineProperty(globalThis,'__extDarkP9OperationCount',
+      {value:operations.length,configurable:true});
     let descendantRepairs=0;
-    for(const op of operations){
-      const el=nodes[op.index];
-      el.style.setProperty('background-color',op.background,'important');
-      el.style.setProperty('color',op.color,'important');
-    }
-    for(const op of operations){
-      if(!op.repairDescendants)continue;
-      if(!colorTools||typeof repairText!=='function')
-        throw Error('P10: reparo contextual indisponivel');
-      const result=repairText(nodes[op.index],colorTools,saveOriginal);
-      descendantRepairs+=result.repaired;
+    try{
+      for(const op of operations){
+        const el=nodes[op.index];
+        el.style.setProperty('background-color',op.background,'important');
+        el.style.setProperty('color',op.color,'important');
+      }
+      for(const op of operations){
+        if(!op.repairDescendants)continue;
+        if(!colorTools||typeof repairText!=='function')
+          throw Error('P10: reparo contextual indisponivel');
+        const result=repairText(nodes[op.index],colorTools,saveOriginal);
+        descendantRepairs+=result.repaired;
+      }
+    }catch(error){
+      // Se a reparacao falhar, nunca deixar CSS parcial na pagina observada.
+      for(const savedStyle of backup){
+        for(const [name,value,priority] of [
+          ['background-color',savedStyle.background,savedStyle.backgroundPriority],
+          ['color',savedStyle.color,savedStyle.colorPriority]
+        ]){
+          if(value)savedStyle.el.style.setProperty(name,value,priority);
+          else savedStyle.el.style.removeProperty(name);
+        }
+      }
+      delete globalThis[backupKey];
+      delete globalThis.__extDarkP9OperationCount;
+      throw error;
     }
     return {applied:operations.length,descendantRepairs};
   }
   if(action==='restore'){
     const backup=globalThis[backupKey];
+    const operationCount=globalThis.__extDarkP9OperationCount;
     if(!Array.isArray(backup))throw Error('P9: nenhum estilo para restaurar');
     for(const saved of backup){
       for(const [name,value,priority] of [
@@ -184,7 +203,8 @@ function renderVisualPage(action,operations=[],colorTools,repairText){
         saved.el.style.getPropertyPriority('color')!==saved.colorPriority)mismatch++;
     }
     delete globalThis[backupKey];
-    return {restored:backup.length,mismatch};
+    delete globalThis.__extDarkP9OperationCount;
+    return {restored:operationCount,mismatch,descendantRestored:backup.length-operationCount};
   }
   if(action==='close'){
     if(Object.prototype.hasOwnProperty.call(globalThis,backupKey))
