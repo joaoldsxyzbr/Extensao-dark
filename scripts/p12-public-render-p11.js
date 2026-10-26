@@ -258,7 +258,12 @@ function assessSurfaceContrast(before,after,colorUtils=colors){
     doc.rows.length<=360&&typeof doc.truncated==='boolean';
   if(!valid(before)||!valid(after)||before.truncated||after.truncated||
      before.rows.length!==after.rows.length)
-    return {status:'inconclusive',audited:0,newWeak:0,reason:'incomplete-surface-sample'};
+    return {status:'inconclusive',audited:0,newWeak:0,
+      reason:'incomplete-surface-sample',
+      countBefore:Array.isArray(before?.rows)?before.rows.length:null,
+      countAfter:Array.isArray(after?.rows)?after.rows.length:null,
+      truncatedBefore:before?.truncated===true,
+      truncatedAfter:after?.truncated===true};
   let newWeak=0,worsened=0,alreadyWeak=0;
   for(let i=0;i<before.rows.length;i++){
     const a=before.rows[i],b=after.rows[i];
