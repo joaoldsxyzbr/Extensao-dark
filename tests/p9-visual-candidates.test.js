@@ -2,7 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
-const {buildPlan,renderVisualPage,outputFolder,command}=require('../scripts/p9-visual-candidates.js');
+const {buildPlan,renderVisualPage,outputFolder,command,reviewContrast}=require('../scripts/p9-visual-candidates.js');
 const {EXPRESSION,VISUAL_EXPRESSION,CAPTURE_SOURCE}=require('../scripts/p9-live-feature-snapshot.js');
 const root=path.resolve(__dirname,'..');
 const example=(reasons=[])=>({x:Array(57).fill(.2),reasons});
@@ -88,4 +88,12 @@ test('P9 visual: apenas prova de laboratorio, sem alterar content scripts ou cam
     path.join(root,'browser-results/p9-visual'));
   assert.throws(()=>outputFolder(path.join(root,'data')),/bloqueadas/);
   assert.throws(()=>outputFolder(path.join(root,'manifest.json')),/bloqueadas/);
+});
+
+test('P9 visual: aumento de textos sem contraste exige revisao e nunca vira aprovacao',()=>{
+  const initial={sampledText:120,weakText:3};
+  assert.equal(reviewContrast(initial,{sampledText:120,weakText:45}).status,'needs-review');
+  assert.equal(reviewContrast(initial,{sampledText:120,weakText:4}).status,'observed-no-clear-regression');
+  assert.equal(reviewContrast(initial,{sampledText:0,weakText:0}).status,'inconclusive');
+  assert.equal(reviewContrast(initial,{sampledText:100,weakText:120}).status,'inconclusive');
 });
