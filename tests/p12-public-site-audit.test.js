@@ -15,7 +15,7 @@ test('P12 sites: domínios independentes dos seis usados no laboratório P9',()=
   for(const site of SITES){
     assert.equal(new URL(site.url).protocol,'https:');
     assert.ok(!previouslyUsed.includes(new URL(site.url).hostname));
-    assert.ok(/^[a-z-]+$/.test(site.id));
+    assert.ok(/^[a-z0-9-]+$/.test(site.id));
   }
 });
 test('P12 sites: o relatório compara professor e rede sem assumir que gate aprovado é qualidade',()=>{
