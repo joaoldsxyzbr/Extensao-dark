@@ -20,6 +20,8 @@ function compileCase(sample){
   if(typeof sample.tag!=='string'||!/^[A-Z]+$/.test(sample.tag))throw new TypeError('P9: tag inválida');
   if(!sample.style||typeof sample.style!=='object'||Array.isArray(sample.style))
     throw new TypeError('P9: estilo ausente');
+  if(Object.hasOwn(sample.style,'backgroundColor')||Object.hasOwn(sample.style,'color'))
+    throw new TypeError('P9: cor fonte não pode ser sobrescrita pelo estilo');
   const parsed=RGB.map(name=>{
     const color=colors.parseColor(sample[name]);
     if(!color)throw new TypeError('P9: cor inválida: '+name);
@@ -71,9 +73,7 @@ function validateManualCorpus(doc){
 }
 function readOnlyOutput(destination){
   const target=path.resolve(destination);
-  if([path.join(ROOT,'data/neural-model.json'),path.join(ROOT,'data/neural-model-previous.json'),
-    path.join(ROOT,'manifest.json'),path.join(ROOT,'content/neural.js'),
-    SOURCE].includes(target)||path.extname(target)!=='.json')
+  if(target!==path.join(ROOT,'data/p9-manual-qa-ci.json'))
     throw new TypeError('P9: arquivo protegido/inválido para relatório');
   return target;
 }
@@ -128,8 +128,11 @@ function audit(options={}){
   const output=readOnlyOutput(options.output||path.join(ROOT,'data/p9-manual-qa-ci.json'));
   fs.mkdirSync(path.dirname(output),{recursive:true});
   fs.writeFileSync(output,JSON.stringify(result,null,2)+'\n');
+  const mistakes=Object.fromEntries(['p7','p8'].map(model=>[model,rows
+    .filter(row=>row[model].action!==row.expected)
+    .map(row=>({id:row.id,expected:row.expected,actual:row[model].action}))]));
   console.log(JSON.stringify({output,coverage,result:{p7:result.p7,p8:result.p8},
-    promotionEligible:result.promotionEligible}));
+    mistakes,promotionEligible:result.promotionEligible}));
   return result;
 }
 if(require.main===module){
