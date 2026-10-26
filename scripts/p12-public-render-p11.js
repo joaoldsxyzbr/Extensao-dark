@@ -28,10 +28,16 @@ function pageExperiment(action, operations=[]){
   const eligible='p,a,li,td,th,h1,h2,h3,small,strong,em,code,span';
   if(action==='start'){
     if(globalThis[key])throw Error('P12: session already active');
-    const surface=document.querySelector('main,article,#content,#main,.document,.content')||document.body;
-    if(!surface)throw Error('P12: no public surface');
-    const nodes=[],rows=[];
-    for(const el of surface.querySelectorAll(eligible)){
+    // Some public sites render a decorative <main> or an empty article
+    // before their actual content. Inspect candidate regions conservatively
+    // and use body only if every narrower region lacks eight usable texts.
+    const candidates=[...document.querySelectorAll(
+      'main,article,#content,#main,.document,.content'
+    ),document.body].filter(Boolean);
+    let selected=null;
+    for(const surface of candidates){
+      const nodes=[],rows=[];
+      for(const el of surface.querySelectorAll(eligible)){
       if(nodes.length>=80)break;
       if(el.closest('button,input,textarea,select,svg,canvas,video,script,'+
         '[role="img"],[aria-disabled="true"],[disabled],[aria-selected="true"]'))continue;
@@ -57,7 +63,12 @@ function pageExperiment(action, operations=[]){
       if(!Number.isFinite(size)||size<5||size>120)continue;
       nodes.push(el);
       rows.push({color:style.color,tag:el.tagName,size,weight});
+      }
+      if(rows.length>=8){selected={surface,nodes,rows};break;}
     }
+    if(!selected)return {status:'inconclusive',
+      reason:'insufficient-safe-visible-text',samples:0};
+    const {surface,nodes,rows}=selected;
     // Resolve effective original paint behind transparent content region.
     let sourceBackground=null,node=surface;
     while(node){
