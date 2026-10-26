@@ -2,7 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
-const {buildPlan,renderVisualPage,outputFolder,command,reviewContrast}=require('../scripts/p9-visual-candidates.js');
+const {buildPlan,renderVisualPage,outputFolder,command,reviewContrast,contrastSafety,selectSafeOperations}=require('../scripts/p9-visual-candidates.js');
 const {EXPRESSION,VISUAL_EXPRESSION,CAPTURE_SOURCE}=require('../scripts/p9-live-feature-snapshot.js');
 const root=path.resolve(__dirname,'..');
 const example=(reasons=[])=>({x:Array(57).fill(.2),reasons});
@@ -96,4 +96,47 @@ test('P9 visual: aumento de textos sem contraste exige revisao e nunca vira apro
   assert.equal(reviewContrast(initial,{sampledText:120,weakText:4}).status,'observed-no-clear-regression');
   assert.equal(reviewContrast(initial,{sampledText:0,weakText:0}).status,'inconclusive');
   assert.equal(reviewContrast(initial,{sampledText:100,weakText:120}).status,'inconclusive');
+});
+
+
+test('P9 descendentes: rejeita qualquer novo texto/icone fraco apos fundo neural',()=>{
+  const baseline={sampledText:136,weakText:6,maskedIcons:5,weakIcons:0};
+  assert.deepEqual(contrastSafety(baseline,{...baseline,weakText:7}).safe,false);
+  assert.deepEqual(contrastSafety(baseline,{...baseline,weakIcons:1}).safe,false);
+  assert.deepEqual(contrastSafety(baseline,{...baseline,sampledText:130}).safe,false);
+  assert.deepEqual(contrastSafety(baseline,{...baseline,maskedIcons:4}).safe,false);
+  assert.deepEqual(contrastSafety(baseline,{...baseline,weakText:5}).safe,true);
+  assert.deepEqual(contrastSafety(baseline,{...baseline}).safe,true);
+  assert.deepEqual(contrastSafety(baseline,null).safe,false);
+});
+
+test('P9 descendentes: avalia cada operacao e rejeita conflito combinado',async()=>{
+  const baseline={sampledText:10,weakText:0,maskedIcons:1,weakIcons:0};
+  const operations=[{index:1},{index:2},{index:3}];
+  const trials=[];
+  const probe=async selected=>{
+    trials.push(selected.map(o=>o.index).join(','));
+    // O 2 por si so escurece o texto de seu descendente.
+    if(selected.some(o=>o.index===2))return {...baseline,weakText:2};
+    // 1 e 3 isolados funcionam; juntos produzem contraste insuficiente.
+    if(selected.length===2)return {...baseline,weakText:1};
+    return {...baseline};
+  };
+  const result=await selectSafeOperations(operations,baseline,probe);
+  assert.deepEqual(trials,['1','2','3','1,3']);
+  assert.deepEqual(result.operations,[]);
+  assert.equal(result.descendantContrastRejected,1);
+  assert.equal(result.combinedContrastRejected,2);
+  assert.equal(result.safe,false);
+});
+
+test('P9 descendentes: aceita conversoes independentes e nao ignora erros de medicao',async()=>{
+  const baseline={sampledText:12,weakText:0,maskedIcons:0,weakIcons:0};
+  const operations=[{index:4},{index:5}];
+  const result=await selectSafeOperations(operations,baseline,async()=>({...baseline}));
+  assert.deepEqual(result.operations,operations);
+  assert.equal(result.safe,true);
+  await assert.rejects(()=>selectSafeOperations(operations,baseline,async()=>{
+    throw Error('Falha de CDP ao medir contraste');
+  }),/CDP/);
 });
