@@ -18,7 +18,7 @@ Prioridades em caso de conflito: **segurança e privacidade → integridade/legi
 - `popup/`: controles globais, por domínio, paleta, motor neural e opção de ignorar o tema escuro nativo.
 - `data/`: pesos versionados, limiares e cenários rotulados; `training/` e `training_tests/`: treinamento e validação offline em Python.
 - `scripts/`, `tests/` e `.github/workflows/`: verificações, laboratório de navegador real e gates de qualidade.
-- `vendor/neural_core/`: snapshot **fixado** do projeto independente `Base-rede-neural`, documentado em `vendor/neural_core/UPSTREAM.md`. Não é uma dependência atualizada automaticamente.
+- `vendor/neural_core/`: **motor neural integrado e mantido pela própria Extensão Dark**. O nome do diretório é legado e não representa uma dependência compartilhada; a origem histórica e a licença estão registradas em `vendor/neural_core/UPSTREAM.md` e `vendor/neural_core/LICENSE`. Não há sincronização com outro repositório.
 
 **Estado inicial a respeitar:** o modelo distribuído usa **7 entradas**, com limiar de **0,80**; o candidato contextual de **18 entradas** permanece experimental, com limiar de **0,90**, conforme `data/neural-thresholds.json`. Verificar o estado real do repositório antes de assumir que esses números continuam atuais.
 
@@ -35,8 +35,8 @@ Prioridades em caso de conflito: **segurança e privacidade → integridade/legi
 
 ## Rede neural: treinamento e promoção
 
-- O **Neural Core** é uma base reutilizável independente. Treinamento, rótulos e decisões específicos do modo escuro pertencem **a este repositório**, nunca devem ser inseridos no projeto genérico para resolver um problema local.
-- Manter a integração do Neural Core versionada e reproduzível: atualizar snapshot apenas de forma explícita, com commit de origem, revisão de API/licença, bundle gerado e testes. Não editar arquivos upstream copiados como atalho; implementar adaptações no código da extensão.
+- **O motor neural pertence a este projeto.** Sua implementação, treinamento, rótulos, pesos, benchmarks e decisões evoluem no repositório `Extensao-dark`; não existe mais arquitetura de motor central, upstream ativo ou necessidade de sincronização com o projeto de origem.
+- É permitido evoluir diretamente o código em `vendor/neural_core/` quando houver necessidade comprovada. Manter compatibilidade de API/modelos, licença e atribuição histórica; reconstruir e verificar o bundle MV3 e executar testes JS/Python. Não renomear caminhos legados sem testar todos os imports, workflows e empacotamento.
 - Separar **candidato** de **modelo publicado**. Treinamento e CI podem gerar pesos/relatórios temporários, mas **não** substituir automaticamente `data/neural-model.json`, alterar limiares ou publicar modelos.
 - Não misturar famílias entre treino, validação e holdout; não usar resultados sintéticos como prova de qualidade em sites reais. Preservar comparações com o baseline e regressões críticas.
 - A promoção de pesos exige decisão **expressa** do responsável, métricas reprodutíveis, aprovação dos gates e **revisão visual humana** de páginas reais. Resultado ausente ou inconclusivo **bloqueia** a promoção; não pode ser convertido artificialmente em sucesso.
@@ -46,7 +46,7 @@ Prioridades em caso de conflito: **segurança e privacidade → integridade/legi
 
 1. **Investigar antes de editar.** Identificar o comportamento atual, os arquivos responsáveis, testes existentes e a causa provável. Alterar apenas o necessário; não reescrever arquitetura estável para corrigir um caso isolado.
 2. **Definir evidência de aceitação.** Para bugs, reproduzir com teste de regressão antes da correção quando viável. Cobrir casos normais, desativação/restauração, tema nativo e risco de afetar outros sites.
-3. **Implementar mudanças pequenas e rastreáveis.** Usar branches e PRs para alterações de código relevantes; preservar trabalho em andamento. Não fazer merge, release, publicação na loja, sincronização de upstream ou promoção de pesos sem autorização correspondente.
+3. **Implementar mudanças pequenas e rastreáveis.** Usar branches e PRs para alterações de código relevantes; preservar trabalho em andamento. Não fazer merge, release, publicação na loja ou promoção de pesos sem autorização correspondente.
 4. **Validar na intensidade adequada.** Executar ao menos os testes afetados e, para mudanças no motor, o conjunto completo de testes nativos. Quando houver impacto visual/DOM, usar cenários no Chromium real e examinar capturas, não apenas mocks.
 5. **Registrar claramente.** Informar arquivos alterados, verificações executadas e seus resultados, riscos/limitações, pendências e próximos passos. Atualizar documentação somente quando o comportamento ou o contrato realmente mudou; não afirmar que testes não realizados passaram.
 
