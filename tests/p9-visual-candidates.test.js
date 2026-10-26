@@ -140,3 +140,48 @@ test('P9 descendentes: aceita conversoes independentes e nao ignora erros de med
     throw Error('Falha de CDP ao medir contraste');
   }),/CDP/);
 });
+
+
+test('P10: render de superficie neural corrige descendente e restaura ambos exatamente',()=>{
+  const {repairDescendantText}=require('../scripts/p10-descendant-color.js');
+  const colors=require('../content/colors.js');
+  const originalRead=globalThis.getComputedStyle;
+  const parentStyle=styleFixture();
+  const childStyle=styleFixture();
+  childStyle.setProperty('background-color','');
+  childStyle.setProperty('color','rgb(24, 24, 24)','');
+  const root={tagName:'ARTICLE',style:parentStyle,isConnected:true,parentElement:null};
+  const descendant={
+    tagName:'P',style:childStyle,isConnected:true,parentElement:root,
+    closest:()=>null,
+    getBoundingClientRect:()=>({width:150,height:24}),
+  };
+  root.querySelectorAll=()=>[descendant];
+  globalThis.getComputedStyle=el=>({
+    display:'block',visibility:'visible',opacity:'1',backgroundImage:'none',
+    maskImage:'none',webkitMaskImage:'none',fontSize:'16px',fontWeight:'400',
+    backgroundColor:el.style.getPropertyValue('background-color')||
+      (el===root?'rgb(255, 255, 255)':'rgba(0, 0, 0, 0)'),
+    color:el.style.getPropertyValue('color')
+  });
+  globalThis.__extDarkP9VisualNodes=[root];
+  try{
+    const result=renderVisualPage('apply',[{index:0,repairDescendants:true,
+      background:'rgb(24, 28, 34)',color:'rgb(239, 242, 245)'}],
+      colors,repairDescendantText);
+    assert.deepEqual(result,{applied:1,descendantRepairs:1});
+    assert.ok(colors.contrastRatio(
+      colors.parseColor(descendant.style.getPropertyValue('color')),
+      colors.parseColor('rgb(24, 28, 34)'))>=4.5);
+    assert.deepEqual(renderVisualPage('restore'),{restored:1,mismatch:0});
+    assert.equal(root.style.getPropertyValue('background-color'),'rgb(250, 250, 250)');
+    assert.equal(descendant.style.getPropertyValue('color'),'rgb(24, 24, 24)');
+    assert.equal(descendant.style.getPropertyPriority('color'),'');
+    assert.deepEqual(renderVisualPage('close'),{closed:true});
+  }finally{
+    globalThis.getComputedStyle=originalRead;
+    delete globalThis.__extDarkP9SavedStyles;
+    delete globalThis.__extDarkP9OperationCount;
+    delete globalThis.__extDarkP9VisualNodes;
+  }
+});
