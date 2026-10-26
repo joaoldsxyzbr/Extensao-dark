@@ -36,6 +36,8 @@ jobs:
           python3 -m training.train_neural_colors_p8 --output data/neural-color-p8-ci-candidate.json --epochs 8
       - name: Observar decisoes P7 P8 em paginas publicas sem aplicar estilos
         run: node scripts/p9-real-site-shadow.js --output=browser-results/p9-shadow --sites=example,wikipedia,mdn,github,roblox,youtube
+      - name: Renderizar P7 P8 apenas no Chromium efemero e restaurar CSS
+        run: node scripts/p9-visual-candidates.js --output=browser-results/p9-visual --sites=example,wikipedia,mdn,github
       - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
         run: |
           node scripts/export-contextual-features.js
