@@ -44,6 +44,8 @@ jobs:
           python3 -m training.train_p11_descendant --epochs 12
       - name: Comparar P11 com professor seguro em templates locais novos
         run: node scripts/p12-descendant-browser.js --output=browser-results/p12-descendant
+      - name: Auditar P11 em domínios públicos inéditos (modo sombra sem conteúdo)
+        run: node scripts/p12-public-site-audit.js
       - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
         run: |
           node scripts/export-contextual-features.js
