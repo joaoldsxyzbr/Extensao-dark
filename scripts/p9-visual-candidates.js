@@ -12,6 +12,8 @@ const {chooseSites,isAllowedLanding}=require('./real-site-audit.js');
 const {VISUAL_EXPRESSION}=require('./p9-live-feature-snapshot.js');
 const {EXPRESSION:CONTRAST_EXPRESSION,summarize}=require('./real-site-snapshot.js');
 const {validateSample}=require('./p9-real-site-shadow.js');
+const {repairDescendantText}=require('./p10-descendant-color.js');
+const COLOR_SOURCE=fs.readFileSync(path.join(ROOT,'content/colors.js'),'utf8');
 const {decode:decodeP7}=require('../training/neural-color-runtime.js');
 const {loadCandidate,predictColors}=require('../training/neural-color-p8-runtime.js');
 
@@ -117,7 +119,7 @@ async function selectSafeOperations(operations,baseline,probe){
 
 // Executado SOMENTE dentro de uma aba efemera de Chromium sem extensao instalada.
 // Referencias aos elementos e estado original ficam somente na memoria da pagina.
-function renderVisualPage(action,operations=[]){
+function renderVisualPage(action,operations=[],colorTools,repairText){
   const key='__extDarkP9VisualNodes',backupKey='__extDarkP9SavedStyles';
   const nodes=globalThis[key];
   if(!Array.isArray(nodes)||nodes.length>140)throw Error('P9: handles do DOM ausentes');
@@ -126,25 +128,41 @@ function renderVisualPage(action,operations=[]){
       throw Error('P9: modo visual ativo; restaure antes');
     if(!Array.isArray(operations)||operations.length>140)throw Error('P9: plano invalido');
     const seen=new Set(),backup=[];
+    const saved=new Set();
+    const saveOriginal=el=>{
+      if(saved.has(el))return;
+      saved.add(el);
+      backup.push({el,background:el.style.getPropertyValue('background-color'),
+        backgroundPriority:el.style.getPropertyPriority('background-color'),
+        color:el.style.getPropertyValue('color'),
+        colorPriority:el.style.getPropertyPriority('color')});
+    };
     for(const op of operations){
       if(!op||!Number.isSafeInteger(op.index)||op.index<0||op.index>=nodes.length||
         seen.has(op.index)||typeof op.background!=='string'||typeof op.color!=='string'||
         !/^rgb\(\d{1,3}, \d{1,3}, \d{1,3}\)$/.test(op.background)||
         !/^rgb\(\d{1,3}, \d{1,3}, \d{1,3}\)$/.test(op.color)||
-        !nodes[op.index]?.isConnected)throw Error('P9: operacao visual invalida');
+        !nodes[op.index]?.isConnected||
+        (op.repairDescendants!==undefined&&typeof op.repairDescendants!=='boolean'))
+        throw Error('P9: operacao visual invalida');
       seen.add(op.index);
-      const el=nodes[op.index];
-      backup.push({el,background:el.style.getPropertyValue('background-color'),
-        backgroundPriority:el.style.getPropertyPriority('background-color'),
-        color:el.style.getPropertyValue('color'),
-        colorPriority:el.style.getPropertyPriority('color')});
+      saveOriginal(nodes[op.index]);
     }
     Object.defineProperty(globalThis,backupKey,{value:backup,configurable:true});
-    for(let i=0;i<operations.length;i++){
-      backup[i].el.style.setProperty('background-color',operations[i].background,'important');
-      backup[i].el.style.setProperty('color',operations[i].color,'important');
+    let descendantRepairs=0;
+    for(const op of operations){
+      const el=nodes[op.index];
+      el.style.setProperty('background-color',op.background,'important');
+      el.style.setProperty('color',op.color,'important');
     }
-    return {applied:backup.length};
+    for(const op of operations){
+      if(!op.repairDescendants)continue;
+      if(!colorTools||typeof repairText!=='function')
+        throw Error('P10: reparo contextual indisponivel');
+      const result=repairText(nodes[op.index],colorTools,saveOriginal);
+      descendantRepairs+=result.repaired;
+    }
+    return {applied:operations.length,descendantRepairs};
   }
   if(action==='restore'){
     const backup=globalThis[backupKey];
@@ -177,8 +195,9 @@ function renderVisualPage(action,operations=[]){
   throw Error('P9: acao visual desconhecida');
 }
 const command=(action,operations)=>
-  '('+renderVisualPage.toString()+')('+JSON.stringify(action)+','+
-  JSON.stringify(operations||[])+')';
+  '(()=>{const module={exports:{}};\n'+COLOR_SOURCE+
+  '\nreturn ('+renderVisualPage.toString()+')('+JSON.stringify(action)+','+
+  JSON.stringify(operations||[])+',module.exports,('+repairDescendantText.toString()+'));})()';
 
 async function inspect(site,models){
   let browser,restoreRequired=false;
@@ -216,7 +235,8 @@ async function inspect(site,models){
           assert.equal(restored.mismatch,0,'P9: CSS divergente apos preflight');
         }
       };
-      const checked=await selectSafeOperations(plan.operations,baselineContrast,probe);
+      const jointOps=plan.operations.map(operation=>({...operation,repairDescendants:true}));
+      const checked=await selectSafeOperations(jointOps,baselineContrast,probe);
       plan.stats.descendantContrastRejected=checked.descendantContrastRejected;
       plan.stats.combinedContrastRejected=checked.combinedContrastRejected;
       plan.stats.guarded=checked.operations.length;
@@ -224,6 +244,7 @@ async function inspect(site,models){
       if(!checked.safe)return {site:site.id,status:'inconclusive',
         reason:'contrast-preflight-inconclusive'};
       const applied=await browser.page.eval(command('apply',checked.operations));
+      plan.stats.descendantRepairs=applied.descendantRepairs;
       restoreRequired=true;
       try{
         assert.equal(applied.applied,checked.operations.length);
