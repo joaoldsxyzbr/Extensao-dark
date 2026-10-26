@@ -29,6 +29,15 @@ jobs:
           node scripts/export-neural-features.js --check
       - name: Gerar corpus contextual supervisionado P2
         run: node scripts/export-contextual-features.js
+      - name: Gerar e auditar corpus CSS avançado P5/P6 (sem treino novo)
+        run: node scripts/generate-css-lab.js --output=training/css-advanced-features.json
+      - name: Arquivar corpus exploratório CSS P5/P6
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: css-advanced-exploratory-corpus-not-deployed
+          path: training/css-advanced-features.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Treinar um modelo candidato com Python (sem substituir pesos distribuídos)
         run: python3 -m training.train_dark --output data/neural-ci-candidate.json
       - name: Verificar pesos distribuídos reproduzíveis em Python e JS
