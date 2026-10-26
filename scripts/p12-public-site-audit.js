@@ -121,7 +121,7 @@ function assess(rows,predict,colorUtils=colors){
     palettes:result};
 }
 function makePalette(palettes,siteId){
-  if(!/^[a-z-]+$/.test(siteId)||!Array.isArray(palettes)||palettes.length>24)
+  if(!/^[a-z0-9-]+$/.test(siteId)||!Array.isArray(palettes)||palettes.length>24)
     throw Error('P12: paleta invalida');
   const valid=v=>{const x=colors.parseColor(v);if(!x||x.a!==1)throw Error('Cor SVG invalida');return 'rgb('+[x.r,x.g,x.b].join(', ')+')';};
   const out=['<svg xmlns="http://www.w3.org/2000/svg" width="870" height="'+
