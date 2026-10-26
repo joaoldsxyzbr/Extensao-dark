@@ -4,10 +4,11 @@ const fs=require('node:fs');
 const path=require('node:path');
 const ROOT=path.resolve(__dirname,'..');
 
-function samplePublicPage(colors){
+function samplePublicPage(colors,storeVisualHandles=false){
   const MAX_SCANNED=2200,MAX_SAMPLES=140;
   const nodes=document.querySelectorAll('body,main,article,section,header,footer,nav,aside,div,button,input,textarea,select,svg,span,a,img,p,li,h1,h2,h3,table');
   const records=[];
+  const visualHandles=storeVisualHandles?[]:null;
   let visible=0;
   for(let i=0;i<Math.min(nodes.length,MAX_SCANNED);i++){
     if(records.length>=MAX_SAMPLES)break;
@@ -43,6 +44,13 @@ function samplePublicPage(colors){
     if(visual.action!=='convert')reasons.push('non-surface');
     // X e motivos tecnicos somente; nunca retornar CSS bruto, atributo, identificador, texto ou URL.
     records.push({x,reasons});
+    if(visualHandles)visualHandles.push(el);
+  }
+  if(visualHandles){
+    if(Object.prototype.hasOwnProperty.call(globalThis,'__extDarkP9VisualNodes'))
+      throw Error('P9: sessão visual ja existe na pagina');
+    Object.defineProperty(globalThis,'__extDarkP9VisualNodes',
+      {value:visualHandles,configurable:true});
   }
   return {scanned:Math.min(nodes.length,MAX_SCANNED),visible,samples:records};
 }
@@ -50,4 +58,8 @@ const COLOR_SOURCE=fs.readFileSync(path.join(ROOT,'content/colors.js'),'utf8');
 // O modulo local recebe as funcoes de cor; nao grava globais na pagina e nao usa eval()/fetch().
 const EXPRESSION='(()=>{const module={exports:{}};\n'+COLOR_SOURCE+
   '\nreturn ('+samplePublicPage.toString()+')(module.exports);})()';
-module.exports=Object.freeze({EXPRESSION,CAPTURE_SOURCE:samplePublicPage.toString(),samplePublicPage});
+// Somente no Chromium descartavel: mantem referencias DOM na pagina, jamais devolvidas ao Node.
+const VISUAL_EXPRESSION='(()=>{const module={exports:{}};\n'+COLOR_SOURCE+
+  '\nreturn ('+samplePublicPage.toString()+')(module.exports,true);})()';
+module.exports=Object.freeze({EXPRESSION,VISUAL_EXPRESSION,
+  CAPTURE_SOURCE:samplePublicPage.toString(),samplePublicPage});
