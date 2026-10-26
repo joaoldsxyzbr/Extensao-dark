@@ -13,12 +13,32 @@ import tempfile
 from vendor.neural_core.training.network import create_network, predict
 from vendor.neural_core.training.export import export_model
 from vendor.neural_core.training.train import train
-from training.train_neural_colors import DATA, safe_output, load_dataset
+from training.train_neural_colors import DATA, safe_output, load_dataset, validate_sample
 
 ROOT = Path(__file__).resolve().parents[1]
 KIND = "neural-color-twohead-experimental-v1"
 INPUTS = 57
 SEED = 20261026
+HARD_NEGATIVES = ROOT / "training/neural-color-p8-hard-negatives.json"
+
+
+def load_hard_negatives(path=HARD_NEGATIVES):
+    data = json.loads(Path(path).read_text(encoding="utf8"))
+    if (not isinstance(data, dict) or data.get("formatVersion") != 1 or
+        data.get("origin") != "training-only-translucency-augmentation-not-real-websites" or
+        data.get("featureCount") != 57 or
+        not isinstance(data.get("samples"), list) or len(data["samples"]) != 378):
+        raise ValueError("Origem/quantidade de negativos P8 inválida")
+    ids = set()
+    for row in data["samples"]:
+        validate_sample(row)
+        if (row["split"] != "train" or row.get("group") not in ("card", "alert") or
+            row["y"][0] != 0 or not 0 < row["x"][2] < 1 or
+            row.get("profile") not in ("css-basic", "css-flex-interaction", "css-layered-shadow") or
+            "hover" not in row.get("id", "") or row["id"] in ids):
+            raise ValueError("Negativo P8 fora das famílias de treino")
+        ids.add(row["id"])
+    return data["samples"]
 
 
 def select_threshold(model, validation):
@@ -81,11 +101,12 @@ def audit_feature_overlap(grouped):
                         for split in ("validation", "holdout", "stress")}}
 
 
-def run_training(*, epochs=8, seed=SEED, data=DATA):
+def run_training(*, epochs=8, seed=SEED, data=DATA, hard_negatives=HARD_NEGATIVES):
     if type(epochs) is not int or not 1 <= epochs <= 25:
         raise ValueError("Épocas P8 fora do limite")
     grouped = load_dataset(data)
-    train_rows = grouped["train"]
+    hard_rows = load_hard_negatives(hard_negatives)
+    train_rows = grouped["train"] + hard_rows
     classifier = create_network([INPUTS, 16, 1], ["tanh", "sigmoid"], seed=seed)
     rgb = create_network([INPUTS, 16, 6], ["tanh", "sigmoid"], seed=seed + 1)
 
@@ -104,13 +125,14 @@ def run_training(*, epochs=8, seed=SEED, data=DATA):
     candidate = {"formatVersion": 1, "kind": KIND, "featureCount": INPUTS,
                  "threshold": threshold,
                  "heads": {"apply": export_model(classifier), "rgb": export_model(rgb)}}
-    audit = audit_feature_overlap(grouped)
+    audit = audit_feature_overlap({**grouped, "train": train_rows})
     scores = {split: measure((classifier, rgb), rows, threshold)
               for split, rows in grouped.items()}
     metrics = {"kind": KIND, "seed": seed, "epochs": epochs,
                "thresholdSource": "validation-negative-max",
                "threshold": threshold,
                "trainingRows": len(cls_samples),
+               "hardNegativeTrainingRows": len(hard_rows),
                "rgbPositiveTrainRows": len(rgb_samples),
                "classifierLoss": cls_loss, "rgbLoss": rgb_loss,
                "featureAudit": audit, "splits": scores,
@@ -144,13 +166,15 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--metrics", type=Path)
     parser.add_argument("--epochs", type=int, default=8)
+    parser.add_argument("--hard-negatives", type=Path, default=HARD_NEGATIVES)
     args = parser.parse_args()
     target = safe_output(args.output)
     if args.metrics:
         metrics_path = safe_output(args.metrics)
         if target == metrics_path:
             raise ValueError("Não sobrescrever candidato com relatório")
-    candidate, metrics = run_training(epochs=args.epochs, data=args.input)
+    candidate, metrics = run_training(epochs=args.epochs, data=args.input,
+                                      hard_negatives=args.hard_negatives)
     atomic_json(candidate, target)
     if args.metrics:
         atomic_json(metrics, metrics_path)

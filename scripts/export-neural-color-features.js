@@ -115,4 +115,4 @@ function main(){
   console.log(JSON.stringify({output,...verify(corpus),origin:corpus.origin}));
 }
 if(require.main===module)main();
-module.exports=Object.freeze({generate,verify,sourceColors,target,FEATURE_NAMES,TARGET_NAMES,THEMES});
+module.exports=Object.freeze({generate,verify,rowFor,sourceColors,target,FEATURE_NAMES,TARGET_NAMES,THEMES});
