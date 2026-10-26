@@ -73,6 +73,48 @@ function reviewContrast(baseline,candidate){
     note:'Amostra CSS, nao certificacao WCAG nem comparacao visual humana'};
 }
 
+// Gate fail-closed. A cor aprovada para o elemento nao garante contraste nos
+// filhos: cada modificacao deve ser medida na arvore real antes da captura.
+function contrastSafety(before,after){
+  const valid=row=>row&&['sampledText','weakText','maskedIcons','weakIcons']
+    .every(key=>Number.isSafeInteger(row[key])&&row[key]>=0)&&
+    row.sampledText>0&&row.weakText<=row.sampledText&&
+    row.weakIcons<=row.maskedIcons;
+  if(!valid(before)||!valid(after))
+    return {safe:false,reason:'contrast-observation-invalid'};
+  if(before.sampledText!==after.sampledText||
+     before.maskedIcons!==after.maskedIcons)
+    return {safe:false,reason:'css-sample-count-changed'};
+  if(after.weakText>before.weakText||after.weakIcons>before.weakIcons)
+    return {safe:false,reason:'descendant-contrast-regression',
+      extraWeakText:after.weakText-before.weakText,
+      extraWeakIcons:after.weakIcons-before.weakIcons};
+  return {safe:true,reason:'no-observed-contrast-regression'};
+}
+
+// Executa cada hipotese em pagina isolada, restaurando-a pelo callback de
+// sondagem. Nao ajusta parametros da rede nem usa os sites como dados de treino.
+async function selectSafeOperations(operations,baseline,probe){
+  if(!Array.isArray(operations)||operations.length>140||
+    typeof probe!=='function')throw new TypeError('P9: preflight invalido');
+  if(!contrastSafety(baseline,baseline).safe)
+    return {safe:false,reason:'baseline-inconclusive',operations:[],
+      descendantContrastRejected:0,combinedContrastRejected:0};
+  const approved=[];
+  let descendantContrastRejected=0;
+  for(const operation of operations){
+    const observed=await probe([operation]);
+    if(contrastSafety(baseline,observed).safe)approved.push(operation);
+    else descendantContrastRejected++;
+  }
+  // Conversoes isoladamente seguras podem interferir umas nas outras.
+  const combined=contrastSafety(baseline,await probe(approved));
+  return {safe:combined.safe,reason:combined.reason,
+    operations:combined.safe?approved:[],
+    descendantContrastRejected,
+    combinedContrastRejected:combined.safe?0:approved.length};
+}
+
 // Executado SOMENTE dentro de uma aba efemera de Chromium sem extensao instalada.
 // Referencias aos elementos e estado original ficam somente na memoria da pagina.
 function renderVisualPage(action,operations=[]){
@@ -160,15 +202,39 @@ async function inspect(site,models){
     const baselineContrast=summarize(await browser.page.eval(CONTRAST_EXPRESSION));
     for(const name of ['p7','p8']){
       const plan=buildPlan(observed.samples,models[name]);
-      const applied=await browser.page.eval(command('apply',plan.operations));
+      // Cada sonda e uma transacao: aplica, mede CSS computado, restaura.
+      const probe=async operations=>{
+        const trial=await browser.page.eval(command('apply',operations));
+        restoreRequired=true;
+        try{
+          assert.equal(trial.applied,operations.length);
+          return summarize(await browser.page.eval(CONTRAST_EXPRESSION));
+        }finally{
+          const restored=await browser.page.eval(command('restore'));
+          restoreRequired=false;
+          assert.equal(restored.restored,trial.applied,'P9: preflight nao restaurou CSS');
+          assert.equal(restored.mismatch,0,'P9: CSS divergente apos preflight');
+        }
+      };
+      const checked=await selectSafeOperations(plan.operations,baselineContrast,probe);
+      plan.stats.descendantContrastRejected=checked.descendantContrastRejected;
+      plan.stats.combinedContrastRejected=checked.combinedContrastRejected;
+      plan.stats.guarded=checked.operations.length;
+      plan.stats.preflight=checked.reason;
+      if(!checked.safe)return {site:site.id,status:'inconclusive',
+        reason:'contrast-preflight-inconclusive'};
+      const applied=await browser.page.eval(command('apply',checked.operations));
       restoreRequired=true;
       try{
-        assert.equal(applied.applied,plan.operations.length);
+        assert.equal(applied.applied,checked.operations.length);
+        const measured=summarize(await browser.page.eval(CONTRAST_EXPRESSION));
+        const safe=contrastSafety(baselineContrast,measured);
+        // Nao gerar captura como aprovada se a pagina mudou entre ensaio e aplicacao.
+        if(!safe.safe)throw Error('P9: rechecagem do contraste falhou: '+safe.reason);
         await sleep(100);
         await browser.page.screenshot(path.join(OUTPUT,site.id+'-'+name+'-rendered.png'));
         snapshots[name]=site.id+'-'+name+'-rendered.png';
-        plan.stats.contrastReview=reviewContrast(baselineContrast,
-          summarize(await browser.page.eval(CONTRAST_EXPRESSION)));
+        plan.stats.contrastReview=reviewContrast(baselineContrast,measured);
       }finally{
         const restored=await browser.page.eval(command('restore'));
         restoreRequired=false;
@@ -178,7 +244,9 @@ async function inspect(site,models){
       modelsReport[name]=plan.stats;
     }
     await browser.page.eval(command('close'));
-    const quality=Object.values(modelsReport).some(model=>model.contrastReview?.status==='needs-review')
+    const quality=Object.values(modelsReport).some(model=>
+      model.descendantContrastRejected>0||model.combinedContrastRejected>0||
+      model.contrastReview?.status==='needs-review')
       ?'needs-review':Object.values(modelsReport).some(model=>model.contrastReview?.status==='inconclusive')
       ?'inconclusive':'observed-no-clear-regression';
     return {site:site.id,status:'observed',quality,sampled:observed.samples.length,
@@ -242,4 +310,4 @@ async function main(){
 if(require.main===module)main().catch(err=>{
   console.error('P9 visual falhou:',err.message);process.exitCode=1;
 });
-module.exports=Object.freeze({buildPlan,renderVisualPage,outputFolder,command,inspect,reviewContrast});
+module.exports=Object.freeze({buildPlan,renderVisualPage,outputFolder,command,inspect,reviewContrast,contrastSafety,selectSafeOperations});
