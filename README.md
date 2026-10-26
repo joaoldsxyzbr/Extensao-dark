@@ -352,3 +352,6 @@ O experimento P7 utiliza Neural Core P15 para prever diretamente a decisão de a
 
 O modelo treinado é um candidato descartável, arquivado no CI por sete dias; **não está incluído no manifesto, não substitui o classificador atual e não é automaticamente publicado**. Veja [P7: laboratório neural de cores](docs/minhas-skills/plans/2026-10-26-p7-neural-colors.md).
 
+## P8 — avaliação experimental de redes neurais separadas (26/10/2026)
+
+A P8 avalia duas cabeças neurais (decisão BCE, cores RGB MSE) em contraste com a P7. Todas as amostras ainda são sintéticas; a avaliação em holdout é apenas auditoria e **não há promoção**. Consulte [P8](docs/minhas-skills/plans/2026-10-26-p8-neural-color-generalization.md).
