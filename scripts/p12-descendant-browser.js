@@ -113,8 +113,11 @@ function applyPage(action,operations){
     const mismatches=before.children.filter(row=>nodes.find(el=>el.id===row.id)
       ?.getAttribute('style')!==row.style).map(row=>row.id);
     delete window.__p12Restore;
+    const first=before.children[0];
     return {restored:before.children.length,
-      ok:surfaceMatch&&mismatches.length===0,surfaceMatch,badIds:mismatches};
+      ok:surfaceMatch&&mismatches.length===0,surfaceMatch,badIds:mismatches,
+      diagnostic:{surfaceBefore:before.surface,surfaceAfter:surface.getAttribute('style'),
+        textBefore:first.style,textAfter:nodes.find(el=>el.id===first.id)?.getAttribute('style')}};
   }
   throw Error('P12: acao inválida');
 }
