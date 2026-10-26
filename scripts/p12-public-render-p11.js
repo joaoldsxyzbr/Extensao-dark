@@ -169,10 +169,15 @@ function pageExperiment(action, operations=[]){
     if(!state.backup||!Array.isArray(operations)||operations.length>160)
       throw Error('P12: repair outside active color transaction');
     const seen=new Set();
+    const current=pageExperiment('audit');
+    if(current.truncated||current.rows.length!==state.auditNodes.length)
+      throw Error('P12: audit cohort changed during repair');
     for(const op of operations){
       if(!op||!Number.isSafeInteger(op.index)||op.index<0||
         op.index>=state.auditNodes.length||seen.has(op.index)||
-        typeof op.color!=='string'||!rgb.test(op.color))
+        typeof op.color!=='string'||!rgb.test(op.color)||
+        !['surface','stable-background'].includes(op.policy)||
+        typeof op.expectedBackground!=='string'||!rgb.test(op.expectedBackground))
         throw Error('P12: invalid repair');
       seen.add(op.index);
       const el=state.auditNodes[op.index],st=css(el);
@@ -182,9 +187,12 @@ function pageExperiment(action, operations=[]){
           '[aria-selected="true"],[disabled]')||
         st.backgroundImage!=='none'||st.maskImage!=='none'||
         st.webkitMaskImage!=='none'||
-        !/^rgba?\(/.test(st.backgroundColor)||
-        st.backgroundColor.startsWith('rgb('))
+        current.rows[op.index]?.bg!==op.expectedBackground)
         throw Error('P12: descendant protection blocked repair');
+      if(op.policy==='surface'&&
+         (!/^rgba?\(/.test(st.backgroundColor)||
+           st.backgroundColor.startsWith('rgb(')))
+        throw Error('P12: painted child cannot be treated as transparent');
     }
     // Append only nodes that were not already saved in the transaction.
     for(const op of operations){
@@ -352,22 +360,26 @@ function planDescendantRepairs(before,after,colorUtils=colors,targetBg=BG){
     if(!regressed)continue;
     if(protectedTags.has(now.tag)||protectedTags.has(old.tag))
       return {status:'blocked',reason:'protected-descendant',repairs:[]};
-    if(colorUtils.contrastRatio(bg,target)!==1)
-      return {status:'blocked',reason:'independent-or-unknown-background',
-        repairs:[],
-        diagnostic:{tag:typeof now.tag==='string'?now.tag:'unknown',
-          backgroundChanged:colorUtils.contrastRatio(oldBg,bg)!==1,
-          foregroundChanged:colorUtils.contrastRatio(oldFg,fg)!==1,
-          ratioBefore:Number(first.toFixed(2)),
-          ratioAfter:Number(second.toFixed(2)),
-          repairableBeforeBlock:repairs.length}};
+    const onSurface=colorUtils.contrastRatio(bg,target)===1;
+    const stableOwnBackground=colorUtils.contrastRatio(oldBg,bg)===1;
+    if(!onSurface&&!stableOwnBackground)
+      return {status:'blocked',reason:'changing-independent-background',
+        repairs:[],diagnostic:{tag:typeof now.tag==='string'?now.tag:'unknown',
+          backgroundChanged:true,ratioBefore:Number(first.toFixed(2)),
+          ratioAfter:Number(second.toFixed(2))}};
     if(repairs.length>=160)
       return {status:'inconclusive',reason:'repair-limit',repairs:[]};
-    const suggestion=colorUtils.ensureContrast(fg,bg,minimum);
+    // If a child has its own unchanged background, the ancestor's new text
+    // color must not replace its previously legible original foreground.
+    const suggestion=onSurface?colorUtils.ensureContrast(fg,bg,minimum):
+      colorUtils.contrastRatio(oldFg,bg)+.0001>=minimum?old.fg:
+      colorUtils.ensureContrast(oldFg,bg,minimum);
     const safe=colorUtils.parseColor(suggestion);
     if(!safe||colorUtils.contrastRatio(safe,bg)+.0001<minimum)
       return {status:'blocked',reason:'no-safe-descendant-color',repairs:[]};
-    repairs.push({index:i,color:suggestion});
+    repairs.push({index:i,color:suggestion,
+      policy:onSurface?'surface':'stable-background',
+      expectedBackground:now.bg});
   }
   return {status:'ready',reason:'all-regressions-repairable',repairs};
 }
