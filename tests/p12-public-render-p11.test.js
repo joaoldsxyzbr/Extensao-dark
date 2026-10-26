@@ -137,3 +137,29 @@ test('P12 repair: already weak text may not be worsened or disguised as fixed',(
   assert.equal(result.status,'ready');
   assert.equal(result.repairs.length,1);
 });
+
+
+test('P12 repair: restore original inherited foreground over unchanged independently painted background',()=>{
+  const before={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(22, 26, 30)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const after={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(241, 243, 246)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const plan=planDescendantRepairs(before,after,colors,BG);
+  assert.equal(plan.status,'ready');
+  assert.equal(plan.repairs.length,1);
+  assert.equal(plan.repairs[0].policy,'stable-background');
+  assert.equal(plan.repairs[0].color,before.rows[0].fg);
+  assert.ok(colors.contrastRatio(colors.parseColor(plan.repairs[0].color),
+    colors.parseColor(before.rows[0].bg))>=4.5);
+});
+test('P12 repair: refuses independent background that changes during transformation',()=>{
+  const before={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(22, 26, 30)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const after={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(241, 243, 246)',bg:'rgb(230, 230, 230)',size:23,weight:700}
+  ]};
+  assert.equal(planDescendantRepairs(before,after,colors,BG).status,'blocked');
+});
