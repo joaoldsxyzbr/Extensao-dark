@@ -138,7 +138,7 @@ function pageExperiment(action, operations=[]){
       const size=parseFloat(st.fontSize),weight=parseInt(st.fontWeight,10)||400;
       if(!background||!Number.isFinite(size)||!Number.isFinite(weight))
         return null;
-      return {fg:st.color,bg:background,size,weight};
+      return {fg:st.color,bg:background,size,weight,tag:el.tagName};
     });
     return {rows,truncated:state.auditTruncated};
   }
@@ -165,6 +165,44 @@ function pageExperiment(action, operations=[]){
       throw error;
     }
   }
+  if(action==='repair'){
+    if(!state.backup||!Array.isArray(operations)||operations.length>160)
+      throw Error('P12: repair outside active color transaction');
+    const seen=new Set();
+    const current=pageExperiment('audit');
+    if(current.truncated||current.rows.length!==state.auditNodes.length)
+      throw Error('P12: audit cohort changed during repair');
+    for(const op of operations){
+      if(!op||!Number.isSafeInteger(op.index)||op.index<0||
+        op.index>=state.auditNodes.length||seen.has(op.index)||
+        typeof op.color!=='string'||!rgb.test(op.color)||
+        !['surface','stable-background'].includes(op.policy)||
+        typeof op.expectedBackground!=='string'||!rgb.test(op.expectedBackground))
+        throw Error('P12: invalid repair');
+      seen.add(op.index);
+      const el=state.auditNodes[op.index],st=css(el);
+      if(!el.isConnected||el===state.surface||
+        el.closest('button,input,textarea,select,svg,canvas,video,'+
+          '[role="button"],[role="img"],[aria-disabled="true"],'+
+          '[aria-selected="true"],[disabled]')||
+        st.backgroundImage!=='none'||st.maskImage!=='none'||
+        st.webkitMaskImage!=='none'||
+        current.rows[op.index]?.bg!==op.expectedBackground)
+        throw Error('P12: descendant protection blocked repair');
+      if(op.policy==='surface'&&
+         (!/^rgba?\(/.test(st.backgroundColor)||
+           st.backgroundColor.startsWith('rgb(')))
+        throw Error('P12: painted child cannot be treated as transparent');
+    }
+    // Append only nodes that were not already saved in the transaction.
+    for(const op of operations){
+      const el=state.auditNodes[op.index];
+      if(!state.backup.some(saved=>saved.element===el))
+        state.backup.push({element:el,inline:el.getAttribute('style')});
+      el.style.setProperty('color',op.color,'important');
+    }
+    return {repaired:operations.length};
+  }
   if(action==='restore'){
     if(!state.backup)throw Error('P12: no active color phase');
     const saved=state.backup;
@@ -177,7 +215,7 @@ function pageExperiment(action, operations=[]){
     const mismatch=saved.some(item=>!equivalent(
       item.element.getAttribute('style'),item.inline));
     state.backup=null;
-    return {restored:state.nodes.length,ok:!mismatch};
+    return {restored:state.nodes.length,restoredDescendants:Math.max(0,saved.length-1-state.nodes.length),ok:!mismatch};
   }
   if(action==='close'){
     if(state.backup)throw Error('P12: restore before close');
@@ -291,6 +329,60 @@ function assessSurfaceContrast(before,after,colorUtils=colors){
     audited:before.rows.length,newWeak,worsened,alreadyWeak,
     reason:newWeak||worsened?'contrast-regression':'no-new-sampled-contrast-regression'};
 }
+// Compute minimal modifications required for previously readable descendants.
+// No content or element identity leaves Chromium: indices refer to the bounded
+// visual audit cohort. All uncertain/protected cases fail closed.
+function planDescendantRepairs(before,after,colorUtils=colors,targetBg=BG){
+  if(!before||!after||!Array.isArray(before.rows)||!Array.isArray(after.rows)||
+    before.rows.length!==after.rows.length||before.rows.length===0||
+    before.rows.length>360||before.truncated||after.truncated)
+    return {status:'inconclusive',reason:'incomplete-audit',repairs:[]};
+  const target=colorUtils.parseColor(targetBg);
+  if(!target||target.a<.999)
+    return {status:'inconclusive',reason:'unknown-target-background',repairs:[]};
+  const protectedTags=new Set(['BUTTON','INPUT','TEXTAREA','SELECT']);
+  const repairs=[];
+  for(let i=0;i<before.rows.length;i++){
+    const old=before.rows[i],now=after.rows[i];
+    if(!old||!now||!Number.isFinite(old.size)||!Number.isFinite(old.weight)||
+      !Number.isFinite(now.size)||!Number.isFinite(now.weight))
+      return {status:'inconclusive',reason:'unknown-css',repairs:[]};
+    const bg=colorUtils.parseColor(now.bg),fg=colorUtils.parseColor(now.fg);
+    const oldBg=colorUtils.parseColor(old.bg),oldFg=colorUtils.parseColor(old.fg);
+    if(!bg||!fg||!oldBg||!oldFg||
+      [bg,fg,oldBg,oldFg].some(x=>x.a<.999))
+      return {status:'inconclusive',reason:'unsupported-transparency',repairs:[]};
+    const minimum=old.size>=24||old.size>=18.66&&old.weight>=700?3:4.5;
+    const first=colorUtils.contrastRatio(oldFg,oldBg);
+    const second=colorUtils.contrastRatio(fg,bg);
+    const regressed=first+.0001>=minimum&&second+.0001<minimum ||
+      first+.0001<minimum&&second+.2<first;
+    if(!regressed)continue;
+    if(protectedTags.has(now.tag)||protectedTags.has(old.tag))
+      return {status:'blocked',reason:'protected-descendant',repairs:[]};
+    const onSurface=colorUtils.contrastRatio(bg,target)===1;
+    const stableOwnBackground=colorUtils.contrastRatio(oldBg,bg)===1;
+    if(!onSurface&&!stableOwnBackground)
+      return {status:'blocked',reason:'changing-independent-background',
+        repairs:[],diagnostic:{tag:typeof now.tag==='string'?now.tag:'unknown',
+          backgroundChanged:true,ratioBefore:Number(first.toFixed(2)),
+          ratioAfter:Number(second.toFixed(2))}};
+    if(repairs.length>=160)
+      return {status:'inconclusive',reason:'repair-limit',repairs:[]};
+    // If a child has its own unchanged background, the ancestor's new text
+    // color must not replace its previously legible original foreground.
+    const suggestion=onSurface?colorUtils.ensureContrast(fg,bg,minimum):
+      colorUtils.contrastRatio(oldFg,bg)+.0001>=minimum?old.fg:
+      colorUtils.ensureContrast(oldFg,bg,minimum);
+    const safe=colorUtils.parseColor(suggestion);
+    if(!safe||colorUtils.contrastRatio(safe,bg)+.0001<minimum)
+      return {status:'blocked',reason:'no-safe-descendant-color',repairs:[]};
+    repairs.push({index:i,color:suggestion,
+      policy:onSurface?'surface':'stable-background',
+      expectedBackground:now.bg});
+  }
+  return {status:'ready',reason:'all-regressions-repairable',repairs};
+}
 async function inspect(site,predict){
   let browser;
   const started=performance.now();
@@ -321,10 +413,25 @@ async function inspect(site,predict){
       const applied=await browser.page.eval(EXPRESSION(pageExperiment,'apply',operations));
       try{
         assert.equal(applied.applied,operations.length);
-        // Check full visible text cohort BEFORE the screenshot can be accepted.
+        // Before a screenshot, reconcile previously readable descendants
+        // that lost contrast because their ancestor became dark. Never touch
+        // protected controls or children with their own painted background.
+        const preRepair=await browser.page.eval(EXPRESSION(pageExperiment,'audit'));
+        const repairs=planDescendantRepairs(originalAudit,preRepair);
+        let repaired=0;
+        if(repairs.status==='ready'&&repairs.repairs.length){
+          const appliedRepair=await browser.page.eval(
+            EXPRESSION(pageExperiment,'repair',repairs.repairs));
+          assert.equal(appliedRepair.repaired,repairs.repairs.length);
+          repaired=appliedRepair.repaired;
+        }
         const full=await browser.page.eval(EXPRESSION(pageExperiment,'audit'));
-        const gate=assessSurfaceContrast(originalAudit,full);
-        report.phases[phase]={status:gate.status,surfaceAudit:gate};
+        const gate=repairs.status==='ready'?
+          assessSurfaceContrast(originalAudit,full):
+          {status:repairs.status,reason:repairs.reason};
+        report.phases[phase]={status:gate.status,surfaceAudit:gate,
+          repairedDescendants:repaired,repairGate:repairs.status,
+          repairDiagnostic:repairs.diagnostic||null};
         if(gate.status==='safe-in-sample'){
           const snapshot=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
           const measured=checkPaint(capture,snapshot,true);
@@ -405,4 +512,4 @@ async function main(){
 if(require.main===module)main().catch(e=>{
   console.error('P12 rendered failed:',e.stack||e);process.exitCode=1;
 });
-module.exports=Object.freeze({CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast});
+module.exports=Object.freeze({CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast,planDescendantRepairs});

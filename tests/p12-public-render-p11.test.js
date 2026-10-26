@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const colors=require('../content/colors.js');
-const {CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast}
+const {CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast,planDescendantRepairs}
   =require('../scripts/p12-public-render-p11.js');
 
 const capture={status:'ready',sourceBackground:'rgb(250, 250, 250)',rows:[
@@ -93,4 +93,73 @@ test('P12 whole-surface: truncation, unknown backgrounds and DOM instability nev
   assert.equal(assessSurfaceContrast({...stable,rows:[null]},stable,colors).status,'inconclusive');
   assert.equal(assessSurfaceContrast(stable,{rows:[{...stable.rows[0],fg:'rgb(2, 2, 2)'}],
     truncated:false},colors).status,'blocked');
+});
+
+
+test('P12 repair: computes bounded safe RGB only for descendants darkened by ancestor',()=>{
+  const before={truncated:false,rows:[
+    {fg:'rgb(22, 23, 24)',bg:'rgb(250, 250, 250)',size:16,weight:400},
+    {fg:'rgb(21, 40, 60)',bg:'rgb(241, 246, 250)',size:16,weight:400},
+    {fg:'rgb(22, 23, 24)',bg:'rgb(255, 255, 255)',size:16,weight:400}
+  ]};
+  const after={truncated:false,rows:[
+    {fg:'rgb(22, 23, 24)',bg:BG,size:16,weight:400},
+    {fg:'rgb(21, 40, 60)',bg:'rgb(241, 246, 250)',size:16,weight:400},
+    {fg:'rgb(22, 23, 24)',bg:'rgb(255, 255, 255)',size:16,weight:400}
+  ]};
+  const result=planDescendantRepairs(before,after,colors,BG);
+  assert.equal(result.status,'ready');
+  assert.equal(result.repairs.length,1);
+  assert.equal(result.repairs[0].index,0);
+  assert.ok(colors.contrastRatio(
+    colors.parseColor(result.repairs[0].color),colors.parseColor(BG))>=4.5);
+});
+test('P12 repair: refuses to change controls, independent painted surfaces or unknown styles',()=>{
+  const before={truncated:false,rows:[
+    {fg:'rgb(22, 23, 24)',bg:'rgb(250, 250, 250)',size:16,weight:400,tag:'BUTTON'},
+    {fg:'rgb(22, 23, 24)',bg:'rgb(250, 250, 250)',size:16,weight:400,tag:'P'}
+  ]};
+  const after={truncated:false,rows:[
+    {...before.rows[0],bg:BG},
+    {...before.rows[1],bg:BG}
+  ]};
+  const result=planDescendantRepairs(before,after,colors,BG);
+  assert.equal(result.status,'blocked');
+  assert.equal(result.reason,'protected-descendant');
+  assert.equal(planDescendantRepairs(before,{...after,truncated:true},colors,BG).status,'inconclusive');
+  const own={...after,rows:[after.rows[0],{...after.rows[1],bg:'rgb(240, 240, 240)'}]};
+  assert.deepEqual(planDescendantRepairs(before,own,colors,BG).repairs,[]);
+});
+test('P12 repair: already weak text may not be worsened or disguised as fixed',()=>{
+  const before={truncated:false,rows:[{fg:'rgb(110, 110, 110)',bg:'rgb(250, 250, 250)',size:16,weight:400,tag:'P'}]};
+  const after={truncated:false,rows:[{fg:'rgb(15, 15, 15)',bg:BG,size:16,weight:400,tag:'P'}]};
+  const result=planDescendantRepairs(before,after,colors,BG);
+  assert.equal(result.status,'ready');
+  assert.equal(result.repairs.length,1);
+});
+
+
+test('P12 repair: restore original inherited foreground over unchanged independently painted background',()=>{
+  const before={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(22, 26, 30)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const after={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(241, 243, 246)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const plan=planDescendantRepairs(before,after,colors,BG);
+  assert.equal(plan.status,'ready');
+  assert.equal(plan.repairs.length,1);
+  assert.equal(plan.repairs[0].policy,'stable-background');
+  assert.equal(plan.repairs[0].color,before.rows[0].fg);
+  assert.ok(colors.contrastRatio(colors.parseColor(plan.repairs[0].color),
+    colors.parseColor(before.rows[0].bg))>=4.5);
+});
+test('P12 repair: refuses independent background that changes during transformation',()=>{
+  const before={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(22, 26, 30)',bg:'rgb(250, 250, 250)',size:23,weight:700}
+  ]};
+  const after={truncated:false,rows:[
+    {tag:'H2',fg:'rgb(241, 243, 246)',bg:'rgb(230, 230, 230)',size:23,weight:700}
+  ]};
+  assert.equal(planDescendantRepairs(before,after,colors,BG).status,'blocked');
 });
