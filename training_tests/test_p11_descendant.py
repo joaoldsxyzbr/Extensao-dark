@@ -49,6 +49,21 @@ class P11DescendantTests(unittest.TestCase):
         self.assertEqual(safe_target(OUTPUT), OUTPUT)
         self.assertEqual(safe_target(METRICS), METRICS)
 
+    def test_selection_uses_validation_safety_and_error_without_holdout(self):
+        from training.train_p11_descendant import select_best
+        options = [
+            {"epochs": 8, "validation": {"unsafeColorProposals": 13, "rgbMAE": .012}},
+            {"epochs": 12, "validation": {"unsafeColorProposals": 5, "rgbMAE": .014}},
+            {"epochs": 16, "validation": {"unsafeColorProposals": 5, "rgbMAE": .010}},
+        ]
+        self.assertEqual(select_best(options)["epochs"], 16)
+        # A non-validation holdout field must not affect the selection.
+        options[0]["holdout"] = {"unsafeColorProposals": 0, "rgbMAE": 0}
+        options[2]["holdout"] = {"unsafeColorProposals": 999, "rgbMAE": 9}
+        self.assertEqual(select_best(options)["epochs"], 16)
+        with self.assertRaisesRegex(ValueError, "validação"):
+            select_best([{"epochs": 5, "validation": {"unsafeColorProposals": -1, "rgbMAE": .01}}])
+
     def test_small_training_export(self):
         candidate, metrics = train_candidate(epochs=1)
         self.assertEqual(candidate["kind"], "p11-neural-descendant-rgb-experimental-v1")
@@ -56,6 +71,11 @@ class P11DescendantTests(unittest.TestCase):
         self.assertEqual(candidate["model"]["layers"][-1]["outputSize"], 3)
         self.assertFalse(metrics["promotionEligible"])
         self.assertEqual(metrics["splits"]["holdout"]["total"], 576)
+        # Model selection must depend only on validation, never on holdout.
+        self.assertEqual(metrics["selection"]["basis"], "validation-only")
+        self.assertEqual(metrics["selection"]["candidateEpochs"], [1])
+        self.assertEqual(metrics["selection"]["selectedEpochs"], 1)
+        self.assertEqual(metrics["selection"]["holdoutUsage"], "final-report-only")
 
 
 if __name__ == "__main__":

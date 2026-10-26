@@ -93,23 +93,74 @@ def quality(model, rows):
             "families": by_family}
 
 
+def select_best(options):
+    """Escolhe pela validação APENAS. Nunca lê métricas do holdout."""
+    if not isinstance(options, list) or not options:
+        raise ValueError("P11: validação sem candidatos")
+    for option in options:
+        if (not isinstance(option, dict) or
+            type(option.get("epochs")) is not int or option["epochs"] < 1 or
+            not isinstance(option.get("validation"), dict)):
+            raise ValueError("P11: validação inválida")
+        validation = option["validation"]
+        unsafe = validation.get("unsafeColorProposals")
+        mae = validation.get("rgbMAE")
+        if (type(unsafe) is not int or unsafe < 0 or
+            type(mae) not in (int, float) or not math.isfinite(mae) or mae < 0):
+            raise ValueError("P11: validação inválida")
+    return min(options, key=lambda row: (
+        row["validation"]["unsafeColorProposals"],
+        row["validation"]["rgbMAE"],
+        row["epochs"],
+    ))
+
+
 def train_candidate(*, epochs=12, data=DATA, seed=SEED):
     if type(epochs) is not int or not 1 <= epochs <= 30:
         raise ValueError("Épocas P11 inválidas")
     grouped = load_dataset(data)
-    network = create_network([12, 20, 3], ["tanh", "sigmoid"], seed=seed)
     pairs = [(row["x"], row["y"]) for row in grouped["train"]]
-    fitting = train(network, pairs, epochs=epochs, batch_size=24,
-                    optimizer="adamw", loss="mse", learning_rate=.02,
-                    weight_decay=.0005, seed=seed)
-    scores = {split: quality(network, rows) for split, rows in grouped.items()}
+    # Candidatos predefinidos antes dos testes; a opção original de 12 épocas
+    # sempre participa. Holdout não é consultado durante a seleção.
+    candidate_epochs = [8, 12, 16] if epochs == 12 else [epochs]
+    options = []
+    for candidate_epochs_count in candidate_epochs:
+        network = create_network([12, 20, 3], ["tanh", "sigmoid"], seed=seed)
+        fitting = train(network, pairs, epochs=candidate_epochs_count, batch_size=24,
+                        optimizer="adamw", loss="mse", learning_rate=.02,
+                        weight_decay=.0005, seed=seed)
+        score = quality(network, grouped["validation"])
+        options.append({"epochs": candidate_epochs_count,
+                        "validation": score, "network": network, "loss": fitting})
+    best = select_best(options)
+    network = best["network"]
+    # Somente o candidato escolhido é medido no holdout histórico. Como ele já
+    # foi exposto em execuções anteriores, não constitui nova avaliação cega.
+    scores = {
+        "train": quality(network, grouped["train"]),
+        "validation": best["validation"],
+        "holdout": quality(network, grouped["holdout"]),
+    }
+    selection = {
+        "basis": "validation-only",
+        "candidateEpochs": candidate_epochs,
+        "selectedEpochs": best["epochs"],
+        "holdoutUsage": "final-report-only",
+        "validationResults": [
+            {"epochs": row["epochs"],
+             "unsafeColorProposals": row["validation"]["unsafeColorProposals"],
+             "rgbMAE": row["validation"]["rgbMAE"]}
+            for row in options
+        ],
+    }
     candidate = {"formatVersion": 1, "kind": KIND, "featureCount": 12,
                  "outputCount": 3, "model": export_model(network)}
-    metrics = {"kind": KIND, "origin": ORIGIN, "epochs": epochs, "seed": seed,
-               "architecture": [12, 20, 3], "loss": fitting, "splits": scores,
+    metrics = {"kind": KIND, "origin": ORIGIN, "epochs": best["epochs"], "seed": seed,
+               "architecture": [12, 20, 3], "loss": best["loss"],
+               "selection": selection, "splits": scores,
                "familyIsolation": True, "teacher": "synthetic-contrast-rule",
                "promotionEligible": False,
-               "reason": "Rede treinada por rótulos sintéticos. Precisa de avaliações cegas em novas páginas e revisão visual."}
+               "reason": "Validação sintética para escolha; holdout já exposto e avaliações cegas de sites ainda inexistentes."}
     return candidate, metrics
 
 
