@@ -12,6 +12,8 @@ test('P6: mais de 20 mil amostras reproduzíveis e 48 atributos, sem dependênci
   assert.equal(corpus.origin,'deterministic-css-augmentations-not-real-websites');
   assert.equal(corpus.samples.length,2520*8);
   assert.equal(STYLE_PROFILES.length,8);
+  const diversity=verifyDataset(corpus).distinctVectors;
+  assert.ok(diversity>=15000,'20 mil linhas não devem ser apenas 4 mil vetores repetidos: '+diversity);
   assert.equal(corpus.summary.groups,30);
   assert.equal(corpus.summary.splits.train,18*7*4*3*7);
   assert.equal(corpus.summary.splits.validation,6*7*4*3*7);
