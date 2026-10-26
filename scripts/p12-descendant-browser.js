@@ -109,11 +109,12 @@ function applyPage(action,operations){
       if(!el)throw Error('P12: DOM modificado');
       revert(el,row.style);
     }
-    const ok=surface.getAttribute('style')===before.surface&&
-      before.children.every(row=>nodes.find(el=>el.id===row.id)
-        ?.getAttribute('style')===row.style);
+    const surfaceMatch=surface.getAttribute('style')===before.surface;
+    const mismatches=before.children.filter(row=>nodes.find(el=>el.id===row.id)
+      ?.getAttribute('style')!==row.style).map(row=>row.id);
     delete window.__p12Restore;
-    return {restored:before.children.length,ok};
+    return {restored:before.children.length,
+      ok:surfaceMatch&&mismatches.length===0,surfaceMatch,badIds:mismatches};
   }
   throw Error('P12: acao inválida');
 }
@@ -150,7 +151,7 @@ async function inspect(id,predict,port){
       }finally{
         const rollback=await page.eval(expr(applyPage,'restore',planned[phase]));
         assert.equal(rollback.restored,planned[phase].length);
-        assert.equal(rollback.ok,true);
+        assert.equal(rollback.ok,true,JSON.stringify(rollback));
       }
     }
     assert.deepEqual(await page.eval(expr(probePage)),baseline,'P12: não restaurado');
