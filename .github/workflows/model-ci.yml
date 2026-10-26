@@ -52,6 +52,23 @@ jobs:
         run: node scripts/evaluate-neural-colors-p8.js
       - name: Avaliar P7 e P8 em cenários CSS manuais externos ao treinamento (sem publicação)
         run: node scripts/evaluate-neural-colors-p9.js
+      - name: Gerar corpus sintético P11 de superfícies e textos descendentes
+        run: node scripts/p11-generate-descendant-data.js
+      - name: Treinar modelo P11 de cor descendente sem publicar
+        run: python3 -m training.train_p11_descendant --epochs 12
+      - name: Comparar inferência P11 Python e JavaScript em famílias isoladas
+        run: node scripts/p11-evaluate-descendant.js
+      - name: Arquivar candidato P11 exclusivamente experimental
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p11-descendant-neural-not-deployed
+          path: |
+            data/p11-descendant-ci-candidate.json
+            data/p11-descendant-ci-metrics.json
+            data/p11-descendant-ci-audit.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Arquivar relatório P8 e modelos exclusivamente experimentais
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
