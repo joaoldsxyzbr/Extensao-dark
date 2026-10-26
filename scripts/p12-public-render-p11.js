@@ -353,7 +353,14 @@ function planDescendantRepairs(before,after,colorUtils=colors,targetBg=BG){
     if(protectedTags.has(now.tag)||protectedTags.has(old.tag))
       return {status:'blocked',reason:'protected-descendant',repairs:[]};
     if(colorUtils.contrastRatio(bg,target)!==1)
-      return {status:'blocked',reason:'independent-or-unknown-background',repairs:[]};
+      return {status:'blocked',reason:'independent-or-unknown-background',
+        repairs:[],
+        diagnostic:{tag:typeof now.tag==='string'?now.tag:'unknown',
+          backgroundChanged:colorUtils.contrastRatio(oldBg,bg)!==1,
+          foregroundChanged:colorUtils.contrastRatio(oldFg,fg)!==1,
+          ratioBefore:Number(first.toFixed(2)),
+          ratioAfter:Number(second.toFixed(2)),
+          repairableBeforeBlock:repairs.length}};
     if(repairs.length>=160)
       return {status:'inconclusive',reason:'repair-limit',repairs:[]};
     const suggestion=colorUtils.ensureContrast(fg,bg,minimum);
@@ -411,7 +418,8 @@ async function inspect(site,predict){
           assessSurfaceContrast(originalAudit,full):
           {status:repairs.status,reason:repairs.reason};
         report.phases[phase]={status:gate.status,surfaceAudit:gate,
-          repairedDescendants:repaired,repairGate:repairs.status};
+          repairedDescendants:repaired,repairGate:repairs.status,
+          repairDiagnostic:repairs.diagnostic||null};
         if(gate.status==='safe-in-sample'){
           const snapshot=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
           const measured=checkPaint(capture,snapshot,true);
