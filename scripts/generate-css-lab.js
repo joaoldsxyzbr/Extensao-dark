@@ -20,11 +20,20 @@ const STYLE_PROFILES=Object.freeze([
 ]);
 const EXPECTED=2520*STYLE_PROFILES.length;
 const WIDTH={compact:24,regular:124,large:320};
+// Hash FNV-1a pequeno e reproduzível. Variações de CSS, nunca dados de sites.
+function hashFixture(id){
+  let h=2166136261;
+  for(const ch of id){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
 function cssFor(row,profile){
   const dim=WIDTH[row.size];
+  const h=hashFixture(row.id+':'+profile);
+  const width=dim+h%29, height=dim+((h>>>8)%29);
   const style={
-    display:'block',position:'static',opacity:'1',fontSize:'16px',
-    fontWeight:'400',lineHeight:'normal',width:dim+'px',height:dim+'px',
+    display:'block',position:'static',opacity:'1',
+    fontSize:(14+((h>>>16)%23))+'px',
+    fontWeight:'400',lineHeight:'normal',width:width+'px',height:height+'px',
     backgroundImage:row.group==='gradient'?'linear-gradient(#aaa,#333)':'none',
     colorScheme:'normal',overflowX:'visible',overflowY:'visible',
     borderTopLeftRadius:'0px',borderTopWidth:'0px',borderRightWidth:'0px',
@@ -57,8 +66,8 @@ function cssFor(row,profile){
     case 'css-scroll-area':
       Object.assign(style,{overflowX:'auto',overflowY:'hidden',
         pointerEvents:row.state==='disabled'?'none':'auto',
-        cursor:'pointer',height:Math.max(44,dim)+'px',
-        width:Math.max(100,dim)+'px'});break;
+        cursor:'pointer',height:Math.max(44,height)+'px',
+        width:Math.max(100,width)+'px'});break;
     case 'css-stress-unseen':
       Object.assign(style,{display:'inline-grid',position:'sticky',
         isolation:'isolate',mixBlendMode:'multiply',filter:'brightness(1.2)',
