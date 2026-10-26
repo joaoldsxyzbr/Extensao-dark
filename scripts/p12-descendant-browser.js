@@ -36,8 +36,10 @@ function probePage(){
       return {id:el.id,tag:el.tagName,foreground:st.color,
         ownBackground:st.backgroundColor,size:parseFloat(st.fontSize),
         weight:st.fontWeight};}),
-    buttonColor:getComputedStyle(document.querySelector('button')||surface).backgroundColor,
-    iconFill:getComputedStyle(document.querySelector('svg circle')||surface).fill};
+    buttonColor:document.querySelector('button')?
+      getComputedStyle(document.querySelector('button')).backgroundColor:null,
+    iconFill:document.querySelector('svg circle')?
+      getComputedStyle(document.querySelector('svg circle')).fill:null};
 }
 function plans(original,predict){
   if(!original||!Array.isArray(original.texts)||original.texts.length<4||
