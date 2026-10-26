@@ -345,3 +345,10 @@ veja [P4](docs/minhas-skills/plans/2026-10-24-p4-gates.md).
   cenário de carga (tempo registrado no relatório, sem promessa de SLA universal).
 
 Documentação: [Auditoria pós-P4](docs/minhas-skills/plans/2026-10-25-auditoria-pos-p4.md).
+
+## P7 — rede neural geradora de cores (somente laboratório, 2026-10-26)
+
+O experimento P7 utiliza Neural Core P15 para prever diretamente a decisão de aplicar tema e os valores RGB de fundo/texto. São 57 entradas (48 propriedades de contexto/CSS, 6 canais RGB e 3 flags de tema) e 7 saídas neurais. Os dados são sintéticos e seus alvos vêm de paletas editoriais; ainda não há validação de generalização em sites reais.
+
+O modelo treinado é um candidato descartável, arquivado no CI por sete dias; **não está incluído no manifesto, não substitui o classificador atual e não é automaticamente publicado**. Veja [P7: laboratório neural de cores](docs/minhas-skills/plans/2026-10-26-p7-neural-colors.md).
+
