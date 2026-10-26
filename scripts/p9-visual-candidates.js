@@ -148,6 +148,13 @@ function renderVisualPage(action,operations=[],colorTools,repairText){
       seen.add(op.index);
       saveOriginal(nodes[op.index]);
     }
+    // Preflight de volume antes de aplicar qualquer estilo: uma arvore enorme
+    // nao pode interromper todas as observacoes da pagina.
+    for(const op of operations){
+      if(op.repairDescendants&&
+        nodes[op.index].querySelectorAll('p,span,a,li,td,th,label,small,strong,em,b,i,pre,code,h1,h2,h3,h4,h5,h6').length>300)
+        return {applied:0,blocked:'descendant-limit'};
+    }
     Object.defineProperty(globalThis,backupKey,{value:backup,configurable:true});
     Object.defineProperty(globalThis,'__extDarkP9OperationCount',
       {value:operations.length,configurable:true});
@@ -245,6 +252,7 @@ async function inspect(site,models){
       // Cada sonda e uma transacao: aplica, mede CSS computado, restaura.
       const probe=async operations=>{
         const trial=await browser.page.eval(command('apply',operations));
+        if(trial?.blocked)return null; // hipotese nao avaliavel => rejeitar somente esta operacao
         restoreRequired=true;
         try{
           assert.equal(trial.applied,operations.length);
