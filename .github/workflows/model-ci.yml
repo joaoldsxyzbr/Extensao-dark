@@ -50,6 +50,8 @@ jobs:
         run: python3 -m training.train_neural_colors_p8 --output data/neural-color-p8-ci-candidate.json --metrics data/neural-color-p8-ci-metrics.json --epochs 8
       - name: Comparar P7 e P8 em conjuntos sintéticos separados
         run: node scripts/evaluate-neural-colors-p8.js
+      - name: Avaliar P7 e P8 em cenários CSS manuais externos ao treinamento (sem publicação)
+        run: node scripts/evaluate-neural-colors-p9.js
       - name: Arquivar relatório P8 e modelos exclusivamente experimentais
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -59,6 +61,7 @@ jobs:
             data/neural-color-p8-ci-candidate.json
             data/neural-color-p8-ci-metrics.json
             data/neural-color-p8-ci-comparison.json
+            data/p9-manual-qa-ci.json
           if-no-files-found: ignore
           retention-days: 7
       - name: Arquivar somente candidato experimental P7
