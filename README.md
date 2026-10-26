@@ -168,14 +168,14 @@ A validação visual com Chrome e Dark Reader continua necessária. O modo neura
 Actions fixadas por SHA, permissões somente de leitura, downloads versionados e ZIPs com extração segura. Testes JS/Python nativos; sem dependências novas. Auditoria em [docs/p5-seguranca-e-auditoria.md](docs/p5-seguranca-e-auditoria.md).
 
 
-## Integração versionada com Neural Core (atualizado em 2026-10-25)
+## Motor neural próprio da Extensão Dark (origem incorporada em 2026-10-25)
 
-**Atualização P15:** snapshot fixado em `5dc938747b64d6b5c5a7a8c442062006c51e1532`. O bundle MV3 expõe inferência em lote e descritores de capacidades/modelos, e o módulo Python oferece otimizadores e verificações adicionais. Os pesos da extensão continuam os mesmos: atualizar a biblioteca **não é retreinar nem ativar** um modelo novo. Consulte [UPSTREAM.md](vendor/neural_core/UPSTREAM.md).
+**Origem P15:** o código incorporado partiu do commit `5dc938747b64d6b5c5a7a8c442062006c51e1532`. O bundle MV3 expõe inferência em lote e descritores de capacidades/modelos, e o módulo Python oferece otimizadores e verificações adicionais. Os pesos da extensão continuam os mesmos: evoluir o motor **não é retreinar nem ativar** um modelo novo. Consulte o [histórico de origem](vendor/neural_core/UPSTREAM.md).
 
-O motor genérico de inferência JS e o treinamento Python são um **snapshot** do repositório `Base-rede-neural`, fixado no commit registrado em [UPSTREAM.md](vendor/neural_core/UPSTREAM.md), em `vendor/neural_core/`. O projeto de origem **não é alterado**; não há submódulo Git, dependência npm, serviço externo ou atualização automática.
+O motor de inferência JS e o treinamento Python foram inicialmente incorporados de `Base-rede-neural` no commit registrado no [histórico de origem](vendor/neural_core/UPSTREAM.md). **Agora são componentes próprios desta extensão, mantidos e evoluídos neste repositório**, sem necessidade de sincronização com o projeto original. Não há submódulo Git, dependência npm, serviço externo ou atualização automática. Os nomes de pastas foram preservados para evitar quebras desnecessárias.
 
-- `vendor/neural_core/src/`: código JavaScript original do motor, copiado sem modificações.
-- `vendor/neural_core/training/`: treinamento Python genérico, copiado sem modificações.
+- `vendor/neural_core/src/`: implementação JavaScript do motor, agora mantida neste projeto.
+- `vendor/neural_core/training/`: implementação Python de treinamento, agora mantida neste projeto.
 - `vendor/neural_core/neural-core.js`: pacote local gerado para content scripts clássicos do Manifest V3.
 - `data/neural-model.json`: pesos migrados da rede 7–12–1, preservando a decisão anterior.
 - `content/neural.js`: adaptador compatível com a API já usada pelo navegador e pelos testes.
@@ -193,9 +193,9 @@ Para adotar um candidato **após avaliar os testes**, substitua manualmente `dat
 A versão versionada do motor só é atualizada por revisão explícita. O processamento no navegador permanece local, sem Python e sem telemetria.
 
 
-## Treinamento contextual com Neural Core — versão 2 (23/10/2026)
+## Treinamento contextual do motor local — versão 2 (23/10/2026)
 
-O modelo 7–12–1 continua leve e roda **somente no navegador**. O treinamento ocorre no CI em Python, usando a cópia versionada do Neural Core, sem alterar o repositório original.
+O modelo 7–12–1 continua leve e roda **somente no navegador**. O treinamento ocorre no CI em Python com o motor integrado localmente, sem qualquer dependência do repositório de origem.
 
 - Conjunto atual: **132 cenários sintéticos** rotulados (82 treinamento, 18 validação, 32 holdout).
 - Aumento de dados: 2 perturbações pequenas por cenário **apenas no treino**; os dados de validação e holdout não são modificados.
