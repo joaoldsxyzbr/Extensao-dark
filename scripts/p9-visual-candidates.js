@@ -204,7 +204,7 @@ function renderVisualPage(action,operations=[],colorTools,repairText){
     }
     delete globalThis[backupKey];
     delete globalThis.__extDarkP9OperationCount;
-    return {restored:operationCount,mismatch,descendantRestored:backup.length-operationCount};
+    return {restored:operationCount,mismatch};
   }
   if(action==='close'){
     if(Object.prototype.hasOwnProperty.call(globalThis,backupKey))
