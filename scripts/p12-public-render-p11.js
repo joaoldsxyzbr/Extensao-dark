@@ -83,8 +83,25 @@ function pageExperiment(action, operations=[]){
     if(!sourceBackground||rows.length<8)return {status:'inconclusive',
       reason:!sourceBackground?'complex-background':'insufficient-safe-visible-text',
       samples:rows.length};
+    // Separate, bounded safety cohort. Includes text that P11 does NOT modify.
+    // Stable element handles stay inside the disposable browser session only.
+    const auditNodes=[];
+    let inspected=0,auditTruncated=false;
+    for(const el of surface.querySelectorAll(
+      'p,a,li,td,th,label,small,strong,em,code,span,h1,h2,h3,h4,h5,h6,button'
+    )){
+      if(++inspected>1600){auditTruncated=true;break;}
+      if(el.closest('svg,canvas,picture,script,style,video'))continue;
+      const st=css(el),r=el.getBoundingClientRect();
+      if(st.display==='none'||st.visibility==='hidden'||Number(st.opacity)<.95||
+        r.width<3||r.height<3||r.right<=0||r.bottom<=0||
+        r.top>=innerHeight||r.left>=innerWidth)continue;
+      if(auditNodes.length>=360){auditTruncated=true;break;}
+      auditNodes.push(el);
+    }
     Object.defineProperty(globalThis,key,{configurable:true,value:{
-      surface,nodes,baseline:rows,sourceBackground,backup:null
+      surface,nodes,baseline:rows,sourceBackground,backup:null,
+      auditNodes,auditTruncated
     }});
     return {status:'ready',sourceBackground,rows};
   }
@@ -94,6 +111,34 @@ function pageExperiment(action, operations=[]){
     background:css(state.surface).backgroundColor,
     colors:state.nodes.map(el=>css(el).color)
   };
+  if(action==='audit'){
+    const rows=state.auditNodes.map(el=>{
+      if(!el.isConnected)return null;
+      const st=css(el),box=el.getBoundingClientRect();
+      if(st.display==='none'||st.visibility==='hidden'||Number(st.opacity)<.95||
+        box.width<3||box.height<3||box.right<=0||box.bottom<=0||
+        box.top>=innerHeight||box.left>=innerWidth||
+        !/^rgba?\(/.test(st.color))return null;
+      let background=null,cur=el;
+      for(let depth=0;cur&&depth<16;depth++,cur=cur.parentElement){
+        const x=css(cur),col=x.backgroundColor;
+        if(x.backgroundImage!=='none'||x.maskImage!=='none'||
+          x.webkitMaskImage!=='none'||Number(x.opacity)<.99||
+          x.mixBlendMode!=='normal'||!/^rgba?\(/.test(col))return null;
+        if(col.startsWith('rgb(')){background=col;break;}
+        const match=col.match(/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)$/);
+        if(!match)return null;
+        const alpha=Number(match[1]);
+        if(alpha>=.999){background=col;break;}
+        if(alpha>.001)return null;
+      }
+      const size=parseFloat(st.fontSize),weight=parseInt(st.fontWeight,10)||400;
+      if(!background||!Number.isFinite(size)||!Number.isFinite(weight))
+        return null;
+      return {fg:st.color,bg:background,size,weight};
+    });
+    return {rows,truncated:state.auditTruncated};
+  }
   if(action==='apply'){
     if(state.backup)throw Error('P12: restore before applying next phase');
     if(!Array.isArray(operations)||operations.length!==state.nodes.length||
@@ -205,6 +250,39 @@ function checkPaint(capture,measured,painted){
   }
   return {sampled:measured.colors.length,weak};
 }
+// Compare every visible text-like element in the sampled surface, including
+// descendants excluded from the 80-element neural plan. Every page record has
+// only numeric typography and CSS RGB; IDs and text never leave Chromium.
+function assessSurfaceContrast(before,after,colorUtils=colors){
+  const valid=doc=>doc&&Array.isArray(doc.rows)&&doc.rows.length>=1&&
+    doc.rows.length<=360&&typeof doc.truncated==='boolean';
+  if(!valid(before)||!valid(after)||before.truncated||after.truncated||
+     before.rows.length!==after.rows.length)
+    return {status:'inconclusive',audited:0,newWeak:0,reason:'incomplete-surface-sample'};
+  let newWeak=0,worsened=0,alreadyWeak=0;
+  for(let i=0;i<before.rows.length;i++){
+    const a=before.rows[i],b=after.rows[i];
+    const color=row=>{
+      if(!row||!Number.isFinite(row.size)||!Number.isFinite(row.weight)||
+        !['string'].every(type=>typeof row.fg===type&&typeof row.bg===type))
+        return null;
+      const fg=colorUtils.parseColor(row.fg),bg=colorUtils.parseColor(row.bg);
+      if(!fg||!bg||fg.a<.999||bg.a<.999)return null;
+      return colorUtils.contrastRatio(fg,bg);
+    };
+    const first=color(a),second=color(b);
+    if(first===null||second===null)
+      return {status:'inconclusive',audited:i,newWeak,
+        reason:'unknown-or-changing-background'};
+    const threshold=a.size>=24||a.size>=18.66&&a.weight>=700?3:4.5;
+    if(first+.0001<threshold)alreadyWeak++;
+    if(first+.0001>=threshold&&second+.0001<threshold)newWeak++;
+    if(first+.0001<threshold&&second+.2<first)worsened++;
+  }
+  return {status:newWeak||worsened?'blocked':'safe-in-sample',
+    audited:before.rows.length,newWeak,worsened,alreadyWeak,
+    reason:newWeak||worsened?'contrast-regression':'no-new-sampled-contrast-regression'};
+}
 async function inspect(site,predict){
   let browser;
   const started=performance.now();
@@ -221,9 +299,12 @@ async function inspect(site,predict){
       reason:capture?.reason||'unavailable-css-samples',samples:capture?.samples||0};
     checkCapture(capture);
     const original=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
+    const originalAudit=await browser.page.eval(EXPRESSION(pageExperiment,'audit'));
+    const computeStart=performance.now();
     const plan=plans(capture,predict);
+    const planningMs=Number((performance.now()-computeStart).toFixed(2));
     const report={site:site.id,status:'observed',
-      samples:plan.stats.total,stats:plan.stats,phases:{},
+      samples:plan.stats.total,stats:{...plan.stats,planningMs},phases:{},
       promoEligible:false,rendering:'isolated-real-dom-partial-surface',
       performanceMs:0,restorationVerified:false};
     await browser.page.screenshot(path.join(FOLDER,site.id+'-original.png'));
@@ -232,11 +313,18 @@ async function inspect(site,predict){
       const applied=await browser.page.eval(EXPRESSION(pageExperiment,'apply',operations));
       try{
         assert.equal(applied.applied,operations.length);
-        const snapshot=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
-        const measured=checkPaint(capture,snapshot,true);
-        assert.equal(measured.weak,0,'P12: text below contrast threshold');
-        await browser.page.screenshot(path.join(FOLDER,site.id+'-'+phase+'.png'));
-        report.phases[phase]={...measured,image:site.id+'-'+phase+'.png'};
+        // Check full visible text cohort BEFORE the screenshot can be accepted.
+        const full=await browser.page.eval(EXPRESSION(pageExperiment,'audit'));
+        const gate=assessSurfaceContrast(originalAudit,full);
+        report.phases[phase]={status:gate.status,surfaceAudit:gate};
+        if(gate.status==='safe-in-sample'){
+          const snapshot=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
+          const measured=checkPaint(capture,snapshot,true);
+          assert.equal(measured.weak,0,'P12: text below contrast threshold');
+          await browser.page.screenshot(path.join(FOLDER,site.id+'-'+phase+'.png'));
+          report.phases[phase]={...report.phases[phase],...measured,
+            image:site.id+'-'+phase+'.png'};
+        }
       }finally{
         const restored=await browser.page.eval(EXPRESSION(pageExperiment,'restore'));
         assert.equal(restored.ok,true,'P12: inline CSS rollback failed');
@@ -244,6 +332,8 @@ async function inspect(site,predict){
       }
       const after=await browser.page.eval(EXPRESSION(pageExperiment,'measure'));
       assert.deepEqual(after,original,'P12: computed CSS was not restored');
+      const afterAudit=await browser.page.eval(EXPRESSION(pageExperiment,'audit'));
+      assert.deepEqual(afterAudit,originalAudit,'P12: full-text CSS was not restored');
     }
     await browser.page.eval(EXPRESSION(pageExperiment,'close'));
     report.restorationVerified=true;
@@ -292,11 +382,19 @@ async function main(){
       ''
     ].join('\n'));
   }
+  report.blockedPhases=report.sites.reduce((n,s)=>
+    n+Object.values(s.phases||{}).filter(p=>p.status==='blocked').length,0);
+  report.inconclusivePhases=report.sites.reduce((n,s)=>
+    n+Object.values(s.phases||{}).filter(p=>p.status==='inconclusive').length,0);
+  report.readyForRelease=false;
+  fs.writeFileSync(path.join(FOLDER,'report.json'),JSON.stringify(report,null,2)+'\n');
   console.log('P12 rendered summary',JSON.stringify({
-    observed:report.observed,inconclusive:report.inconclusive,promotionEligible:false
+    observed:report.observed,inconclusive:report.inconclusive,
+    blockedPhases:report.blockedPhases,inconclusivePhases:report.inconclusivePhases,
+    promotionEligible:false
   }));
 }
 if(require.main===module)main().catch(e=>{
   console.error('P12 rendered failed:',e.stack||e);process.exitCode=1;
 });
-module.exports=Object.freeze({CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment});
+module.exports=Object.freeze({CASES,BG,allowedOutput,checkCapture,plans,checkPaint,pageExperiment,assessSurfaceContrast});
