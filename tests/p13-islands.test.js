@@ -46,3 +46,12 @@ test('P13: DOM preview never collects text, links or form values',()=>{
   const source=fs.readFileSync(path.join(__dirname,'../scripts/p13-islands.js'),'utf8');
   assert.doesNotMatch(source,/fetch\(|XMLHttpRequest|new WebSocket/);
 });
+
+test('P13: leaf panel containing direct text gets a readable own foreground',()=>{
+  const panel={...light,leaf:true,foreground:'rgb(34, 44, 55)'};
+  const patch=planIslands([panel])[0];
+  assert.ok(patch.targetForeground);
+  assert.ok(colors.contrastRatio(colors.parseColor(patch.targetForeground),
+    colors.parseColor(patch.target))>=4.5);
+  assert.equal(planIslands([{...panel,leaf:false}])[0].targetForeground,null);
+});
