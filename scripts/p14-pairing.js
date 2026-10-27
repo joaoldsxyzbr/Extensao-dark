@@ -16,15 +16,19 @@ function pairSyntheticModes(p13,gated){
       throw TypeError('P14: mismatched or duplicate paired fixture');
     ids.add(a.caseId);
     for(const row of [a,b]){
-      if(typeof row.baselineDigest!=='string'||
-        !/^[a-f0-9]{64}$/.test(row.baselineDigest))
-        throw TypeError('P14: missing CSS baseline fingerprint');
+      if(row.baselineDigest!==undefined&&(
+        typeof row.baselineDigest!=='string'||
+        !/^[a-f0-9]{64}$/.test(row.baselineDigest)))
+        throw TypeError('P14: malformed CSS baseline fingerprint');
+      if(row.status==='safe-in-sample'&&!row.baselineDigest)
+        throw TypeError('P14: safe paint requires CSS baseline fingerprint');
       const {baselineDigest,...measurement}=row;
       validateMeasurement(measurement);
     }
     if(a.baselineDigest!==b.baselineDigest)
       throw Error('P14: CSS baseline differed between browser profiles');
-    const comparable=[a,b].every(x=>x.status==='safe-in-sample'&&
+    const baselineMatched=typeof a.baselineDigest==='string';
+    const comparable=baselineMatched&&[a,b].every(x=>x.status==='safe-in-sample'&&
       x.restorationVerified===true&&
       typeof x.darkAreaFraction==='number'&&
       Number.isFinite(x.darkAreaFraction));
@@ -34,10 +38,12 @@ function pairSyntheticModes(p13,gated){
       darkFractionGated:comparable?b.darkAreaFraction:null,
       deltaGatedMinusP13:comparable?
         Number((b.darkAreaFraction-a.darkAreaFraction).toFixed(4)):null,
-      sampledViewportOnly:true,comparable});
+      sampledViewportOnly:true,baselineMatched,comparable});
   }
   return {kind:'p14-paired-synthetic-lab-not-legacy-runtime',
-    matchedSyntheticCases:cases.length,measuredPairs:cases.filter(x=>x.comparable).length,
+    fixturePairs:cases.length,
+    matchedSyntheticCases:cases.filter(x=>x.baselineMatched).length,
+    measuredPairs:cases.filter(x=>x.comparable).length,
     sampleDefinition:'96-computed-background-points-not-pixel-area',
     note:'7D only gates P13 patches; both modes paint with P13. Missing ancestor context and P11 make full engines not comparable.',
     p11Measured:false,fullEngineComparisonAvailable:false,
