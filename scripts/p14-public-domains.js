@@ -9,7 +9,7 @@ const SPLITS=['train','validation','holdout'];
 // Separate source-of-truth lock: changing a split needs deliberate code review.
 const FROZEN=Object.freeze({
   train:['go.dev','nodejs.org','rust-lang.org','kotlinlang.org','swift.org',
-    'php.net','rubyonrails.org','django.com','docker.com','kubernetes.io',
+    'php.net','rubyonrails.org','djangoproject.com','docker.com','kubernetes.io',
     'angular.dev','react.dev','vuejs.org','svelte.dev','sqlite.org'],
   validation:['astro.build','vite.dev','tailwindcss.com','nextjs.org','palletsprojects.com'],
   holdout:['julialang.org','microsoft.com','amazon.com','oracle.com','gitlab.com',
