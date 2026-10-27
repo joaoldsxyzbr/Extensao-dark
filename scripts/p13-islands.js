@@ -80,7 +80,7 @@ function islandSession(action,operations=[]){
   const KEY='__darkP13Islands';
   const rgb=/^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/;
   const css=el=>getComputedStyle(el);
-  const selector='main,header,nav,aside,section,article,div,table,pre,blockquote';
+  const selector='body,main,header,nav,aside,section,article,div,table,pre,blockquote,form,ul,footer';
   const textSelector='p,a,li,td,th,h1,h2,h3,h4,h5,h6,span,small,strong,em,code,label,button';
   const visible=el=>{
     const r=el.getBoundingClientRect();
