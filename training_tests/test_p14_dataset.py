@@ -62,5 +62,29 @@ class P14DatasetContract(unittest.TestCase):
         self.assertEqual(self.catalog["schemaVersion"], 1)
 
 
+    def test_public_domain_plan_is_unverified_and_disjoint(self):
+        candidate_file = ROOT / "training" / "datasets" / "p14-public-domain-candidates.json"
+        plan = json.loads(candidate_file.read_text(encoding="utf-8"))
+        self.assertEqual(plan["kind"], "p14-public-domain-candidates-not-reviewed")
+        self.assertFalse(plan["releaseEligible"])
+        self.assertIn("no-network", plan["policy"])
+        self.assertEqual(len(plan["domains"]), 30)
+        roots = [row["rootDomain"] for row in plan["domains"]]
+        self.assertEqual(len(set(roots)), 30)
+        known = {row["domain"] for row in self.known["domains"]}
+        for row in plan["domains"]:
+            self.assertEqual(set(row), {"rootDomain", "host", "split", "review"})
+            self.assertEqual(row["review"], "unverified-candidate")
+            self.assertTrue(row["host"] == row["rootDomain"] or
+                            row["host"].endswith("." + row["rootDomain"]))
+            self.assertFalse(any(row["rootDomain"] == d or
+                                 row["rootDomain"].endswith("." + d) or
+                                 d.endswith("." + row["rootDomain"])
+                                 for d in known))
+        self.assertEqual(sum(x["split"] == "train" for x in plan["domains"]), 15)
+        self.assertEqual(sum(x["split"] == "validation" for x in plan["domains"]), 5)
+        self.assertEqual(sum(x["split"] == "holdout" for x in plan["domains"]), 10)
+
+
 if __name__ == "__main__":
     unittest.main()
