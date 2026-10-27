@@ -39,7 +39,7 @@ test('P14 P11: proposals use P13 painted CSS, without changing the teacher repai
   assert.equal(assertP11Diagnostic(item),true);
   assert.deepEqual(repairs,original);
   assert.deepEqual(before,old);
-  assert.doesNotMatch(JSON.stringify(item),/rgb\\(|background|foreground|url|textContent/);
+  assert.doesNotMatch(JSON.stringify(item),/rgb[(]|background|foreground|url|textContent/);
 });
 test('P14 P11: unsafe suggestions cannot be treated as a measured safe proposal',()=>{
   const item=compareP11TextRepairs(before,after,repairs,fake('rgb(31, 31, 31)'));
