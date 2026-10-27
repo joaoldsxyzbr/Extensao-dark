@@ -44,3 +44,10 @@ O workflow model-ci valida contratos e testes. O browser-e2e executa a bancada e
 5. Somente depois iniciar a extração contextual P15 e treinar a nova rede P16.
 
 **Privacidade e integridade:** nenhum dataset inclui URL de usuário, cookie, conteúdo de formulário, HTML da página ou elementos identificáveis da navegação. Publicar apenas métricas agregadas e fixtures criadas para teste. Os candidatos continuam fora do MV3 de produção, e a main não deve receber alterações até autorização posterior.
+
+## Incremento seguinte — candidatos públicos reservados (27/10/2026)
+
+- Registro **somente de planejamento** em `training/datasets/p14-public-domain-candidates.json`: 30 domínios-raiz distintos, dos quais 15 atribuídos ao treino, 5 à validação e **10 reservados ao holdout**. São propostas não verificadas; a existência de um domínio no arquivo não comprova acessibilidade, estabilidade, licença, permissão de coleta ou cobertura visual.
+- `scripts/p14-public-domains.js` valida hosts e domínios-raiz, impede mistura de subdomínios entre grupos, exclui sites diagnósticos conhecidos, rejeita URLs pessoais/caminhos/textos e congela a atribuição dos três splits. Os 10 domínios de avaliação não são expostos pela função de exploração.
+- Não existe crawler nem coletor ativado: **0 requisições de rede, 0 permissões revisadas, 0 páginas públicas verificadas, 0 rótulos humanos e 0 testes cegos**. O registro não autoriza acessar o holdout, treinar, promover pesos ou publicar.
+- Os testes JavaScript e Python verificam o contrato; o CI executa somente a validação offline. Antes de qualquer futura coleta, revisar acesso/termos/robots, diversidade além de páginas de documentação e privacidade, e definir páginas públicas específicas permitidas. A reserva de 30 domínios não satisfaz a meta de 120 páginas válidas.
