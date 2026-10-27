@@ -16,6 +16,8 @@ test('P14 public: reserve 30 distinct roots, with 10 untouched final holdout dom
   });
   const seen=getExplorationCandidates(copy());
   assert.equal(seen.length,20);
+  assert.ok(seen.some(x=>x.rootDomain==='djangoproject.com'&&
+    x.host==='docs.djangoproject.com'));
   assert.equal(seen.filter(x=>x.split==='train').length,15);
   assert.equal(seen.filter(x=>x.split==='validation').length,5);
   assert.ok(seen.every(x=>x.split!=='holdout'));
