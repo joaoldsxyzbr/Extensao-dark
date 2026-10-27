@@ -49,6 +49,38 @@ function compareProposals(samples,inputs={colors,neural,threshold,planner:planIs
   assertProposalRecord(record);
   return record;
 }
+
+// Uses the *distributed* 7D model as an additional gate on P13 proposals.
+// Not the legacy MV3 engine: no ancestral CSS or runtime protections are inferred.
+function gateP13WithLegacy(samples,patches,inputs={colors,neural,threshold}){
+  const {colors:c,neural:n,threshold:t}=inputs;
+  if(!Array.isArray(samples)||samples.length<1||samples.length>24||
+    !Array.isArray(patches)||patches.length>samples.length||
+    !c||!n||n.MODEL?.input!==7||typeof n.probability!=='function'||t!==.8)
+    throw TypeError('P14: invalid 7D gate inputs');
+  const seen=new Set(),accepted=[];
+  for(const patch of patches){
+    const i=patch?.index;
+    if(!Number.isSafeInteger(i)||i<0||i>=samples.length||seen.has(i)||
+      patch.source!==samples[i]?.background||
+      typeof patch.target!=='string'||!c.parseColor(patch.target))
+      throw TypeError('P14: unsafe P13 patch for 7D gate');
+    seen.add(i);
+    const bg=c.parseColor(samples[i].background);
+    const fg=c.parseColor(samples[i].foreground);
+    if(!bg||!fg||bg.a<.999||fg.a<.999)
+      throw TypeError('P14: invalid computed sample for 7D gate');
+    const vector=c.neuralFeatures(bg,fg,null,{control:false,selected:false});
+    if(!Array.isArray(vector)||vector.length!==7)
+      throw TypeError('P14: invalid 7D features');
+    const probability=n.probability(vector);
+    if(typeof probability!=='number'||!Number.isFinite(probability)||
+      probability<0||probability>1)
+      throw TypeError('P14: unsafe 7D probability');
+    if(probability>=t)accepted.push(patch);
+  }
+  return accepted;
+}
 function assertProposalRecord(row){
   if(!row||typeof row!=='object'||Array.isArray(row)||
     Object.keys(row).length!==KEYS.length||
@@ -65,4 +97,4 @@ function assertProposalRecord(row){
     throw TypeError('P14: unsafe or invalid proposal diagnostic');
   return true;
 }
-module.exports=Object.freeze({compareProposals,assertProposalRecord});
+module.exports=Object.freeze({compareProposals,gateP13WithLegacy,assertProposalRecord});
