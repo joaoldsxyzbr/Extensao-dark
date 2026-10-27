@@ -46,7 +46,8 @@ function validateMeasurement(row){
   if(row.status==='safe-in-sample'&&(
     row.newWeak!==0||row.restorationVerified!==true||
     row.auditedText===null||row.auditedText===undefined||
-    row.auditedText<1))
+    row.auditedText<1||
+    (['train','validation'].includes(row.split)&&row.controlsChanged!==0)))
     throw Error('P14: unsafe or incomplete result cannot pass');
   return true;
 }
