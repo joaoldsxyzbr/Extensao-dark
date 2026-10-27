@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "kind": "p14-public-domain-candidates-not-reviewed",
+  "frozenAt": "2026-10-27",
+  "policy": "no-network-no-holdout-evaluation",
+  "releaseEligible": false,
+  "domains": [
+    {
+      "rootDomain": "go.dev",
+      "host": "go.dev",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "nodejs.org",
+      "host": "nodejs.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "rust-lang.org",
+      "host": "rust-lang.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "kotlinlang.org",
+      "host": "kotlinlang.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "swift.org",
+      "host": "swift.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "php.net",
+      "host": "www.php.net",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "rubyonrails.org",
+      "host": "rubyonrails.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "django.com",
+      "host": "docs.djangoproject.com",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "docker.com",
+      "host": "docs.docker.com",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "kubernetes.io",
+      "host": "kubernetes.io",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "angular.dev",
+      "host": "angular.dev",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "react.dev",
+      "host": "react.dev",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "vuejs.org",
+      "host": "vuejs.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "svelte.dev",
+      "host": "svelte.dev",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "sqlite.org",
+      "host": "www.sqlite.org",
+      "split": "train",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "astro.build",
+      "host": "docs.astro.build",
+      "split": "validation",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "vite.dev",
+      "host": "vite.dev",
+      "split": "validation",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "tailwindcss.com",
+      "host": "tailwindcss.com",
+      "split": "validation",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "nextjs.org",
+      "host": "nextjs.org",
+      "split": "validation",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "palletsprojects.com",
+      "host": "flask.palletsprojects.com",
+      "split": "validation",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "julialang.org",
+      "host": "docs.julialang.org",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "microsoft.com",
+      "host": "learn.microsoft.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "amazon.com",
+      "host": "docs.aws.amazon.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "oracle.com",
+      "host": "docs.oracle.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "gitlab.com",
+      "host": "docs.gitlab.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "gradle.org",
+      "host": "docs.gradle.org",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "npmjs.com",
+      "host": "docs.npmjs.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "tensorflow.org",
+      "host": "www.tensorflow.org",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "apple.com",
+      "host": "developer.apple.com",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    },
+    {
+      "rootDomain": "openstreetmap.org",
+      "host": "www.openstreetmap.org",
+      "split": "holdout",
+      "review": "unverified-candidate"
+    }
+  ]
+}
