@@ -51,7 +51,7 @@ jobs:
       - name: Avaliar ilhas claras em superficies independentes (P13, somente laboratorio)
         run: node scripts/p13-islands-preview.js
       - name: Medir baseline P13 nas fixtures P14 sem executar holdout
-        run: node scripts/p14-benchmark-browser.js
+        run: node scripts/p14-benchmark-browser.js --p11-candidate=data/p11-descendant-ci-candidate.json
       - name: Consolidar diagnosticos existentes em contrato P14 (nao comparaveis)
         run: node scripts/p14-benchmark-contract.js --input=browser-results/p13-white-islands/p13-report.json --output=browser-results/p14-baseline-diagnostics.json
       - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
