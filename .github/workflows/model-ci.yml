@@ -56,6 +56,15 @@ jobs:
         run: node scripts/p11-generate-descendant-data.js
       - name: Treinar modelo P11 de cor descendente sem publicar
         run: python3 -m training.train_p11_descendant --epochs 12
+      - name: Comparar 7D, P11 e P13 nos mesmos cenários CSS P14 sem promover modelos
+        run: node scripts/p14-common-benchmark.js
+      - name: Arquivar benchmark sintético P14 (não é avaliação cega)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p14-synthetic-common-benchmark-not-deployed
+          path: browser-results/p14-benchmark/report.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Comparar inferência P11 Python e JavaScript em famílias isoladas
         run: node scripts/p11-evaluate-descendant.js
       - name: Arquivar candidato P11 exclusivamente experimental
