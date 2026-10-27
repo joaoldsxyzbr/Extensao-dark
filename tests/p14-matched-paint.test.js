@@ -38,7 +38,7 @@ test('P14 gated paint: never invent fallback or permit invalid decisions/patches
 const row=(caseId,mode,digest='a'.repeat(64))=>({
   caseId,split:'train',model:mode,source:'isolated-browser',
   status:'safe-in-sample',auditedText:10,newWeak:0,restorationVerified:true,
-  darkAreaFraction:.7,baselineDigest:digest
+  controlsChanged:0,darkAreaFraction:.7,baselineDigest:digest
 });
 test('P14 paired lab: compare only same scenario and identical baseline CSS',()=>{
   const a=row('canvas-shell','p13-rule-baseline');
