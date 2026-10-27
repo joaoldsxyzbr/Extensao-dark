@@ -1,7 +1,7 @@
 'use strict';
 // P14: shadow-only test of P11 text RGB proposals on CSS already painted by
 // the P13 lab. No P11 DOM painting, no 7D MV3 equivalence, no private content.
-const ASSUMPTIONS='is-link-assumed-false-explicit-color-assumed-true';
+const ASSUMPTIONS='link-from-dom-explicit-color-only-when-witnessed';
 const KIND='p14-p11-text-css-shadow-only';
 const FIELDS=['kind','status','candidates','suggested','rejected',
   'differentFromP13','contextAssumptions','applied',
@@ -30,7 +30,7 @@ function assertP11Diagnostic(row){
     throw TypeError('P14: inconsistent P11 diagnostic');
   return true;
 }
-function compareP11TextRepairs(before,after,repairs,inputs){
+function compareP11TextRepairs(before,after,repairs,inputs,context=null){
   if(!inputs||!inputs.core||!inputs.model||!inputs.colors||
     typeof inputs.featuresFor!=='function'||typeof inputs.predictText!=='function')
     throw TypeError('P14: P11 candidate is required for shadow audit');
@@ -39,7 +39,14 @@ function compareP11TextRepairs(before,after,repairs,inputs){
     a.rows.length>=1&&a.rows.length<=240;
   const unknown=()=>make('inconclusive');
   if(!valid(before)||!valid(after)||before.rows.length!==after.rows.length||
-    !Array.isArray(repairs)||repairs.length>150)return unknown();
+    !Array.isArray(repairs)||repairs.length>150||
+    !context||context.truncated!==false||!Array.isArray(context.rows)||
+    context.rows.length!==before.rows.length||context.rows.some(row=>
+      !row||typeof row!=='object'||Array.isArray(row)||
+      Object.keys(row).length!==2||
+      !Object.hasOwn(row,'isLink')||!Object.hasOwn(row,'explicitColor')||
+      typeof row.isLink!=='boolean'||
+      ![true,null].includes(row.explicitColor)))return unknown();
   if(!repairs.length)return make('no-repair-opportunity',0,0,0,0);
   let suggested=0,rejected=0,different=0;
   const seen=new Set();
@@ -49,7 +56,8 @@ function compareP11TextRepairs(before,after,repairs,inputs){
       seen.has(i)||typeof repair.background!=='string'||
       typeof repair.color!=='string')return unknown();
     seen.add(i);
-    const old=before.rows[i],now=after.rows[i];
+    const old=before.rows[i],now=after.rows[i],metadata=context.rows[i];
+    if(metadata.explicitColor!==true)return unknown();
     if(!old||!now||old.protected!==false||now.protected!==false||
       typeof old.fg!=='string'||typeof old.bg!=='string'||
       typeof now.fg!=='string'||typeof now.bg!=='string'||
@@ -62,10 +70,11 @@ function compareP11TextRepairs(before,after,repairs,inputs){
     const isLarge=old.size>=24||(old.size>=18.66&&old.weight>=700);
     const contrast=isLarge?3:4.5;
     if(colors.contrastRatio(teacher,target)+.0001<contrast)return unknown();
-    // P13 does not expose original link/explicit declaration semantics.
-    // These are PROXY assumptions, not reconstructed P11 inference context.
+    // Only DOM-observed link semantics and evidenced direct color are used.
+    // Unknown stylesheet inheritance blocks P11 shadow measurement.
     const features=featuresFor(colors,{background:now.bg,text:old.fg,
-      sourceBackground:old.bg,isLink:false,isLarge,explicitColor:true});
+      sourceBackground:old.bg,isLink:metadata.isLink,isLarge,
+      explicitColor:metadata.explicitColor});
     const prediction=predictText(core,model,features,colors);
     if(prediction?.action==='reject'&&
       prediction.reason==='insufficient-neural-contrast'){rejected++;continue;}
