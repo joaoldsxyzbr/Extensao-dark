@@ -68,10 +68,13 @@ test('P14: contract metrics cannot conceal missing data or false-safe contrast',
   assert.equal(contract.catalogDigest,fingerprint(fresh()));
   const ok={caseId:'canvas-shell',split:'train',model:'p13-rule-baseline',
     status:'safe-in-sample',source:'isolated-browser',auditedText:8,newWeak:0,
-    restorationVerified:true,durationMs:1.5};
+    restorationVerified:true,controlsChanged:0,durationMs:1.5};
   assert.equal(validateMeasurement(ok),true);
   assert.throws(()=>validateMeasurement({...ok,newWeak:1}),/cannot pass/);
   assert.throws(()=>validateMeasurement({...ok,restorationVerified:false}),/cannot pass/);
+  assert.throws(()=>validateMeasurement({...ok,controlsChanged:1}),/cannot pass/);
+  const missingControls={...ok};delete missingControls.controlsChanged;
+  assert.throws(()=>validateMeasurement(missingControls),/cannot pass/);
   assert.throws(()=>validateMeasurement({...ok,cookie:'123'}),/private/);
   assert.throws(()=>validateMeasurement({...ok,url:'https://bad.test/'}),/private/);
   assert.throws(()=>validateMeasurement({...ok,durationMs:-1}),/invalid/);
@@ -79,7 +82,7 @@ test('P14: contract metrics cannot conceal missing data or false-safe contrast',
 test('P14: p95 is measured only on safe samples, no fabricated area coverage',()=>{
   const base={split:'validation',model:'p13-rule-baseline',
     source:'isolated-browser',status:'safe-in-sample',
-    auditedText:10,newWeak:0,restorationVerified:true};
+    auditedText:10,newWeak:0,restorationVerified:true,controlsChanged:0};
   const result=aggregate([
     {...base,caseId:'case-a',durationMs:2,convertedSurfaces:2},
     {...base,caseId:'case-b',durationMs:8,convertedSurfaces:3},
