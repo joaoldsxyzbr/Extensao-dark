@@ -17,6 +17,8 @@ const {launch}=require('./browser-e2e.js');
 const {compareProposals,gateP13WithLegacy}=require('./p14-matched-proposals.js');
 const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
+const {captureProtectedControls,countProtectedControlChanges}=
+  require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
 const JS=(fn,...args)=>'('+fn.toString()+')('+args.map(JSON.stringify).join(',')+')';
 // Gridded computed background sampling: approximate *viewport sample points*;
@@ -56,6 +58,7 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
     eligibleAreaFraction:null,darkAreaFraction:null,
     controlsChanged:null,restorationVerified:null};
   let browser,started=false,phaseOpen=false,baseline=null,areaBefore=null;
+  let baselineControls=null;
   try{
     browser=await launch(null);
     await browser.page.navigate(baseUrl+'/'+item.id,{fixtureReady:true});
@@ -66,6 +69,10 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
     started=true;
     result.candidateSurfaces=ready.samples.length;
     baseline=await browser.page.eval(JS(islandSession,'audit'));
+    baselineControls=await browser.page.eval(JS(captureProtectedControls));
+    if(baselineControls?.truncated!==false){
+      result.reason='protected-controls-baseline-inconclusive';return result;
+    }
     areaBefore=await browser.page.eval(JS(sampleBackgroundGrid));
     const planStart=performance.now();
     const p13Plan=planIslands(ready.samples);
@@ -102,6 +109,13 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
     result.newWeak=inspected.newWeak??null;
     result.status=inspected.status;
     result.reason=result.status==='safe-in-sample'?'synthetic-sample-only':'contrast-unknown-or-regressed';
+    const controlsAfter=await browser.page.eval(JS(captureProtectedControls));
+    result.controlsChanged=countProtectedControlChanges(baselineControls,controlsAfter);
+    if(result.controlsChanged===null&&result.status==='safe-in-sample'){
+      result.status='inconclusive';result.reason='protected-controls-inconclusive';
+    }else if(result.controlsChanged>0){
+      result.status='blocked';result.reason='protected-controls-changed';
+    }
     const areaAfter=await browser.page.eval(JS(sampleBackgroundGrid));
     if(areaBefore.valid>=20&&areaAfter.valid>=20){
       result.eligibleAreaFraction=Number((areaBefore.valid/96).toFixed(4));
@@ -123,6 +137,9 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
         const baselineRestored=await browser.page.eval(JS(sampleBackgroundGrid));
         verifySampledRollback({rollback,beforeAudit:baseline,
           afterAudit:restored,beforeGrid:areaBefore,afterGrid:baselineRestored});
+        const restoredControls=await browser.page.eval(JS(captureProtectedControls));
+        assert.equal(countProtectedControlChanges(baselineControls,restoredControls),0,
+          'P14: protected control CSS changed after rollback for '+item.id);
         result.restorationVerified=true;
       }
       if(started)await browser.page.eval(JS(islandSession,'close'));
