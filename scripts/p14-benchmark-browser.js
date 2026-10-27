@@ -6,6 +6,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const http=require('node:http');
 const path=require('node:path');
+const crypto=require('node:crypto');
 const {performance}=require('node:perf_hooks');
 const {ROOT,reportContract}=require('./p14-dataset-contract.js');
 const {getExplorationFixtures,buildPage}=require('./p14-fixture-pages.js');
@@ -13,7 +14,8 @@ const {aggregate,buildReport}=require('./p14-benchmark-contract.js');
 const {planIslands,suggestTextRepair,evaluateIslandContrast,islandSession}
  =require('./p13-islands.js');
 const {launch}=require('./browser-e2e.js');
-const {compareProposals}=require('./p14-matched-proposals.js');
+const {compareProposals,gateP13WithLegacy}=require('./p14-matched-proposals.js');
+const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
 const JS=(fn,...args)=>'('+fn.toString()+')('+args.map(JSON.stringify).join(',')+')';
@@ -44,8 +46,10 @@ function sampleBackgroundGrid(){
   }
   return {gridPoints:96,valid,dark,bright,unknown};
 }
-async function explore(item,baseUrl){
-  const result={caseId:item.id,split:item.split,model:'p13-rule-baseline',
+async function explore(item,baseUrl,mode='p13-rule-baseline'){
+  if(!['p13-rule-baseline','7d-gated-p13-lab'].includes(mode))
+    throw TypeError('P14: unknown preview mode');
+  const result={caseId:item.id,split:item.split,model:mode,
     source:'isolated-browser',status:'inconclusive',
     reason:'unmeasured',candidateSurfaces:null,convertedSurfaces:null,
     auditedText:null,newWeak:null,repairedText:null,durationMs:null,
@@ -64,15 +68,23 @@ async function explore(item,baseUrl){
     baseline=await browser.page.eval(JS(islandSession,'audit'));
     areaBefore=await browser.page.eval(JS(sampleBackgroundGrid));
     const planStart=performance.now();
-    const proposals=planIslands(ready.samples);
+    const p13Plan=planIslands(ready.samples);
     result.decisionComparison=compareProposals(ready.samples);
-    assert.equal(result.decisionComparison.p13Proposed,proposals.length);
+    assert.equal(result.decisionComparison.p13Proposed,p13Plan.length);
+    result.baselineDigest=crypto.createHash('sha256').update(JSON.stringify({
+      cssSamples:ready.samples,textAudit:baseline,grid:areaBefore})).digest('hex');
+    const proposals=mode==='p13-rule-baseline'?p13Plan:
+      gateP13WithLegacy(ready.samples,p13Plan);
+    if(mode==='7d-gated-p13-lab')
+      assert.equal(result.decisionComparison.agreementOnP13,proposals.length);
     result.durationMs=Number((performance.now()-planStart).toFixed(3));
     result.convertedSurfaces=proposals.length;
     if(!proposals.length){
       result.reason='no-convertible-surface';return result;
     }
-    await browser.page.screenshot(path.join(OUTPUT,item.id+'-original.png'));
+    if(mode==='p13-rule-baseline')
+      await browser.page.screenshot(path.join(OUTPUT,item.id+'-original.png'));
+
     phaseOpen=true;
     await browser.page.eval(JS(islandSession,'paint',proposals));
     const changed=await browser.page.eval(JS(islandSession,'audit'));
@@ -96,7 +108,8 @@ async function explore(item,baseUrl){
       result.darkAreaFraction=Number((areaAfter.dark/areaAfter.valid).toFixed(4));
     }
     if(result.status==='safe-in-sample')
-      await browser.page.screenshot(path.join(OUTPUT,item.id+'-p13.png'));
+      await browser.page.screenshot(path.join(OUTPUT,item.id+'-'+
+        (mode==='p13-rule-baseline'?'p13':'gated-p13')+'.png'));
     return result;
   }catch(error){
     // Broken authored fixtures are not silently approved.
@@ -129,25 +142,37 @@ async function main(){
   });
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const observations=[],decisionComparisons=[];
+  const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
   try{
     for(const item of fixtures){
-      const row=await explore(item,'http://127.0.0.1:'+server.address().port);
-      const {decisionComparison,...measurement}=row;
+      const url='http://127.0.0.1:'+server.address().port;
+      const row=await explore(item,url);
+      const gated=await explore(item,url,'7d-gated-p13-lab');
+      const {decisionComparison,baselineDigest,...measurement}=row;
+      const {decisionComparison:unusedGated,baselineDigest:gatedDigest,
+        ...gatedMeasurement}=gated;
       observations.push(measurement);
+      gatedObservations.push(gatedMeasurement);
+      pairedP13.push({...measurement,baselineDigest});
+      pairedGated.push({...gatedMeasurement,baselineDigest:gatedDigest});
       if(decisionComparison)decisionComparisons.push({caseId:item.id,
         split:item.split,...decisionComparison});
-      console.log('P14 fixture',item.id,row.status,
-        JSON.stringify({converted:row.convertedSurfaces,weak:row.newWeak,
-          rollback:row.restorationVerified}));
+      console.log('P14 fixture',item.id,
+        JSON.stringify({p13:row.status,gated:gated.status,
+          p13Converted:row.convertedSurfaces,gatedConverted:gated.convertedSurfaces,
+          p13Rollback:row.restorationVerified,gatedRollback:gated.restorationVerified}));
     }
   }finally{await new Promise(resolve=>server.close(resolve));}
   const aggregateP13=aggregate(observations);
+  const aggregateGated=aggregate(gatedObservations,{model:'7d-gated-p13-lab'});
+  const pairedSyntheticPaint=pairSyntheticModes(pairedP13,pairedGated);
   const report={...buildReport(aggregateP13),
     kind:'p14-synthetic-browser-baseline',
     evidence:'isolated-authored-fixtures-not-real-user-sites',
     benchmarkResult:'exploratory-only',
-    availableModes:['p13-rule-baseline'],
+    availableModes:['p13-rule-baseline','7d-gated-p13-lab'],
+    gatedLabAggregate:aggregateGated,
+    pairedSyntheticPaint,
     proposalGateDiagnostic:{kind:'same-computed-css-vote-only',
       comparedCases:decisionComparisons.length,
       comparedSurfaceVotes:decisionComparisons.reduce((n,x)=>n+x.inputSurfaces,0),
@@ -163,6 +188,8 @@ async function main(){
     blocked:aggregateP13.blocked,inconclusive:aggregateP13.inconclusive,
     measuredAreaCases:aggregateP13.measuredAreaCases,
     comparedDecisionCases:decisionComparisons.length,
+    pairedSyntheticCases:pairedSyntheticPaint.matchedSyntheticCases,
+    measuredSyntheticPairs:pairedSyntheticPaint.measuredPairs,
     promotionEligible:false
   }));
   assert.equal(report.holdoutFixturesNotExecuted,3);
@@ -174,7 +201,9 @@ async function main(){
       'P13: '+aggregateP13.safe+' observações seguras; '+
       aggregateP13.inconclusive+' inconclusivas; '+
       aggregateP13.blocked+' bloqueadas.\n'+
-      'P14: votos 7D/P13 nos mesmos CSS computados, sem aplicar 7D; P11 ainda não medido.\n'+
+      'P14: duas pinturas P13 e 7D-gated-P13 em CSS sintético, com rollback.\n'+
+      'Pares sintéticos comparáveis: '+pairedSyntheticPaint.measuredPairs+'; '+
+      'P11 e motor MV3 7D completo NÃO foram comparados.\n'+
       '**Comparação completa de motores 7D/P11/P13 NÃO disponível.**\n');
 }
 if(require.main===module)main().catch(err=>{
