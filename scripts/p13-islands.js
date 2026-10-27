@@ -15,7 +15,22 @@ function planIslands(samples,api=colors){
     const target=api.mapBackground(bg,'deep');
     const parsed=api.parseColor(target);
     if(!parsed||api.luminance(parsed)>.18)continue;
-    result.push({index:row.index,source:row.background,target});
+    // Leaf containers may contain direct text nodes that never appear in
+    // a nested text-element audit. Give the container itself safe foreground.
+    // Never change inherited foreground on non-leaf containers.
+    let targetForeground=null;
+    if(row.leaf===true){
+      const original=api.parseColor(row.foreground);
+      if(!original||original.a<.999)
+        throw TypeError('P13: leaf foreground must be opaque');
+      const proposed=api.ensureContrast(original,parsed,4.5);
+      const fg=api.parseColor(proposed);
+      if(!fg||api.contrastRatio(fg,parsed)+.0001<4.5)
+        throw TypeError('P13: cannot protect direct text');
+      targetForeground=proposed;
+    }
+    result.push({index:row.index,source:row.background,target,
+      sourceForeground:row.foreground||null,targetForeground});
   }
   return result;
 }
@@ -122,6 +137,7 @@ function islandSession(action,operations=[]){
     const samples=surfaces.map((el,index)=>{
       const rect=el.getBoundingClientRect(),st=css(el);
       return {index,background:st.backgroundColor,
+        foreground:st.color,leaf:el.childElementCount===0,
         width:Math.round(rect.width),height:Math.round(rect.height)};
     });
     Object.defineProperty(globalThis,KEY,{configurable:true,
@@ -166,6 +182,10 @@ function islandSession(action,operations=[]){
         patch.index<0||patch.index>=state.samples.length||
         patch.source!==state.samples[patch.index].background||
         typeof patch.target!=='string'||!rgb.test(patch.target)||
+        !(patch.targetForeground===null||
+          patch.targetForeground!==undefined&&rgb.test(patch.targetForeground)&&
+          state.samples[patch.index].leaf===true&&
+          patch.sourceForeground===state.samples[patch.index].foreground)||
         css(state.surfaces[patch.index]).backgroundColor!==patch.source)
         throw Error('P13: unsafe surface proposal');
       ids.add(patch.index);
@@ -173,6 +193,8 @@ function islandSession(action,operations=[]){
     for(const patch of operations){
       const el=state.surfaces[patch.index];
       save(el);el.style.setProperty('background-color',patch.target,'important');
+      if(patch.targetForeground!==null)
+        el.style.setProperty('color',patch.targetForeground,'important');
     }
     state.active=true;
     return {painted:operations.length};
