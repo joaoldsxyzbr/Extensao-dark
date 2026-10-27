@@ -13,6 +13,8 @@ const {aggregate,buildReport}=require('./p14-benchmark-contract.js');
 const {planIslands,suggestTextRepair,evaluateIslandContrast,islandSession}
  =require('./p13-islands.js');
 const {launch}=require('./browser-e2e.js');
+const {compareProposals}=require('./p14-matched-proposals.js');
+const {verifySampledRollback}=require('./p14-rollback-audit.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
 const JS=(fn,...args)=>'('+fn.toString()+')('+args.map(JSON.stringify).join(',')+')';
 // Gridded computed background sampling: approximate *viewport sample points*;
@@ -49,7 +51,7 @@ async function explore(item,baseUrl){
     auditedText:null,newWeak:null,repairedText:null,durationMs:null,
     eligibleAreaFraction:null,darkAreaFraction:null,
     controlsChanged:null,restorationVerified:null};
-  let browser,started=false,phaseOpen=false;
+  let browser,started=false,phaseOpen=false,baseline=null,areaBefore=null;
   try{
     browser=await launch(null);
     await browser.page.navigate(baseUrl+'/'+item.id,{fixtureReady:true});
@@ -59,10 +61,12 @@ async function explore(item,baseUrl){
     }
     started=true;
     result.candidateSurfaces=ready.samples.length;
-    const baseline=await browser.page.eval(JS(islandSession,'audit'));
-    const areaBefore=await browser.page.eval(JS(sampleBackgroundGrid));
+    baseline=await browser.page.eval(JS(islandSession,'audit'));
+    areaBefore=await browser.page.eval(JS(sampleBackgroundGrid));
     const planStart=performance.now();
     const proposals=planIslands(ready.samples);
+    result.decisionComparison=compareProposals(ready.samples);
+    assert.equal(result.decisionComparison.p13Proposed,proposals.length);
     result.durationMs=Number((performance.now()-planStart).toFixed(3));
     result.convertedSurfaces=proposals.length;
     if(!proposals.length){
@@ -104,10 +108,8 @@ async function explore(item,baseUrl){
         assert.equal(rollback.ok,true,'P14: CSS rollback failed for '+item.id);
         const restored=await browser.page.eval(JS(islandSession,'audit'));
         const baselineRestored=await browser.page.eval(JS(sampleBackgroundGrid));
-        // A fresh baseline is checked again after rollback. A missing
-        // background means the sample is inconclusive, not necessarily safe.
-        assert.ok(restored&&Array.isArray(restored.rows));
-        assert.equal(baselineRestored.gridPoints,96);
+        verifySampledRollback({rollback,beforeAudit:baseline,
+          afterAudit:restored,beforeGrid:areaBefore,afterGrid:baselineRestored});
         result.restorationVerified=true;
       }
       if(started)await browser.page.eval(JS(islandSession,'close'));
@@ -127,11 +129,14 @@ async function main(){
   });
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const observations=[];
+  const observations=[],decisionComparisons=[];
   try{
     for(const item of fixtures){
       const row=await explore(item,'http://127.0.0.1:'+server.address().port);
-      observations.push(row);
+      const {decisionComparison,...measurement}=row;
+      observations.push(measurement);
+      if(decisionComparison)decisionComparisons.push({caseId:item.id,
+        split:item.split,...decisionComparison});
       console.log('P14 fixture',item.id,row.status,
         JSON.stringify({converted:row.convertedSurfaces,weak:row.newWeak,
           rollback:row.restorationVerified}));
@@ -143,6 +148,13 @@ async function main(){
     evidence:'isolated-authored-fixtures-not-real-user-sites',
     benchmarkResult:'exploratory-only',
     availableModes:['p13-rule-baseline'],
+    proposalGateDiagnostic:{kind:'same-computed-css-vote-only',
+      comparedCases:decisionComparisons.length,
+      comparedSurfaceVotes:decisionComparisons.reduce((n,x)=>n+x.inputSurfaces,0),
+      p11Status:'not-evaluated-on-these-fixtures',
+      sevenDStatus:'proposal-votes-only-no-mv3-or-painting',
+      fullEngineComparisonAvailable:false,promotionEligible:false,
+      cases:decisionComparisons},
     records:observations};
   fs.writeFileSync(path.join(OUTPUT,'p14-benchmark.json'),
     JSON.stringify(report,null,2)+'\n');
@@ -150,6 +162,7 @@ async function main(){
     fixtures:fixtures.length,safe:aggregateP13.safe,
     blocked:aggregateP13.blocked,inconclusive:aggregateP13.inconclusive,
     measuredAreaCases:aggregateP13.measuredAreaCases,
+    comparedDecisionCases:decisionComparisons.length,
     promotionEligible:false
   }));
   assert.equal(report.holdoutFixturesNotExecuted,3);
@@ -161,7 +174,8 @@ async function main(){
       'P13: '+aggregateP13.safe+' observações seguras; '+
       aggregateP13.inconclusive+' inconclusivas; '+
       aggregateP13.blocked+' bloqueadas.\n'+
-      '**7D vs P11 vs P13 ainda NÃO comparados em cenários equivalentes.**\n');
+      'P14: votos 7D/P13 nos mesmos CSS computados, sem aplicar 7D; P11 ainda não medido.\n'+
+      '**Comparação completa de motores 7D/P11/P13 NÃO disponível.**\n');
 }
 if(require.main===module)main().catch(err=>{
   console.error('P14 benchmark failure:',err.stack||err);process.exitCode=1;
