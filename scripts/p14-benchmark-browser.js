@@ -18,6 +18,7 @@ const {compareProposals,gateP13WithLegacy}=require('./p14-matched-proposals.js')
 const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
 const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
+const {captureP11TextContext}=require('./p14-p11-context.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
@@ -70,6 +71,9 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     started=true;
     result.candidateSurfaces=ready.samples.length;
     baseline=await browser.page.eval(JS(islandSession,'audit'));
+    // Observe semantic flags BEFORE any P13 paint or text recolor.
+    const p11Context=p11Inputs&&mode==='p13-rule-baseline'?
+      await browser.page.eval(JS(captureP11TextContext)):null;
     baselineControls=await browser.page.eval(JS(captureProtectedControls));
     if(baselineControls?.truncated!==false){
       result.reason='protected-controls-baseline-inconclusive';return result;
@@ -103,7 +107,7 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     }
     if(p11Inputs&&mode==='p13-rule-baseline')
       result.p11ShadowDiagnostic=compareP11TextRepairs(
-        baseline,changed,fixes.repairs,p11Inputs);
+        baseline,changed,fixes.repairs,p11Inputs,p11Context);
     if(fixes.repairs.length)
       await browser.page.eval(JS(islandSession,'recolor',fixes.repairs));
     result.repairedText=fixes.repairs.length;
@@ -218,7 +222,7 @@ async function main(){
       .reduce((n,x)=>n+x.suggested,0),
     neuralContrastRejected:p11Diagnostics.filter(x=>x.status==='measured')
       .reduce((n,x)=>n+x.rejected,0),
-    contextAssumptions:'is-link-assumed-false-explicit-color-assumed-true',
+    contextAssumptions:'link-from-dom-explicit-color-only-when-witnessed',
     applied:false,p11SurfaceDecisionMeasured:false,
     matchedFullEngines:false,independentVisualReview:false,
     promotionEligible:false,cases:p11Diagnostics
