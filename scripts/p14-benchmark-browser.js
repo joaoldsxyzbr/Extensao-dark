@@ -17,6 +17,7 @@ const {launch}=require('./browser-e2e.js');
 const {compareProposals,gateP13WithLegacy}=require('./p14-matched-proposals.js');
 const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
+const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
@@ -48,7 +49,7 @@ function sampleBackgroundGrid(){
   }
   return {gridPoints:96,valid,dark,bright,unknown};
 }
-async function explore(item,baseUrl,mode='p13-rule-baseline'){
+async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
   if(!['p13-rule-baseline','7d-gated-p13-lab'].includes(mode))
     throw TypeError('P14: unknown preview mode');
   const result={caseId:item.id,split:item.split,model:mode,
@@ -100,6 +101,9 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
       result.status=fixes.status==='blocked'?'blocked':'inconclusive';
       result.reason='unsafe-or-incomplete-foreground';return result;
     }
+    if(p11Inputs&&mode==='p13-rule-baseline')
+      result.p11ShadowDiagnostic=compareP11TextRepairs(
+        baseline,changed,fixes.repairs,p11Inputs);
     if(fixes.repairs.length)
       await browser.page.eval(JS(islandSession,'recolor',fixes.repairs));
     result.repairedText=fixes.repairs.length;
@@ -148,6 +152,21 @@ async function explore(item,baseUrl,mode='p13-rule-baseline'){
   }
 }
 async function main(){
+  const candidateArg=process.argv.find(arg=>arg.startsWith('--p11-candidate='));
+  if(process.argv.some(arg=>arg.startsWith('--')&&arg!==candidateArg))
+    throw Error('P14: unknown benchmark option');
+  let p11Inputs=null;
+  if(candidateArg){
+    const file=path.resolve(candidateArg.slice('--p11-candidate='.length));
+    if(file!==path.join(ROOT,'data/p11-descendant-ci-candidate.json'))
+      throw Error('P14: P11 must load the isolated CI candidate only');
+    const core=require('../vendor/neural_core/neural-core.js');
+    const colors=require('../content/colors.js');
+    const runtime=require('../training/p11-descendant-runtime.js');
+    const candidate=JSON.parse(fs.readFileSync(file,'utf8'));
+    p11Inputs={core,colors,featuresFor:runtime.featuresFor,
+      predictText:runtime.predictText,model:runtime.loadCandidate(core,candidate)};
+  }
   const fixtures=getExplorationFixtures();
   assert.equal(fixtures.length,12);
   const files=Object.fromEntries(fixtures.map(row=>[row.id,buildPage(row)]));
@@ -160,12 +179,15 @@ async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
+  const p11Diagnostics=[];
   try{
     for(const item of fixtures){
       const url='http://127.0.0.1:'+server.address().port;
-      const row=await explore(item,url);
+      const row=await explore(item,url,'p13-rule-baseline',p11Inputs);
       const gated=await explore(item,url,'7d-gated-p13-lab');
-      const {decisionComparison,baselineDigest,...measurement}=row;
+      const {decisionComparison,baselineDigest,p11ShadowDiagnostic,...measurement}=row;
+      if(p11ShadowDiagnostic)p11Diagnostics.push({caseId:item.id,
+        split:item.split,...p11ShadowDiagnostic});
       const {decisionComparison:unusedGated,baselineDigest:gatedDigest,
         ...gatedMeasurement}=gated;
       observations.push(measurement);
@@ -183,17 +205,38 @@ async function main(){
   const aggregateP13=aggregate(observations);
   const aggregateGated=aggregate(gatedObservations,{model:'7d-gated-p13-lab'});
   const pairedSyntheticPaint=pairSyntheticModes(pairedP13,pairedGated);
+  const p11Shadow=p11Inputs?{
+    kind:'p14-p11-shadow-proposals-on-p13-css',
+    fixtureCount:fixtures.length,evaluatedCases:p11Diagnostics.length,
+    missingCases:fixtures.length-p11Diagnostics.length,
+    measuredCases:p11Diagnostics.filter(x=>x.status==='measured').length,
+    noRepairCases:p11Diagnostics.filter(x=>x.status==='no-repair-opportunity').length,
+    inconclusiveCases:p11Diagnostics.filter(x=>x.status==='inconclusive').length,
+    candidates:p11Diagnostics.filter(x=>x.status==='measured')
+      .reduce((n,x)=>n+x.candidates,0),
+    neuralSuggestions:p11Diagnostics.filter(x=>x.status==='measured')
+      .reduce((n,x)=>n+x.suggested,0),
+    neuralContrastRejected:p11Diagnostics.filter(x=>x.status==='measured')
+      .reduce((n,x)=>n+x.rejected,0),
+    contextAssumptions:'is-link-assumed-false-explicit-color-assumed-true',
+    applied:false,p11SurfaceDecisionMeasured:false,
+    matchedFullEngines:false,independentVisualReview:false,
+    promotionEligible:false,cases:p11Diagnostics
+  }:{
+    kind:'p14-p11-shadow-not-requested',evaluatedCases:0,
+    matchedFullEngines:false,promotionEligible:false
+  };
   const report={...buildReport(aggregateP13),
     kind:'p14-synthetic-browser-baseline',
     evidence:'isolated-authored-fixtures-not-real-user-sites',
     benchmarkResult:'exploratory-only',
     availableModes:['p13-rule-baseline','7d-gated-p13-lab'],
     gatedLabAggregate:aggregateGated,
-    pairedSyntheticPaint,
+    pairedSyntheticPaint,p11TextShadowDiagnostic:p11Shadow,
     proposalGateDiagnostic:{kind:'same-computed-css-vote-only',
       comparedCases:decisionComparisons.length,
       comparedSurfaceVotes:decisionComparisons.reduce((n,x)=>n+x.inputSurfaces,0),
-      p11Status:'not-evaluated-on-these-fixtures',
+      p11Status:p11Inputs?'shadow-text-proposals-on-p13-css-only':'not-evaluated-on-these-fixtures',
       sevenDStatus:'proposal-votes-only-no-mv3-or-painting',
       fullEngineComparisonAvailable:false,promotionEligible:false,
       cases:decisionComparisons},
@@ -207,6 +250,8 @@ async function main(){
     comparedDecisionCases:decisionComparisons.length,
     pairedSyntheticCases:pairedSyntheticPaint.matchedSyntheticCases,
     measuredSyntheticPairs:pairedSyntheticPaint.measuredPairs,
+    p11ShadowCases:p11Diagnostics.length,
+    p11Suggestions:p11Shadow.neuralSuggestions??null,
     promotionEligible:false
   }));
   assert.equal(report.holdoutFixturesNotExecuted,3);
@@ -220,7 +265,9 @@ async function main(){
       aggregateP13.blocked+' bloqueadas.\n'+
       'P14: duas pinturas P13 e 7D-gated-P13 em CSS sintético, com rollback.\n'+
       'Pares sintéticos comparáveis: '+pairedSyntheticPaint.measuredPairs+'; '+
-      'P11 e motor MV3 7D completo NÃO foram comparados.\n'+
+      (p11Inputs?'P11: propostas de texto em modo sombra sobre CSS P13, sem pintura P11.\n':
+        'P11 não foi medido neste ensaio.\n')+
+      'Motor MV3 7D completo NÃO foi comparado.\n'+
       '**Comparação completa de motores 7D/P11/P13 NÃO disponível.**\n');
 }
 if(require.main===module)main().catch(err=>{
