@@ -68,3 +68,22 @@ test('P14 paired lab: no invented passing observation or cross-fixture compariso
   assert.equal(report.cases[0].deltaGatedMinusP13,null);
   assert.equal(report.promotionEligible,false);
 });
+
+test('P14 paired lab: two unmeasured fixtures stay inconclusive, never matched CSS',()=>{
+  const a={...row('native-dark','p13-rule-baseline'),
+    status:'inconclusive',restorationVerified:null,
+    newWeak:null,darkAreaFraction:null};
+  const b={...row('native-dark','7d-gated-p13-lab'),
+    status:'inconclusive',restorationVerified:null,
+    newWeak:null,darkAreaFraction:null};
+  delete a.baselineDigest;
+  delete b.baselineDigest;
+  const report=pairSyntheticModes([a],[b]);
+  assert.equal(report.fixturePairs,1);
+  assert.equal(report.matchedSyntheticCases,0);
+  assert.equal(report.measuredPairs,0);
+  assert.equal(report.cases[0].baselineMatched,false);
+  assert.equal(report.cases[0].deltaGatedMinusP13,null);
+  assert.throws(()=>pairSyntheticModes([{...a,status:'safe-in-sample',
+    restorationVerified:true,newWeak:0}],[b]),/P14:/);
+});
