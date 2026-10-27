@@ -120,7 +120,7 @@ async function main(){
   fs.writeFileSync(path.join(OUTPUT,'p13-report.json'),JSON.stringify(report,null,2)+'\n');
   const fixtures=report.scenarios.filter(x=>x.source==='local-fixture');
   if(fixtures.length!==2||fixtures.some(x=>x.status!=='safe-in-sample'||
-      x.planned<1||x.restorationVerified!==true))
+      x.planned<2||x.restorationVerified!==true))
     throw Error('P13: new surface preview failed local safety fixtures');
   console.log('P13 summary',JSON.stringify({safe:report.safe,blocked:report.blocked,
     inconclusive:report.inconclusive,promotionEligible:false}));
