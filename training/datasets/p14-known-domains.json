@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "known-diagnostics-not-blind-holdout",
+  "domains": [
+    {
+      "domain": "docs.python.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.rfc-editor.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.iana.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.w3.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.gnu.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.postgresql.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "en.wikipedia.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "developer.mozilla.org",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "github.com",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "example.com",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.youtube.com",
+      "status": "known-from-earlier-experiments"
+    },
+    {
+      "domain": "www.roblox.com",
+      "status": "known-from-earlier-experiments"
+    }
+  ]
+}
