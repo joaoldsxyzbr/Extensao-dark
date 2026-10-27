@@ -102,7 +102,7 @@ function modelActions(doc,baseline,p11){
     const score=core.predict(baseline,features)[0];
     if(!Number.isFinite(score))throw TypeError('P14: bad 7D probability');
     const protectedStyle=row.control||row.selected||row.hasImage||
-      colors.isVividAccent(bg)||row.protected;
+      colors.isVividAccent(bg);
     const context={action:!protectedStyle&&colors.luminance(bg)>=.17?
       'convert':'preserve',kind:row.hasImage?'graphic':'surface',
       control:row.control,selected:row.selected,masked:row.hasImage,
