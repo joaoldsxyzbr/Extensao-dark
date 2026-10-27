@@ -27,7 +27,7 @@ function validateMeasurement(row){
     typeof row.caseId!=='string'||!/^[a-z][a-z0-9-]{2,55}$/.test(row.caseId)||
     !['train','validation','diagnostic'].includes(row.split)||
     !ALLOWED_STATUS.has(row.status)||row.source!=='isolated-browser'||
-    typeof row.model!=='string'||!['p13-rule-baseline','7d-legacy','p11-text'].includes(row.model)||
+    typeof row.model!=='string'||!['p13-rule-baseline','7d-legacy','p11-text','7d-gated-p13-lab'].includes(row.model)||
     Object.keys(row).some(k=>!['caseId','split','status','model','source','reason',...METRICS].includes(k)))
     throw TypeError('P14: unknown, private or malformed benchmark observation');
   if(row.reason!==undefined&&
