@@ -41,7 +41,7 @@ test('P15 risk coverage: count overlapping reasons, never call them converted pi
 });
 test('P15 risk coverage: inconclusive is not zero risks or zero white islands',()=>{
   const r=summarizeP15RiskCoverage({
-    kind:'p15-region-graph-v1',status:'inconclusive',scanned:8001,nodes:[]
+    kind:'p15-region-graph-v1',status:'inconclusive',scanned:1201,nodes:[]
   });
   assert.equal(r.status,'inconclusive');
   assert.equal(r.regions,null);
