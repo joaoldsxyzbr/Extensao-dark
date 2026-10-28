@@ -224,7 +224,8 @@ test('P15: captures open Shadow DOM hierarchy and direct text without exporting 
   const host=element('DIV','rgb(27, 31, 36)',{parent:body});
   const inner=element('SECTION','rgb(247, 247, 247)',{hasText:true});
   const nested=element('ARTICLE','rgb(241, 241, 241)',{parent:inner});
-  const root={mode:'open',host,querySelectorAll:()=>[inner,nested]};
+  const root={mode:'open',host,querySelectorAll:()=>[inner,nested],
+    querySelector:()=>null};
   host.shadowRoot=root;
   inner.getRootNode=()=>root;
   nested.getRootNode=()=>root;
