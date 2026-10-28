@@ -105,6 +105,14 @@ async function launch(extension) {
     await cdp.command('Runtime.enable',{},sessionId);
     const page={
       async eval(expr){const r=await cdp.command('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true},sessionId);if(r.exceptionDetails)throw Error('Erro em página: '+(r.exceptionDetails.text||JSON.stringify(r.exceptionDetails)));return r.result?.value;},
+      async setViewport(width,height){
+        if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||
+          width<1||height<1||width>8192||height>8192)
+          throw TypeError('Browser E2E: invalid viewport dimensions');
+        await cdp.command('Emulation.setDeviceMetricsOverride',{
+          width,height,deviceScaleFactor:1,mobile:false
+        },sessionId);
+      },
       async navigate(url,{fixtureReady=true}={}){const result=await cdp.command('Page.navigate',{url},sessionId,25000);if(result.errorText)throw Error('Navegação Chrome bloqueada/falhou: '+result.errorText);await waitFor(async()=>await page.eval(fixtureReady?'document.readyState === "complete" && window.__fixtureReady === true':'document.body !== null && (document.readyState === "complete" || document.readyState === "interactive")'),fixtureReady?8000:18000);},
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
