@@ -25,7 +25,7 @@ function captureRegionGraph(){
     HEADER:'navigation',ASIDE:'navigation',FORM:'form',
     ARTICLE:'panel',SECTION:'panel',TABLE:'table'}[tag]||'region');
   const paint=el=>{
-    const s=getComputedStyle(el);
+    const s=styleFor(el);
     if(s.backgroundImage&&s.backgroundImage!=='none'||
       s.maskImage&&s.maskImage!=='none'||
       s.webkitMaskImage&&s.webkitMaskImage!=='none'||
@@ -42,14 +42,16 @@ function captureRegionGraph(){
     return {background:'complex',ownLuma:null};
   };
   const regions=[],positions=new Map();
-  let scanned=0,visited=0;
+  let scanned=0,visited=0,frameCount=0;
   // Traverse document and reachable OPEN shadow roots only. Hosts need not
   // match the region selector (e.g. a custom span). Each root is visited once.
-  const scopes=[{root:document,depth:0}],seen=new Set([document]);
+  const scopes=[{root:document,depth:0,inFrame:false}],seen=new Set([document]);
+  const styleFor=(el,pseudo)=>el.ownerDocument?.defaultView?.getComputedStyle?.(el,pseudo)||
+    getComputedStyle(el,pseudo);
   const composedParent=el=>{
     if(el.parentElement)return el.parentElement;
     const root=el.getRootNode?.();
-    return root?.host||null;
+    return root?.host||root?.defaultView?.frameElement||null;
   };
   const protectedAncestor=el=>{
     // closest() stops at shadow boundaries, so inspect each host explicitly.
@@ -57,32 +59,38 @@ function captureRegionGraph(){
     for(let depth=0;cur&&depth<10;depth++){
       if(cur.closest(protectedSelector))return true;
       const root=cur.getRootNode?.();
-      if(!root?.host)return false;
-      cur=root.host;
+      const host=root?.host||root?.defaultView?.frameElement;
+      if(!host)return false;
+      cur=host;
     }
     return true; // unknown/deep chain: fail closed
   };
   for(let scopeIndex=0;scopeIndex<scopes.length;scopeIndex++){
-    const {root,depth}=scopes[scopeIndex];
+    const {root,depth,inFrame}=scopes[scopeIndex];
     for(const el of root.querySelectorAll(selector)){
       if(++scanned>1600)return failed(scanned);
       if(!el.isConnected)return failed(scanned);
       if(protectedAncestor(el))continue;
     const rect=el.getBoundingClientRect();
+    const viewport=el.ownerDocument?.defaultView;
+    const vw=viewport?.innerWidth??innerWidth;
+    const vh=viewport?.innerHeight??innerHeight;
+    if(!Number.isFinite(vw)||vw<=0||!Number.isFinite(vh)||vh<=0)
+      return failed(scanned);
     if(!Number.isFinite(rect.width)||!Number.isFinite(rect.height)||
       !Number.isFinite(rect.left)||!Number.isFinite(rect.top)||
       !Number.isFinite(rect.right)||!Number.isFinite(rect.bottom))
       return failed(scanned);
     if(rect.width<75||rect.height<28||rect.right<=0||
-      rect.bottom<=0||rect.left>=innerWidth||rect.top>=innerHeight)
+      rect.bottom<=0||rect.left>=vw||rect.top>=vh)
       continue;
     if(regions.length>=80)return failed(scanned);
-    const style=getComputedStyle(el);
+    const style=styleFor(el);
     if(style.display==='none'||style.visibility==='hidden')continue;
     // Generated ::before / ::after may paint over a seemingly safe surface.
     // Record only a boolean. Never return generated CSS content strings.
-    const before=getComputedStyle(el,'::before');
-    const after=getComputedStyle(el,'::after');
+    const before=styleFor(el,'::before');
+    const after=styleFor(el,'::after');
     if(!before||typeof before.content!=='string'||
       !after||typeof after.content!=='string')return failed(scanned);
     const activePseudo=s=>s.content!=='none'&&
@@ -107,15 +115,15 @@ function captureRegionGraph(){
     const hasDirectText=Array.from(el.childNodes).some(n=>n.nodeType===3);
     const node={index:regions.length,parent:parentIndex,
       background:own.background,ownLuma:own.ownLuma,effectiveLuma,
-      widthFraction:Number(Math.min(1,rect.width/innerWidth).toFixed(4)),
-      heightFraction:Number(Math.min(1,rect.height/innerHeight).toFixed(4)),
+      widthFraction:Number(Math.min(1,rect.width/vw).toFixed(4)),
+      heightFraction:Number(Math.min(1,rect.height/vh).toFixed(4)),
       areaFraction:Number(Math.min(1,rect.width*rect.height/
-        (innerWidth*innerHeight)).toFixed(4)),
+        (vw*vh)).toFixed(4)),
       kind:kind(el.tagName),hasDirectText,
       hasProtectedDescendants:!!el.querySelector(protectedSelector)||
         !!el.shadowRoot?.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
-      nativeDark:style.colorScheme==='dark',hasPseudoPaint};
+      nativeDark:style.colorScheme==='dark',hasPseudoPaint,inFrame};
       positions.set(el,node.index);
       regions.push(node);
     }
@@ -123,12 +131,25 @@ function captureRegionGraph(){
     // a readable shadowRoot but no background or region role themselves.
     for(const host of root.querySelectorAll('*')){
       if(++visited>8000)return failed(scanned);
-      const child=host.shadowRoot;
-      if(!child||child.mode!=='open'||seen.has(child))continue;
+      const shadow=host.shadowRoot;
+      if(shadow?.mode==='open'&&!seen.has(shadow)){
+        if(protectedAncestor(host))continue;
+        if(depth>=8||scopes.length>=24)return failed(scanned);
+        seen.add(shadow);
+        scopes.push({root:shadow,depth:depth+1,inFrame});
+      }
+      if(host.tagName!=='IFRAME')continue;
       if(protectedAncestor(host))continue;
-      if(depth>=8||scopes.length>=24)return failed(scanned);
+      // Do not inspect src, navigation, URL or the parent iframe attributes.
+      // Cross-origin/opaque/incomplete frames fail closed for the whole graph.
+      let child;
+      try{child=host.contentDocument;}catch{return failed(scanned);}
+      if(!child||!child.body||typeof child.querySelectorAll!=='function')
+        return failed(scanned);
+      if(seen.has(child))continue;
+      if(++frameCount>8||depth>=8||scopes.length>=24)return failed(scanned);
       seen.add(child);
-      scopes.push({root:child,depth:depth+1});
+      scopes.push({root:child,depth:depth+1,inFrame:true});
     }
   }
   if(!regions.length)return failed(scanned);
