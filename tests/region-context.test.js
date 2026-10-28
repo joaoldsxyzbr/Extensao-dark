@@ -254,7 +254,8 @@ test('P15: discovers shadow hosts outside region selector, including nested root
   const nestedHost=element('SPAN','rgb(29, 32, 36)',{parent:inner});
   const leaf=element('ARTICLE','rgb(238, 238, 238)');
   const root2={mode:'open',host:nestedHost,querySelectorAll:()=>[leaf]};
-  const root1={mode:'open',host,querySelectorAll:()=>[inner,nestedHost]};
+  const root1={mode:'open',host,querySelectorAll:selector=>selector==='*'?
+    [inner,nestedHost]:[inner]};
   host.shadowRoot=root1;nestedHost.shadowRoot=root2;
   inner.getRootNode=()=>root1;nestedHost.getRootNode=()=>root1;
   leaf.getRootNode=()=>root2;
