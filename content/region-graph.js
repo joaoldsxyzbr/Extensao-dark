@@ -12,7 +12,9 @@ function captureRegionGraph(){
     'canvas,picture,[role="button"],[role="img"],[aria-selected="true"],'+
     '[aria-disabled="true"],[disabled],[aria-pressed="true"],'+
     '[aria-checked="true"],[role="checkbox"],[role="switch"],'+
-    ':checked,:focus-visible';
+    ':checked,:focus-visible,[contenteditable]:not([contenteditable="false"]),'+
+    '[role="textbox"],[role="searchbox"],'+
+    '[aria-live]:not([aria-live="off"])';
   const opaque=/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
   const transparent=/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*0(?:\.0+)?\s*\)$/;
   const linear=x=>{
@@ -150,6 +152,7 @@ function captureRegionGraph(){
     }
     return true; // unknown/deep chain: fail closed
   };
+  try{
   for(let scopeIndex=0;scopeIndex<scopes.length;scopeIndex++){
     const {root,depth,inFrame}=scopes[scopeIndex];
     for(const el of elements(root,true)){
@@ -245,5 +248,10 @@ function captureRegionGraph(){
   }
   if(!regions.length)return failed(scanned);
   return {kind:'p15-region-graph-v1',status:'ready',scanned,nodes:regions};
+  }catch{
+    // Detached DOM, changing shadow roots or CSSOM access failures must
+    // discard the entire capture rather than expose a partial safe graph.
+    return failed(scanned);
+  }
 }
 module.exports=Object.freeze({captureRegionGraph});
