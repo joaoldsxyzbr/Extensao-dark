@@ -4,7 +4,7 @@
 const NODE_KEYS=['index','parent','background','ownLuma','effectiveLuma',
   'widthFraction','heightFraction','areaFraction','kind',
   'hasDirectText','hasProtectedDescendants','focusWithin','nativeDark',
-  'hasPseudoPaint'];
+  'hasPseudoPaint','inFrame'];
 const KINDS=new Set(['canvas','navigation','form','panel','table','region']);
 const BACKGROUNDS=new Set(['opaque','transparent','complex']);
 const within=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=1;
@@ -35,7 +35,7 @@ function buildRegionFeatures(graph){
       !BACKGROUNDS.has(n.background)||!KINDS.has(n.kind)||
       !within(n.widthFraction)||!within(n.heightFraction)||
       !within(n.areaFraction)||
-      ['hasDirectText','hasProtectedDescendants','focusWithin','nativeDark','hasPseudoPaint']
+      ['hasDirectText','hasProtectedDescendants','focusWithin','nativeDark','hasPseudoPaint','inFrame']
         .some(k=>typeof n[k]!=='boolean')||
       (n.background==='opaque'?
         !within(n.ownLuma)||n.effectiveLuma!==n.ownLuma:
@@ -64,9 +64,9 @@ function buildRegionFeatures(graph){
       brightSiblings:siblings.filter(bright).length,
       hasDirectText:n.hasDirectText,
       hasProtectedDescendants:n.hasProtectedDescendants,
-      hasPseudoPaint:n.hasPseudoPaint,
+      hasPseudoPaint:n.hasPseudoPaint,inFrame:n.inFrame,
       uncertain:n.background!=='opaque'||n.effectiveLuma===null||
-        n.hasProtectedDescendants||n.focusWithin||n.nativeDark||n.hasPseudoPaint};
+        n.hasProtectedDescendants||n.focusWithin||n.nativeDark||n.hasPseudoPaint||n.inFrame};
   });
   // A light region is a confirmed inner island ONLY when both itself and
   // its dark immediate parent have enough CSS evidence to assess safely.
