@@ -21,6 +21,7 @@ const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
 const {captureP11TextContext}=require('./p14-p11-context.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
+const {assessRegionStability}=require('./p15-dynamic-stability.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
@@ -75,6 +76,11 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     if(mode==='p13-rule-baseline'){
       const graph=await browser.page.eval(JS(captureRegionGraph));
       const context=buildRegionFeatures(graph);
+      // Two short, independent reads before any paint: a bounded stability
+      // warning only, not proof of layout stability under user interaction.
+      await new Promise(resolve=>setTimeout(resolve,60));
+      const secondGraph=await browser.page.eval(JS(captureRegionGraph));
+      result.regionStabilityDiagnostic=assessRegionStability(graph,secondGraph);
       result.regionDiagnostic={
         status:context.status,regions:context.regionCount,
         lightRegions:context.lightRegions,
@@ -198,14 +204,16 @@ async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
-  const p11Diagnostics=[],regionDiagnostics=[];
+  const p11Diagnostics=[],regionDiagnostics=[],regionStabilityDiagnostics=[];
   try{
     for(const item of fixtures){
       const url='http://127.0.0.1:'+server.address().port;
       const row=await explore(item,url,'p13-rule-baseline',p11Inputs);
       const gated=await explore(item,url,'7d-gated-p13-lab');
       const {decisionComparison,baselineDigest,p11ShadowDiagnostic,
-        regionDiagnostic,...measurement}=row;
+        regionDiagnostic,regionStabilityDiagnostic,...measurement}=row;
+      if(regionStabilityDiagnostic)regionStabilityDiagnostics.push({
+        caseId:item.id,split:item.split,...regionStabilityDiagnostic});
       if(regionDiagnostic)regionDiagnostics.push({
         caseId:item.id,split:item.split,...regionDiagnostic});
       if(p11ShadowDiagnostic)p11Diagnostics.push({caseId:item.id,
@@ -262,6 +270,18 @@ async function main(){
       .reduce((n,x)=>n+x.embeddedLightRegions,0),
     directTextRegions:regionDiagnostics.filter(x=>x.status==='ready')
       .reduce((n,x)=>n+x.directTextRegions,0),
+    stabilityDiagnostic:{
+      kind:'p15-two-snapshot-stability-no-user-interaction',
+      comparedCases:regionStabilityDiagnostics.length,
+      stableInSampleCases:regionStabilityDiagnostics
+        .filter(x=>x.status==='stable-in-sample').length,
+      inconclusiveCases:regionStabilityDiagnostics
+        .filter(x=>x.status==='inconclusive').length,
+      comparisonWindowMs:60,
+      notLongTermStability:true,independentVisualReview:false,
+      applied:false,promotionEligible:false,
+      cases:regionStabilityDiagnostics
+    },
     outputMeaning:'css-geometry-samples-not-pixel-area',
     applied:false,trained:false,
     independentVisualReview:false,promotionEligible:false,
@@ -294,6 +314,7 @@ async function main(){
     measuredSyntheticPairs:pairedSyntheticPaint.measuredPairs,
     p11ShadowCases:p11Diagnostics.length,
     p15ObservedCases:p15RegionContext.observedCases,
+    p15StableInSampleCases:p15RegionContext.stabilityDiagnostic.stableInSampleCases,
     p11Suggestions:p11Shadow.neuralSuggestions??null,
     promotionEligible:false
   }));
