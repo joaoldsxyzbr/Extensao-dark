@@ -668,3 +668,53 @@ test('P15: direct-text detection is structural, ignoring the private text value'
   assert.equal(result.nodes[1].hasDirectText,true);
   assert.doesNotMatch(JSON.stringify(result),/never export me/);
 });
+
+test('P15: ancestor compositor/clip flags never certify a bright descendant',()=>{
+  const conditions=[
+    {transform:'matrix(1, 0, 0, 1, 12, 0)'},
+    {clipPath:'inset(5px)'},
+    {perspective:'650px'},
+    {contain:'paint'},
+    {isolation:'isolate'},
+    {willChange:'transform'}
+  ];
+  for(const extra of conditions){
+    const body=element('BODY','rgb(27, 30, 34)');
+    const layer=element('DIV','rgb(28, 32, 36)',{parent:body});
+    const panel=element('SECTION','rgb(248, 248, 248)',{parent:layer});
+    const doc={body,querySelectorAll:()=>[body,layer,panel]};
+    const ctx={document:doc,innerWidth:1200,innerHeight:800,
+      getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+        backgroundColor:el._background,backgroundImage:'none',
+        maskImage:'none',webkitMaskImage:'none',opacity:'1',
+        mixBlendMode:'normal',colorScheme:'light',
+        ...(el===layer?extra:{})}};
+    const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+      '('+captureRegionGraph.toString()+')()',ctx)));
+    assert.equal(g.status,'ready');
+    assert.equal(g.nodes[2].hasComplexAncestorPaint,true,
+      'ancestor compositor rule must block: '+Object.keys(extra)[0]);
+    const rows=buildRegionFeatures(g).rows;
+    assert.equal(rows[2].uncertain,true);
+    assert.equal(rows[2].confirmedLightIsland,false);
+    assert.equal(g.nodes[2].hasDirectText,false);
+  }
+});
+test('P15: safe opaque untransformed ancestor keeps eligible light island',()=>{
+  const body=element('BODY','rgb(27, 30, 34)');
+  const layer=element('DIV','rgb(29, 32, 37)',{parent:body});
+  const panel=element('SECTION','rgb(248, 248, 248)',{parent:layer});
+  const ctx={document:{body,querySelectorAll:()=>[body,layer,panel]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light',transform:'none',
+      clipPath:'none',perspective:'none',contain:'none',
+      isolation:'auto',willChange:'auto'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[2].hasComplexAncestorPaint,false);
+  assert.equal(buildRegionFeatures(g).rows[2].confirmedLightIsland,true);
+});
