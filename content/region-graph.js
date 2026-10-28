@@ -10,7 +10,9 @@ function captureRegionGraph(){
     'pre,blockquote,form,ul,footer';
   const protectedSelector='button,input,textarea,select,svg,img,video,'+
     'canvas,picture,[role="button"],[role="img"],[aria-selected="true"],'+
-    '[aria-disabled="true"],[disabled]';
+    '[aria-disabled="true"],[disabled],[aria-pressed="true"],'+
+    '[aria-checked="true"],[role="checkbox"],[role="switch"],'+
+    ':checked,:focus-visible';
   const opaque=/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
   const transparent=/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*0(?:\.0+)?\s*\)$/;
   const linear=x=>{
@@ -56,6 +58,15 @@ function captureRegionGraph(){
     if(regions.length>=80)return failed(scanned);
     const style=getComputedStyle(el);
     if(style.display==='none'||style.visibility==='hidden')continue;
+    // Generated ::before / ::after may paint over a seemingly safe surface.
+    // Record only a boolean. Never return generated CSS content strings.
+    const before=getComputedStyle(el,'::before');
+    const after=getComputedStyle(el,'::after');
+    if(!before||typeof before.content!=='string'||
+      !after||typeof after.content!=='string')return failed(scanned);
+    const activePseudo=s=>s.content!=='none'&&
+      s.content!=='normal'&&s.content!=='';
+    const hasPseudoPaint=activePseudo(before)||activePseudo(after);
     const own=paint(el);
     let effectiveLuma=own.ownLuma;
     if(own.background==='transparent'){
@@ -82,7 +93,7 @@ function captureRegionGraph(){
       kind:kind(el.tagName),hasDirectText,
       hasProtectedDescendants:!!el.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
-      nativeDark:style.colorScheme==='dark'};
+      nativeDark:style.colorScheme==='dark',hasPseudoPaint};
     positions.set(el,node.index);
     regions.push(node);
   }
