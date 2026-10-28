@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const {launch}=require('./browser-e2e.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
+const {assessRegionStability}=require('./p15-dynamic-stability.js');
 const HTML='<!doctype html><meta charset="utf-8">'+
   '<style>body{background:rgb(27,31,36);margin:0;padding:25px}'+
   '.mount{display:block;width:500px;height:230px;'+
@@ -74,6 +75,30 @@ async function main(){
     assert.equal(cssOutput.rows.filter(x=>x.confirmedLightIsland).length,0);
     assert.equal(cssOutput.applied,false);
     assert.equal(cssOutput.promotionEligible,false);
+    // A dynamic stylesheet change must invalidate the original capture.
+    const sameGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const still=assessRegionStability(cssGraph,sameGraph);
+    assert.equal(still.status,'stable-in-sample');
+    assert.equal(still.promotionEligible,false);
+    await browser.page.eval('document.querySelector("main").style.backgroundColor="rgb(12, 15, 19)"');
+    const changedGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const changed=assessRegionStability(cssGraph,changedGraph);
+    assert.equal(changed.status,'inconclusive');
+    assert.equal(changed.reason,'css-or-layout-changed');
+    assert.ok(changed.changedRegions>0);
+    assert.equal(changed.promotionEligible,false);
+    // A DOM insertion invalidates coverage even if all prior regions still exist.
+    await browser.page.eval('(()=>{const s=document.createElement("section");s.style.cssText="display:block;width:210px;height:80px;background:rgb(220,220,220)";document.querySelector("main").append(s)})()');
+    const insertedGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const inserted=assessRegionStability(cssGraph,insertedGraph);
+    assert.equal(inserted.status,'inconclusive');
+    assert.equal(inserted.reason,'region-count-changed');
+    assert.equal(inserted.applied,false);
+    console.log('P15 dynamic CSS Chromium',JSON.stringify({
+      staticStatus:still.status,changedStatus:changed.status,
+      changedRegions:changed.changedRegions,
+      insertedStatus:inserted.status,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
