@@ -14,7 +14,9 @@ function captureRegionGraph(){
     '[aria-checked="true"],[role="checkbox"],[role="switch"],'+
     ':checked,:focus-visible,[contenteditable]:not([contenteditable="false"]),'+
     '[role="textbox"],[role="searchbox"],'+
-    '[aria-live]:not([aria-live="off"])';
+    '[aria-live]:not([aria-live="off"]),'+
+    'a[href],summary,[role="link"],[role="tab"],'+
+    '[role="menuitem"],[role="combobox"],[role="listbox"]';
   const opaque=/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
   const transparent=/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*0(?:\.0+)?\s*\)$/;
   const linear=x=>{
