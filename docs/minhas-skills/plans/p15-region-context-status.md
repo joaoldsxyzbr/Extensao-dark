@@ -13,7 +13,7 @@
 
 - É uma **amostra de retângulos e CSS computado**, não cobertura em pixels e não um mapa completo de stacking/oclusões. Presença de nó de texto direto inclui nós com espaços e não comprova texto visível.
 - A composição só reconhece cor RGB opaca ou transparência zero com ancestral opaco simples. **Gradientes, máscaras, filtros, misturas, opacidade parcial e cores complexas** são inconclusivos. `color-scheme: dark` marca incerteza, não promoção.
-- Agora percorre Shadow DOM aberto com limites, mas ainda não atravessa iframes e raízes fechadas. Detecta presença de pseudo-elementos gerados, sem estimar sua área de pintura; não captura hover nem aplica mudanças. Não cobre roots fechadas, CSSOM complexo ou todos os padrões de layout. A lista de região é finita, logo cortes retornam inconclusivo sem aproveitar amostras parciais.
+- Agora percorre Shadow DOM aberto e faz observação **conservadora** de iframes acessíveis com limites, mas não autoriza ilhas de iframe para pintura; frames inacessíveis e raízes fechadas permanecem limites explícitos. Detecta presença de pseudo-elementos gerados, sem estimar sua área de pintura; não captura hover nem aplica mudanças. Não cobre roots fechadas, CSSOM complexo ou todos os padrões de layout. A lista de região é finita, logo cortes retornam inconclusivo sem aproveitar amostras parciais.
 - Nenhuma nova permissão, dependência, telemetria, leitura de texto de usuário, histórico, navegação ou treino em sites reais. O holdout sintético e domínios públicos reservados da P14 continuam intocados.
 - **`promotionEligible=false` e `applied=false`**. Este incremento não resolve as áreas brancas da extensão publicada, nem valida qualidade visual humana.
 
@@ -40,3 +40,11 @@ A captura P15 agora atravessa raízes Shadow DOM abertas, inclusive quando o hos
 O teste Node cobre raízes aninhadas, hosts não-regionais, ancestrais protegidos, privacidade e limites. Um teste independente e autoral no Chromium verifica a superfície clara dentro de shadow root e o bloqueio de controle protegido; não utiliza o conjunto reservado da P14.
 
 A limpeza do perfil temporário de Chromium recebeu retries nativos após falha ENOTEMPTY observada no CI. Continuam pendentes raízes fechadas, iframes, sobreposições, CSS complexo e validação visual. Nenhuma mudança na extensão instalada, manifesto ou pesos.
+
+## Incremento P15 — iframe acessível somente como diagnóstico (28/10/2026)
+
+- A descoberta contextual agora encontra elementos `iframe` sem consultar `src`, `href`, `location` nem qualquer URL. Em `contentDocument` acessível no mesmo contexto de segurança, inspeciona apenas regiões CSS/geométricas do subdocumento, com composição de ancestral até o elemento iframe do documento hospedeiro.
+- O contrato adiciona `inFrame:boolean`; **toda região em iframe permanece `uncertain=true`, mesmo com cor de fundo opaca**, logo `confirmedLightIsland=false`. Métricas geométricas internas são frações do viewport do próprio iframe; não podem ser somadas a pixels da janela principal.
+- Um iframe inacessível, opaco ou com DOM indisponível torna a captura da página `inconclusive` **sem retornar linhas parciais**. Limites: até **8 documentos iframe**, até 24 escopos totais, 8 níveis de profundidade, 80 regiões, 1600 candidatos e 8000 nós de descoberta. Raízes Shadow DOM abertas dentro de frames seguem o mesmo limite.
+- Os testes Node cobrem iframe acessível e bloqueado, dados inválidos, herança do pai e abstenção. A bancada Chromium autoral foi ampliada com um iframe `srcdoc` local, sem rede e sem abrir o holdout P14, para validar que não vira ilha segura.
+- Continua sendo instrumentação de bancada: **não altera a extensão MV3, cores ou pesos neurais**, e não comprova cobertura visual, estabilidade de todos os iframes ou integração à First AI. Continuam pendentes oclusões, frames inacessíveis, raízes fechadas e composição CSS avançada.
