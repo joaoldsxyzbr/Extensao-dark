@@ -153,23 +153,32 @@ function captureRegionGraph(){
     }
     return !!node; // deep chain: uncertain
   };
-  // Bounded traversal of interactive descendants. Native querySelector()
-  // can inspect arbitrarily large subtrees before returning, so use a
-  // TreeWalker and fail closed after 512 elements per scope.
+  // Search descendants in light DOM and accessible nested open shadow
+  // roots. One shared node/scope budget prevents hidden controls from being
+  // missed by querySelector() crossing no shadow boundary.
   const protectedDescendants=el=>{
-    const scan=root=>{
-      // Genuine DOM roots always have ownerDocument. Sparse test doubles
-      // without it keep the legacy querySelector fallback.
+    const pending=[el],seenRoots=new Set();
+    let visited=0;
+    while(pending.length){
+      const root=pending.pop();
+      if(seenRoots.has(root))continue;
+      seenRoots.add(root);
+      if(seenRoots.size>24)return true; // too many shadow scopes
       const walker=root.ownerDocument?.createTreeWalker?.(root,1);
-      if(!walker)return !!root.querySelector(protectedSelector);
-      let count=0;
-      for(let child=walker.nextNode();child;child=walker.nextNode()){
-        if(++count>512)return true;
-        if(child.matches(protectedSelector))return true;
+      if(!walker){
+        // Minimal non-browser test doubles only; no nested traversal possible.
+        if(root.querySelector(protectedSelector))return true;
+        if(root.shadowRoot?.mode==='open')pending.push(root.shadowRoot);
+        continue;
       }
-      return false;
-    };
-    return scan(el)||!!(el.shadowRoot&&scan(el.shadowRoot));
+      if(root.shadowRoot?.mode==='open')pending.push(root.shadowRoot);
+      for(let child=walker.nextNode();child;child=walker.nextNode()){
+        if(++visited>512)return true; // one shared limit across scopes
+        if(child.matches(protectedSelector))return true;
+        if(child.shadowRoot?.mode==='open')pending.push(child.shadowRoot);
+      }
+    }
+    return false;
   };
   const protectedAncestor=el=>{
     // closest() stops at shadow boundaries, so inspect each host explicitly.
