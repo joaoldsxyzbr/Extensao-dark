@@ -74,13 +74,16 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     started=true;
     result.candidateSurfaces=ready.samples.length;
     if(mode==='p13-rule-baseline'){
+      const viewportBefore=await browser.page.eval('({width:innerWidth,height:innerHeight})');
       const graph=await browser.page.eval(JS(captureRegionGraph));
       const context=buildRegionFeatures(graph);
       // Two short, independent reads before any paint: a bounded stability
       // warning only, not proof of layout stability under user interaction.
       await new Promise(resolve=>setTimeout(resolve,60));
       const secondGraph=await browser.page.eval(JS(captureRegionGraph));
-      result.regionStabilityDiagnostic=assessRegionStability(graph,secondGraph);
+      const viewportAfter=await browser.page.eval('({width:innerWidth,height:innerHeight})');
+      result.regionStabilityDiagnostic=assessRegionStability(graph,secondGraph,
+        {before:viewportBefore,after:viewportAfter});
       result.regionDiagnostic={
         status:context.status,regions:context.regionCount,
         lightRegions:context.lightRegions,
