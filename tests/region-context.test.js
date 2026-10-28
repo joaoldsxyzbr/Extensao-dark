@@ -881,3 +881,32 @@ test('P15: total protected-control budget includes open shadow descendants',()=>
   assert.equal(graph.nodes[1].hasProtectedDescendants,true);
   assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,false);
 });
+
+test('P15: unrelated protected controls must not hide a clean bright island',()=>{
+  const source=graph([
+    entry(0,-1,'opaque',.06,{kind:'canvas',hasProtectedDescendants:true}),
+    entry(1,0,'opaque',.93),
+    entry(2,0,'opaque',.9,{hasProtectedDescendants:true})
+  ]);
+  const rows=buildRegionFeatures(source).rows;
+  assert.equal(rows[0].uncertain,true,'dark page still contains protected controls');
+  assert.equal(rows[1].uncertain,false);
+  assert.equal(rows[1].confirmedLightIsland,true,
+    'clean bright child is unrelated to controls elsewhere in dark parent');
+  assert.equal(rows[2].confirmedLightIsland,false,
+    'bright child containing its own control must remain protected');
+  const result=buildRegionFeatures(source);
+  assert.equal(result.applied,false);
+  assert.equal(result.promotionEligible,false);
+});
+test('P15: a risky dark parent still blocks descendants, even with unrelated controls',()=>{
+  for(const flag of ['hasPseudoPaint','hasOcclusionRisk',
+    'hasComplexAncestorPaint','hasMotionRisk','nativeDark','focusWithin']){
+    const result=buildRegionFeatures(graph([
+      entry(0,-1,'opaque',.06,{hasProtectedDescendants:true,[flag]:true}),
+      entry(1,0,'opaque',.95)
+    ]));
+    assert.equal(result.rows[1].confirmedLightIsland,false,
+      'uncertain parent paint or interaction: '+flag);
+  }
+});
