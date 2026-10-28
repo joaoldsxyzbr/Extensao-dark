@@ -53,6 +53,43 @@ function captureRegionGraph(){
     const root=el.getRootNode?.();
     return root?.host||root?.defaultView?.frameElement||null;
   };
+  // Bounded computed-CSS warnings, not a rendered-pixel segmentation.
+  const complexAncestor=el=>{
+    let parent=composedParent(el);
+    for(let n=0;parent&&n<12;n++,parent=composedParent(parent))
+      if(paint(parent).background==='complex')return true;
+    return !!parent; // ancestor chain too deep: never infer safety
+  };
+  const occlusionRisk=(el,rect,css)=>{
+    if(['fixed','sticky','absolute'].includes(css.position)||
+      css.transform&&css.transform!=='none'||
+      css.perspective&&css.perspective!=='none'||
+      css.clipPath&&css.clipPath!=='none'||
+      css.isolation==='isolate')return true;
+    // ElementFromPoint is only a bounded hit-test. Any unknown or unrelated
+    // topmost element blocks "confirmed" status, not proof of visual coverage.
+    const root=el.getRootNode?.();
+    const scope=root?.elementFromPoint?root:el.ownerDocument||document;
+    if(typeof scope.elementFromPoint!=='function')return false;
+    const points=[[.5,.5],[.25,.25],[.75,.75]];
+    for(const [fx,fy] of points){
+      let hit;
+      try{
+        const w=scope.defaultView?.innerWidth??innerWidth;
+        const h=scope.defaultView?.innerHeight??innerHeight;
+        const x=Math.min(w-1,Math.max(0,rect.left+rect.width*fx));
+        const y=Math.min(h-1,Math.max(0,rect.top+rect.height*fy));
+        hit=scope.elementFromPoint(x,y);
+      }catch{return true;}
+      if(!hit)return true;
+      let cursor=hit,inside=false;
+      for(let i=0;cursor&&i<24;i++,cursor=composedParent(cursor)){
+        if(cursor===el){inside=true;break;}
+      }
+      if(!inside)return true;
+    }
+    return false;
+  };
   const protectedAncestor=el=>{
     // closest() stops at shadow boundaries, so inspect each host explicitly.
     let cur=el;
@@ -97,6 +134,8 @@ function captureRegionGraph(){
       s.content!=='normal'&&s.content!=='';
     const hasPseudoPaint=activePseudo(before)||activePseudo(after);
     const own=paint(el);
+    const hasComplexAncestorPaint=complexAncestor(el);
+    const hasOcclusionRisk=occlusionRisk(el,rect,style);
     let effectiveLuma=own.ownLuma;
     if(own.background==='transparent'){
       let parent=composedParent(el),hops=0;
@@ -123,7 +162,8 @@ function captureRegionGraph(){
       hasProtectedDescendants:!!el.querySelector(protectedSelector)||
         !!el.shadowRoot?.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
-      nativeDark:style.colorScheme==='dark',hasPseudoPaint,inFrame};
+      nativeDark:style.colorScheme==='dark',hasPseudoPaint,inFrame,
+      hasOcclusionRisk,hasComplexAncestorPaint};
       positions.set(el,node.index);
       regions.push(node);
     }
