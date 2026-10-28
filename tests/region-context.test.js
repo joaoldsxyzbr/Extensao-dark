@@ -31,6 +31,9 @@ test('P15: parent, children and siblings expose light islands but do not choose 
   assert.equal(result.rows[1].ancestorBright,false);
   assert.equal(result.rows[3].ancestorBright,true);
   assert.equal(result.rows[1].hasDirectText,true);
+  assert.equal(result.rows[1].confirmedLightIsland,true);
+  assert.equal(result.rows[2].confirmedLightIsland,true);
+  assert.equal(result.rows[3].confirmedLightIsland,false);
   assert.equal(result.promotionEligible,false);
   assert.equal(result.applied,false);
   assert.equal(JSON.stringify(result).includes('decision'),false);
@@ -161,6 +164,7 @@ test('P15: pseudo-element generated paint makes the region uncertain',()=>{
   const features=buildRegionFeatures(captured);
   assert.equal(features.rows[1].uncertain,true);
   assert.equal(features.rows[1].hasPseudoPaint,true);
+  assert.equal(features.rows[1].confirmedLightIsland,false);
   assert.equal(features.promotionEligible,false);
 });
 test('P15: selection, pressed, checked and focus controls are protected',()=>{
@@ -184,7 +188,9 @@ test('P15: selection, pressed, checked and focus controls are protected',()=>{
   assert.ok(selectors.some(s=>s.includes('aria-checked')));
   assert.equal(captured.nodes[1].hasProtectedDescendants,true);
   assert.equal(captured.nodes[1].focusWithin,true);
-  assert.equal(buildRegionFeatures(captured).rows[1].uncertain,true);
+  const features=buildRegionFeatures(captured);
+  assert.equal(features.rows[1].uncertain,true);
+  assert.equal(features.rows[1].confirmedLightIsland,false);
 });
 test('P15: unknown pseudo style aborts measurement instead of claiming safety',()=>{
   const body=element('BODY','rgb(28, 28, 28)');
@@ -199,4 +205,16 @@ test('P15: unknown pseudo style aborts measurement instead of claiming safety',(
   assert.equal(observed.status,'inconclusive');
   assert.equal(observed.nodes.length,0);
   assert.equal(buildRegionFeatures(JSON.parse(JSON.stringify(observed))).regionCount,null);
+});
+
+test('P15: uncertain child or uncertain parent cannot be a confirmed light island',()=>{
+  const root=entry(0,-1,'opaque',.08);
+  const bright=entry(1,0,'opaque',.95,{hasPseudoPaint:true});
+  const innocent=entry(2,1,'opaque',.96);
+  const result=buildRegionFeatures(graph([root,bright,innocent]));
+  assert.equal(result.rows[1].confirmedLightIsland,false);
+  assert.equal(result.rows[2].confirmedLightIsland,false);
+  const protectedChild=buildRegionFeatures(graph([
+    root,entry(1,0,'opaque',.91,{hasProtectedDescendants:true})]));
+  assert.equal(protectedChild.rows[1].confirmedLightIsland,false);
 });
