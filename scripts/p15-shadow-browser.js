@@ -440,6 +440,41 @@ async function main(){
       protectedBefore:true,protectedAfter:false,
       status:nestedChange.status,applied:false,promotionEligible:false
     }));
+    // A button inside one bright sibling must not make every independent
+    // bright island inconclusive merely because the dark BODY is a parent.
+    const siblingsHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{margin:0;background:rgb(27,30,35)}'+
+      'main,section{display:block;margin:20px;width:360px;'+
+      'height:125px;background:rgb(248,249,250)}</style>'+
+      '<main></main><section><button type="button">Fixture</button></section>'+
+      '<script>window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(siblingsHtml),{fixtureReady:true});
+    const siblingsBefore=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(siblingsBefore.status,'ready');
+    const siblingRows=buildRegionFeatures(siblingsBefore).rows;
+    assert.equal(siblingRows.length,3);
+    assert.equal(siblingRows[0].hasProtectedDescendants,true);
+    assert.equal(siblingRows[1].confirmedLightIsland,true,
+      'A clean bright sibling stays visible in dark parent with unrelated controls');
+    assert.equal(siblingRows[2].confirmedLightIsland,false,
+      'Bright sibling containing button stays protected');
+    await browser.page.eval(
+      'document.querySelector("main").append(document.querySelector("button"))');
+    const siblingsAfter=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(siblingsAfter.status,'ready');
+    const movedRows=buildRegionFeatures(siblingsAfter).rows;
+    assert.equal(movedRows[1].confirmedLightIsland,false);
+    assert.equal(movedRows[2].confirmedLightIsland,true);
+    assert.equal(assessRegionStability(siblingsBefore,siblingsAfter).status,
+      'inconclusive');
+    assert.equal(buildRegionFeatures(siblingsAfter).promotionEligible,false);
+    console.log('P15 sibling controls Chromium',JSON.stringify({
+      cleanBefore:true,protectedBefore:true,afterMove:'inconclusive',
+      applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
