@@ -204,6 +204,32 @@ async function main(){
       hostNodes:8300,regionCandidates:1700,
       status:'inconclusive',applied:false,promotionEligible:false
     }));
+    // Editing and live announcements are sensitive UI, not a candidate
+    // to auto-convert or to collect text from.
+    const editorHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{background:rgb(30,32,35)}'+
+      'main{display:block;width:460px;height:270px;'+
+      'background:rgb(246,247,248)}'+
+      'div,section{display:block;width:350px;height:70px;'+
+      'background:rgb(250,250,250)}</style>'+
+      '<main><div contenteditable="true">Synthetic private label</div>'+
+      '<section aria-live="polite">Synthetic live update</section></main>'+
+      '<script>window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(editorHtml),{fixtureReady:true});
+    const editorGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(editorGraph.status,'ready');
+    const editorRows=buildRegionFeatures(editorGraph);
+    assert.equal(editorRows.regionCount,2);
+    assert.equal(editorRows.rows[1].hasProtectedDescendants,true);
+    assert.equal(editorRows.rows[1].confirmedLightIsland,false);
+    assert.equal(editorRows.applied,false);
+    assert.doesNotMatch(JSON.stringify(editorGraph),
+      /Synthetic private label|Synthetic live update/);
+    console.log('P15 protected edit and live Chromium',JSON.stringify({
+      protectedRegions:editorRows.rows.filter(x=>x.hasProtectedDescendants).length,
+      status:'ready',applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
