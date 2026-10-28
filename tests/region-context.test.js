@@ -541,8 +541,10 @@ test('P15: tree walkers visit large DOM incrementally without selector-wide allo
   assert.equal(result.status,'inconclusive');
   assert.deepEqual(result.nodes,[]);
   assert.equal(result.scanned,1);
-  assert.equal(walkers,2);
-  assert.ok(visited<=16101);
+  // Abort during the first bounded walk; do not allocate a huge NodeList
+  // and do not start a second scan of the giant document.
+  assert.equal(walkers,1);
+  assert.equal(visited,8001);
 });
 test('P15: more than 1600 matching region nodes aborts without materializing results',()=>{
   const body=element('BODY','rgb(28, 29, 31)');
