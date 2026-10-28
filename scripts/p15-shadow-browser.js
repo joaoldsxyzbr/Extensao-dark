@@ -315,6 +315,28 @@ async function main(){
         x.ownBright&&x.hasComplexAncestorPaint).length,
       applied:false,promotionEligible:false
     }));
+    const linkHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{margin:0;background:rgb(27,30,35)}'+
+      'main{display:block;width:440px;height:180px;'+
+      'background:rgb(244,245,247)}</style>'+
+      '<main><a href="#synthetic">Authored navigation</a>'+
+      '<details><summary>Authored disclosure</summary></details></main>'+
+      '<script>window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(linkHtml),{fixtureReady:true});
+    const linkGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(linkGraph.status,'ready');
+    const linkRows=buildRegionFeatures(linkGraph).rows;
+    assert.ok(linkRows.some(x=>x.ownBright&&x.hasProtectedDescendants&&
+      !x.confirmedLightIsland),
+      'Bright parent containing links and disclosures must stay uncertain');
+    assert.equal(linkRows.filter(x=>x.confirmedLightIsland).length,0);
+    assert.doesNotMatch(JSON.stringify(linkGraph),
+      /Authored navigation|Authored disclosure|#synthetic/);
+    console.log('P15 navigation protection Chromium',JSON.stringify({
+      status:'ready',uncertain:linkRows.filter(x=>x.uncertain).length,
+      applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
