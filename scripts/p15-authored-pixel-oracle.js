@@ -8,6 +8,7 @@ const path=require('node:path');
 function validateLandmarks(points){
   if(!Array.isArray(points)||points.length<1||points.length>8)
     throw TypeError('P15: invalid screenshot landmark count');
+  const seen=new Set();
   return points.map(p=>{
     if(!p||typeof p!=='object'||Array.isArray(p)||
       Object.keys(p).length!==3||
@@ -16,6 +17,10 @@ function validateLandmarks(points){
       p.x<0||p.y<0||p.x>=8192||p.y>=8192||
       !['bright','dark'].includes(p.expected))
       throw TypeError('P15: invalid screenshot landmark');
+    const coordinate=p.x+','+p.y;
+    if(seen.has(coordinate))
+      throw TypeError('P15: repeated screenshot landmark');
+    seen.add(coordinate);
     return {x:p.x,y:p.y,expected:p.expected};
   });
 }
