@@ -77,8 +77,19 @@ function captureRegionGraph(){
   // Bounded computed-CSS warnings, not a rendered-pixel segmentation.
   const complexAncestor=el=>{
     let parent=composedParent(el);
-    for(let n=0;parent&&n<12;n++,parent=composedParent(parent))
-      if(paint(parent).background==='complex')return true;
+    for(let n=0;parent&&n<12;n++,parent=composedParent(parent)){
+      const s=styleFor(parent);
+      if(paint(parent).background==='complex'||
+        s.transform&&s.transform!=='none'||
+        s.perspective&&s.perspective!=='none'||
+        s.clipPath&&s.clipPath!=='none'||
+        s.contain&&s.contain.split(' ').some(v=>v==='paint'||v==='strict'||v==='content')||
+        s.isolation==='isolate'||
+        s.willChange&&s.willChange.split(',').some(v=>
+          ['transform','opacity','filter','perspective','clip-path']
+            .includes(v.trim())))
+        return true;
+    }
     return !!parent; // ancestor chain too deep: never infer safety
   };
   const occlusionRisk=(el,rect,css)=>{
