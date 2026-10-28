@@ -53,6 +53,27 @@ class CDP {
   }
   close(){this.socket.close();}
 }
+// Chromium may still be writing its temporary profile after SIGTERM.
+// Wait for exit and retry only transient filesystem races; never ignore a
+// profile that could not be removed.
+async function cleanupChromium(child,profile){
+  const alive=()=>child.exitCode===null&&child.signalCode===null;
+  if(alive())child.kill('SIGTERM');
+  for(let i=0;i<20&&alive();i++)await sleep(100);
+  if(alive()){
+    child.kill('SIGKILL');
+    for(let i=0;i<15&&alive();i++)await sleep(100);
+  }
+  for(let attempt=0;attempt<12;attempt++){
+    try{
+      fs.rmSync(profile,{recursive:true,force:true,maxRetries:4,retryDelay:150});
+      return;
+    }catch(error){
+      if(!['ENOTEMPTY','EBUSY','EPERM'].includes(error.code)||attempt===11)throw error;
+      await sleep(250);
+    }
+  }
+}
 async function launch(extension) {
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-cdp-'));
   const args=['--headless=new','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
@@ -88,8 +109,8 @@ async function launch(extension) {
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
-    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true,maxRetries:6,retryDelay:150});}};
-  }catch(err){child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true,maxRetries:6,retryDelay:150});throw err;}
+    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();await cleanupChromium(child,profile);}};
+  }catch(err){try{await cleanupChromium(child,profile);}catch(cleanupError){err.cause=cleanupError;}throw err;}
 }
 async function waitFor(fn,timeout=5000){const start=performance.now();while(performance.now()-start<timeout){if(await fn())return;await sleep(60);}throw Error('Condição não atingida em '+timeout+'ms');}
 const metrics = `(()=>{
