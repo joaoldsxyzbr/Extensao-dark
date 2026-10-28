@@ -120,3 +120,9 @@ Evidência: [CI navegador #40687325522](https://github.com/joaoldsxyzbr/Extensao
 - `docs/minhas-skills/plans/p15-visual-validation-protocol.md` define como comparar observações CSS com área realmente clara, revisões cegas e controles/contraste, sem tocar o holdout. **É um roteiro para futura revisão independente, não evidência de que essa revisão ocorreu.**
 - Em `content/region-graph.js` a detecção de texto direto deixou de executar `Array.from(childNodes)`: inspeciona somente `nodeType` em até **256 filhos diretos**. Acima desse limite ou em lista inválida, toda a amostra se torna inconclusiva, sem dados parciais. Os testes Node e o Chromium incluem cenário com 257 filhos. Nenhum conteúdo de texto, valor ou URL é lido.
 - O CI do SHA anterior `50c2cba` passou em qualidade e navegador, mas **o CI da revisão atual precisa ser observado separadamente**. P15 ainda não consegue medir área pixel a pixel, cobrir todos os sites, autorizar pintura nem concluir P14/P16.
+
+### Diagnóstico e correção da fixture de carga (28/10/2026)
+
+- No commit `0ec7389`, o workflow de navegador `#40691289188` falhou no smoke P15 ao esperar `scanned=1601` e obter `scanned=1`. Causa identificada: a própria fixture inseria 1.700 seções diretamente em `body`; o novo gate de no máximo 256 filhos diretos já impedia a primeira região, antes que a contagem de 1600 candidatos fosse testada.
+- A fixture passou a criar grupos com no máximo **170 filhos por wrapper** não regional, preservando os 1.700 candidatos regionais e os 8.300 elementos não regionais. Assim, os gates independentes são exercitados sem depender da ordem de bloqueio incidental. Nenhuma lógica de proteção foi enfraquecida.
+- Este registro distingue o CI anterior aprovado da rodada com fixture corrigida; **só o CI correspondente ao SHA mais recente valida a correção**. Continua proibida a promoção automática de pesos ou pintura com base nessas métricas.
