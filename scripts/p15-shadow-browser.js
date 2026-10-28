@@ -288,8 +288,8 @@ async function main(){
     assert.ok(layeredRows.some(x=>x.ownBright&&!x.hasComplexAncestorPaint&&
       x.confirmedLightIsland),
       'Independent clean opaque region remains observable');
-    assert.ok(layeredRows.some(x=>x.ownBright&&x.nativeDark&&
-      !x.confirmedLightIsland),
+    assert.ok(layeredGraph.nodes.some(n=>n.nativeDark&&n.ownLuma>.75&&
+      !layeredRows[n.index].confirmedLightIsland),
       'Native light-dark color scheme stays protected');
     console.log('P15 compositor ancestors Chromium',JSON.stringify({
       status:'ready',unsafeChildren:layeredRows.filter(x=>
