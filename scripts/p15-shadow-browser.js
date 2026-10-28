@@ -48,6 +48,36 @@ async function main(){
     assert.equal(result.applied,false);
     assert.equal(result.promotionEligible,false);
     assert.doesNotMatch(JSON.stringify(result),/Authored synthetic label|rgb\(|https?:\/\//);
+    // Independent synthetic CSS stress case. No holdout or external site.
+    const cssHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{margin:0;background:rgb(25,30,35)}'+
+      'main{display:block;margin:25px;width:440px;height:160px;'+
+      'background:rgb(245,246,247)}'+
+      'aside{position:fixed;top:25px;left:15px;width:400px;'+
+      'height:150px;background:rgb(30,32,35);z-index:999}'+
+      'article{display:block;margin:35px 0;width:440px;height:150px;'+
+      'background:linear-gradient(white,gray)}'+
+      'section{display:block;width:300px;height:100px;'+
+      'background:rgb(247,248,249)}</style>'+
+      '<main></main><aside></aside><article><section></section></article>'+
+      '<script>window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(cssHtml),{fixtureReady:true});
+    const cssGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(cssGraph.status,'ready');
+    assert.ok(cssGraph.nodes.some(x=>x.hasOcclusionRisk&&x.ownLuma>.75),
+      'Overlapped bright region must be uncertain');
+    assert.ok(cssGraph.nodes.some(x=>x.hasComplexAncestorPaint&&x.ownLuma>.75),
+      'Bright region below gradient parent must be uncertain');
+    const cssOutput=buildRegionFeatures(cssGraph);
+    assert.ok(cssOutput.uncertainRegions>=2);
+    assert.equal(cssOutput.rows.filter(x=>x.confirmedLightIsland).length,0);
+    assert.equal(cssOutput.applied,false);
+    assert.equal(cssOutput.promotionEligible,false);
+    console.log('P15 CSS overlap Chromium',JSON.stringify({
+      status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
+      confirmedLightIslands:0,applied:false,promotionEligible:false
+    }));
     console.log('P15 Shadow DOM Chromium',JSON.stringify({
       status:result.status,regions:result.regionCount,
       confirmedLightIslands:islands.length,
