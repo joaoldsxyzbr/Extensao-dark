@@ -267,13 +267,15 @@ async function main(){
     // a bright child of a transformed/clipped opaque ancestor.
     const layeredHtml='<!doctype html><meta charset="utf-8">'+
       '<style>body{background:rgb(27,30,34);margin:0}'+
-      '.layer,.plain{display:block;background:rgb(30,33,37);'+
+      '.layer,.plain,.native{display:block;background:rgb(30,33,37);'+
       'width:450px;height:190px;margin:20px}'+
       '.layer{transform:translateX(2px);clip-path:inset(1px)}'+
+      '.native{color-scheme:light dark}'+ 
       'section{display:block;width:350px;height:115px;'+
       'background:rgb(248,249,250)}</style>'+
       '<div class="layer"><section></section></div>'+
-      '<div class="plain"><section></section></div>'+
+      '<div class="plain"><section></section></div>'+ 
+      '<div class="native"><section></section></div>'+
       '<script>window.__fixtureReady=true;</script>';
     await browser.page.navigate('data:text/html;charset=utf-8,'+
       encodeURIComponent(layeredHtml),{fixtureReady:true});
@@ -286,6 +288,9 @@ async function main(){
     assert.ok(layeredRows.some(x=>x.ownBright&&!x.hasComplexAncestorPaint&&
       x.confirmedLightIsland),
       'Independent clean opaque region remains observable');
+    assert.ok(layeredRows.some(x=>x.ownBright&&x.nativeDark&&
+      !x.confirmedLightIsland),
+      'Native light-dark color scheme stays protected');
     console.log('P15 compositor ancestors Chromium',JSON.stringify({
       status:'ready',unsafeChildren:layeredRows.filter(x=>
         x.ownBright&&x.hasComplexAncestorPaint).length,
