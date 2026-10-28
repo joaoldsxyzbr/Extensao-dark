@@ -153,6 +153,23 @@ function captureRegionGraph(){
     }
     return !!node; // deep chain: uncertain
   };
+  // Bounded traversal of interactive descendants. Native querySelector()
+  // can inspect arbitrarily large subtrees before returning, so use a
+  // TreeWalker and fail closed after 512 elements per scope.
+  const protectedDescendants=el=>{
+    const scan=root=>{
+      const owner=root.ownerDocument||document;
+      const walker=owner.createTreeWalker?.(root,1);
+      if(!walker)return !!root.querySelector(protectedSelector);
+      let count=0;
+      for(let child=walker.nextNode();child;child=walker.nextNode()){
+        if(++count>512)return true;
+        if(child.matches(protectedSelector))return true;
+      }
+      return false;
+    };
+    return scan(el)||!!(el.shadowRoot&&scan(el.shadowRoot));
+  };
   const protectedAncestor=el=>{
     // closest() stops at shadow boundaries, so inspect each host explicitly.
     let cur=el;
@@ -233,8 +250,7 @@ function captureRegionGraph(){
       areaFraction:Number(Math.min(1,rect.width*rect.height/
         (vw*vh)).toFixed(4)),
       kind:kind(el.tagName),hasDirectText,
-      hasProtectedDescendants:!!el.querySelector(protectedSelector)||
-        !!el.shadowRoot?.querySelector(protectedSelector),
+      hasProtectedDescendants:protectedDescendants(el),
       focusWithin:!!el.matches(':focus-within'),
       // A multi-valued color-scheme declares native dark capability too.
       // Refuse automatic paint when dark is one of the tokens.
