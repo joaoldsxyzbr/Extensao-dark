@@ -234,7 +234,11 @@ function captureRegionGraph(){
       hasProtectedDescendants:!!el.querySelector(protectedSelector)||
         !!el.shadowRoot?.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
-      nativeDark:style.colorScheme==='dark',hasPseudoPaint,inFrame,
+      // A multi-valued color-scheme declares native dark capability too.
+      // Refuse automatic paint when dark is one of the tokens.
+      nativeDark:typeof style.colorScheme==='string'&&
+        style.colorScheme.split(/\s+/).includes('dark'),
+      hasPseudoPaint,inFrame,
       hasOcclusionRisk,hasComplexAncestorPaint,hasMotionRisk};
       positions.set(el,node.index);
       regions.push(node);
