@@ -90,6 +90,35 @@ function captureRegionGraph(){
     }
     return false;
   };
+  // Animation and transition configuration are risk indicators, not proof
+  // of movement. Only scan a bounded composed-ancestor chain; never inspect
+  // keyframes or animation targets/content.
+  const motionRisk=el=>{
+    const nonzero=value=>{
+      if(typeof value!=='string'||!value.trim())return false;
+      return value.split(',').some(unit=>{
+        const s=unit.trim();
+        if(!/^(?:\\d+\\.?\\d*|\\.\\d+)(?:ms|s)$/.test(s))return true;
+        return Number.parseFloat(s)>0;
+      });
+    };
+    let node=el;
+    for(let steps=0;node&&steps<12;steps++,node=composedParent(node)){
+      const style=styleFor(node);
+      if(!style)return true;
+      if(style.animationName&&style.animationName!=='none'&&
+        nonzero(style.animationDuration))return true;
+      if(style.transitionProperty&&style.transitionProperty!=='none'&&
+        nonzero(style.transitionDuration))return true;
+      if(typeof node.getAnimations==='function'){
+        try{
+          if(node.getAnimations({subtree:false}).some(a=>
+            a.playState==='running'||a.playState==='pending'))return true;
+        }catch{return true;}
+      }
+    }
+    return !!node; // deep chain: uncertain
+  };
   const protectedAncestor=el=>{
     // closest() stops at shadow boundaries, so inspect each host explicitly.
     let cur=el;
@@ -136,6 +165,7 @@ function captureRegionGraph(){
     const own=paint(el);
     const hasComplexAncestorPaint=complexAncestor(el);
     const hasOcclusionRisk=occlusionRisk(el,rect,style);
+    const hasMotionRisk=motionRisk(el);
     let effectiveLuma=own.ownLuma;
     if(own.background==='transparent'){
       let parent=composedParent(el),hops=0;
@@ -163,7 +193,7 @@ function captureRegionGraph(){
         !!el.shadowRoot?.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
       nativeDark:style.colorScheme==='dark',hasPseudoPaint,inFrame,
-      hasOcclusionRisk,hasComplexAncestorPaint};
+      hasOcclusionRisk,hasComplexAncestorPaint,hasMotionRisk};
       positions.set(el,node.index);
       regions.push(node);
     }
