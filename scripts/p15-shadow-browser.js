@@ -187,7 +187,7 @@ async function main(){
     ]){
       const stressHtml='<!doctype html><meta charset="utf-8">'+
         '<style>body{margin:0;min-height:150px;background:rgb(27,30,34)}'+
-        'section,span{display:inline-block;width:1px;height:1px}</style>'+
+        'section,span{display:inline-block;width:1px;height:1px}</style><body>'+
         '<script>const nodes=document.createDocumentFragment();'+
         'for(let i=0;i<'+count+';i++){nodes.append(document.createElement("'+
         tag+'"))}document.body.append(nodes);'+
