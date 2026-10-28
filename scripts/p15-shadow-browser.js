@@ -120,8 +120,12 @@ async function main(){
     assert.ok(['css-or-layout-changed','region-count-changed',
       'coverage-changed'].includes(focusResult.reason),
       'Focus must invalidate the previous CSS/DOM sample');
-    assert.ok(buildRegionFeatures(focused).rows.some(x=>x.focusWithin&&
-      !x.confirmedLightIsland));
+    const activeFocus=await browser.page.eval(
+      'document.activeElement===document.querySelector("main")');
+    assert.equal(activeFocus,true);
+    // :focus-visible is protected and may exclude the focused region entirely.
+    assert.equal(buildRegionFeatures(focused).rows
+      .filter(x=>x.confirmedLightIsland).length,0);
     const viewportBefore=await browser.page.eval('({width:innerWidth,height:innerHeight})');
     await browser.page.setViewport(860,650);
     const viewportAfter=await browser.page.eval('({width:innerWidth,height:innerHeight})');
