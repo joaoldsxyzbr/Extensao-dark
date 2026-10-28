@@ -19,6 +19,11 @@ const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
 const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
 const {captureP11TextContext}=require('./p14-p11-context.js');
+const {captureRegionGraph}=require('../content/region-graph.js');
+const {buildRegionFeatures}=require('../content/region-features.js');
+const {summarizeP15RiskCoverage}=require('./p15-risk-coverage.js');
+const {assessRegionStability}=require('./p15-dynamic-stability.js');
+const {summarizeP15Performance}=require('./p15-performance-contract.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
@@ -70,6 +75,42 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     }
     started=true;
     result.candidateSurfaces=ready.samples.length;
+    if(mode==='p13-rule-baseline'){
+      const regionStart=performance.now();
+      const viewportBefore=await browser.page.eval('({width:innerWidth,height:innerHeight})');
+      const timedCapture=()=>browser.page.eval('(()=>{const start=performance.now();'+
+        'const graph='+JS(captureRegionGraph)+';'+
+        'return {graph,elapsedMs:performance.now()-start};})()');
+      const first=await timedCapture();
+      const graph=first.graph;
+      const context=buildRegionFeatures(graph);
+      result.regionRiskDiagnostic=summarizeP15RiskCoverage(graph);
+      // Two short, independent reads before any paint: a bounded stability
+      // warning only, not proof of layout stability under user interaction.
+      await new Promise(resolve=>setTimeout(resolve,60));
+      const second=await timedCapture();
+      const viewportAfter=await browser.page.eval('({width:innerWidth,height:innerHeight})');
+      const comparisonStart=performance.now();
+      result.regionStabilityDiagnostic=assessRegionStability(graph,second.graph,
+        {before:viewportBefore,after:viewportAfter});
+      const compareMs=performance.now()-comparisonStart;
+      result.regionPerformanceDiagnostic={
+        firstCaptureMs:Number(first.elapsedMs.toFixed(3)),
+        secondCaptureMs:Number(second.elapsedMs.toFixed(3)),
+        compareMs:Number(compareMs.toFixed(3)),
+        totalWallMs:Number((performance.now()-regionStart).toFixed(3)),
+        status:result.regionStabilityDiagnostic.status
+      };
+      result.regionDiagnostic={
+        status:context.status,regions:context.regionCount,
+        lightRegions:context.lightRegions,
+        uncertainRegions:context.uncertainRegions,
+        embeddedLightRegions:context.status==='ready'?
+          context.rows.filter(x=>x.confirmedLightIsland).length:null,
+        directTextRegions:context.status==='ready'?
+          context.rows.filter(x=>x.hasDirectText).length:null
+      };
+    }
     baseline=await browser.page.eval(JS(islandSession,'audit'));
     // Observe semantic flags BEFORE any P13 paint or text recolor.
     const p11Context=p11Inputs&&mode==='p13-rule-baseline'?
@@ -183,13 +224,22 @@ async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
-  const p11Diagnostics=[];
+  const p11Diagnostics=[],regionDiagnostics=[],regionRiskDiagnostics=[],regionStabilityDiagnostics=[],
+    regionPerformanceSamples=[];
   try{
     for(const item of fixtures){
       const url='http://127.0.0.1:'+server.address().port;
       const row=await explore(item,url,'p13-rule-baseline',p11Inputs);
       const gated=await explore(item,url,'7d-gated-p13-lab');
-      const {decisionComparison,baselineDigest,p11ShadowDiagnostic,...measurement}=row;
+      const {decisionComparison,baselineDigest,p11ShadowDiagnostic,
+        regionDiagnostic,regionRiskDiagnostic,regionStabilityDiagnostic,regionPerformanceDiagnostic,
+        ...measurement}=row;
+      if(regionPerformanceDiagnostic)regionPerformanceSamples.push(regionPerformanceDiagnostic);
+      if(regionRiskDiagnostic)regionRiskDiagnostics.push(regionRiskDiagnostic);
+      if(regionStabilityDiagnostic)regionStabilityDiagnostics.push({
+        caseId:item.id,split:item.split,...regionStabilityDiagnostic});
+      if(regionDiagnostic)regionDiagnostics.push({
+        caseId:item.id,split:item.split,...regionDiagnostic});
       if(p11ShadowDiagnostic)p11Diagnostics.push({caseId:item.id,
         split:item.split,...p11ShadowDiagnostic});
       const {decisionComparison:unusedGated,baselineDigest:gatedDigest,
@@ -230,6 +280,57 @@ async function main(){
     kind:'p14-p11-shadow-not-requested',evaluatedCases:0,
     matchedFullEngines:false,promotionEligible:false
   };
+  const p15RegionContext={
+    kind:'p15-region-graph-exploration-not-inference',
+    exploratoryCases:fixtures.length,
+    observedCases:regionDiagnostics.filter(x=>x.status==='ready').length,
+    inconclusiveCases:fixtures.length-
+      regionDiagnostics.filter(x=>x.status==='ready').length,
+    lightRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.lightRegions,0),
+    uncertainRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.uncertainRegions,0),
+    embeddedLightRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.embeddedLightRegions,0),
+    directTextRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.directTextRegions,0),
+    performanceDiagnostic:summarizeP15Performance(regionPerformanceSamples,
+      fixtures.length),
+    // Only aggregate risk COUNTS from exploratory synthetic fixtures;
+    // no DOM identifiers, page content, CSS strings or pixel-area claims.
+    riskCoverage:{
+      kind:'p15-aggregate-risk-counts-v1',
+      observedCases:regionRiskDiagnostics.filter(x=>x.status==='measured-exploratory').length,
+      inconclusiveCases:fixtures.length-
+        regionRiskDiagnostics.filter(x=>x.status==='measured-exploratory').length,
+      regionCount:regionRiskDiagnostics.filter(x=>x.regions!==null)
+        .reduce((n,x)=>n+x.regions,0),
+      confirmedLightIslands:regionRiskDiagnostics.filter(x=>x.confirmedLightIslands!==null)
+        .reduce((n,x)=>n+x.confirmedLightIslands,0),
+      reasons:Object.fromEntries([
+        'protectedDescendant','focus','nativeDark','pseudo','frame',
+        'occlusion','complexAncestor','motion','unknownPaint'
+      ].map(k=>[k,regionRiskDiagnostics.reduce((n,x)=>n+(x.reasons?.[k]??0),0)])),
+      units:'region-count-not-pixels',independentVisualReview:false,
+      applied:false,promotionEligible:false
+    },
+    stabilityDiagnostic:{
+      kind:'p15-two-snapshot-stability-no-user-interaction',
+      comparedCases:regionStabilityDiagnostics.length,
+      stableInSampleCases:regionStabilityDiagnostics
+        .filter(x=>x.status==='stable-in-sample').length,
+      inconclusiveCases:regionStabilityDiagnostics
+        .filter(x=>x.status==='inconclusive').length,
+      comparisonWindowMs:60,
+      notLongTermStability:true,independentVisualReview:false,
+      applied:false,promotionEligible:false,
+      cases:regionStabilityDiagnostics
+    },
+    outputMeaning:'css-geometry-samples-not-pixel-area',
+    applied:false,trained:false,
+    independentVisualReview:false,promotionEligible:false,
+    cases:regionDiagnostics
+  };
   const report={...buildReport(aggregateP13),
     kind:'p14-synthetic-browser-baseline',
     evidence:'isolated-authored-fixtures-not-real-user-sites',
@@ -237,6 +338,7 @@ async function main(){
     availableModes:['p13-rule-baseline','7d-gated-p13-lab'],
     gatedLabAggregate:aggregateGated,
     pairedSyntheticPaint,p11TextShadowDiagnostic:p11Shadow,
+    p15RegionContext,
     proposalGateDiagnostic:{kind:'same-computed-css-vote-only',
       comparedCases:decisionComparisons.length,
       comparedSurfaceVotes:decisionComparisons.reduce((n,x)=>n+x.inputSurfaces,0),
@@ -255,6 +357,10 @@ async function main(){
     pairedSyntheticCases:pairedSyntheticPaint.matchedSyntheticCases,
     measuredSyntheticPairs:pairedSyntheticPaint.measuredPairs,
     p11ShadowCases:p11Diagnostics.length,
+    p15ObservedCases:p15RegionContext.observedCases,
+    p15StableInSampleCases:p15RegionContext.stabilityDiagnostic.stableInSampleCases,
+    p15CaptureP95Ms:p15RegionContext.performanceDiagnostic.firstCaptureMs?.p95??null,
+    p15RiskUncertainCases:p15RegionContext.riskCoverage.inconclusiveCases,
     p11Suggestions:p11Shadow.neuralSuggestions??null,
     promotionEligible:false
   }));

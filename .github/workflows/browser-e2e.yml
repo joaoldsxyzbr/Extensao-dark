@@ -26,6 +26,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Preparar Chrome for Testing e Dark Reader oficial em perfis isolados
         run: python3 scripts/prepare-browser-fixtures.py
+      - name: Validar extração P15 em Shadow DOM aberto (Chrome descartável)
+        run: node scripts/p15-shadow-browser.js
       - name: Executar navegador real e comparar capturas
         run: node scripts/browser-e2e.js --output=browser-results --compare-extension="$DARK_READER_TEST_PATH"
       - name: Treinar P7 e P8 somente para auditoria em modo sombra
