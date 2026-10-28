@@ -31,7 +31,7 @@
 - A barreira para descendentes protegidos inclui estados `aria-pressed`, `aria-checked`, `role=checkbox`, `role=switch`, `:checked` e `:focus-visible`, além das proteções existentes. Eles só sinalizam incerteza na análise, **sem recolorir controles**.
 - Regressões adicionais em `tests/region-context.test.js` cobrem geração de pseudo-elementos, estado interativo e falta de metadados. O registro continua limitado a CSS/geométricos, sem texto, URLs, formulário nem permissões novas; relatórios P14 mostram apenas contagens.
 - O campo `confirmedLightIsland` só marca uma região como ilha clara observável quando seu CSS é opaco/seguro e seu pai imediato é não claro e também confiável. A métrica do Chromium usa esse campo e **não** conta regiões claras com pseudo-elemento, controles protegidos ou estados incertos. A contagem permanece estrutural/amostral, nunca área real de pixels.
-- Pendente: Shadow DOM aberto, frames acessíveis, pseudo-elementos com pintura independente de `content` gerado, stacking/oclusões e cobertura real das áreas brancas. Nenhum modelo treinado/promovido e nenhuma integração ao MV3.
+- Pendente: raízes fechadas, frames acessíveis, pseudo-elementos com pintura independente de `content` gerado, stacking/oclusões e cobertura real das áreas brancas. Shadow DOM aberto foi adicionado no incremento seguinte. Nenhum modelo treinado/promovido e nenhuma integração ao MV3.
 
 ## Incremento: Shadow DOM aberto (28/10/2026)
 
