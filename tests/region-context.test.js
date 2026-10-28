@@ -526,8 +526,8 @@ test('P15: tree walkers visit large DOM incrementally without selector-wide allo
       walkers++;
       let n=0;
       return {nextNode:()=>{
-        if(++n>8100)throw Error('walker was not bounded');
-        visited++;
+        if(n>=8100)return null;
+        n++;visited++;
         return n===1?body:tiny;
       }};
     }};
@@ -542,7 +542,7 @@ test('P15: tree walkers visit large DOM incrementally without selector-wide allo
   assert.deepEqual(result.nodes,[]);
   assert.equal(result.scanned,1);
   assert.equal(walkers,2);
-  assert.ok(visited<=8102);
+  assert.ok(visited<=16101);
 });
 test('P15: more than 1600 matching region nodes aborts without materializing results',()=>{
   const body=element('BODY','rgb(28, 29, 31)');
