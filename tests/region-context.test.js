@@ -512,3 +512,63 @@ test('P15: default zero-duration CSS transitions remain non-animated',()=>{
   assert.equal(g.nodes[1].hasMotionRisk,false);
   assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,true);
 });
+
+test('P15: tree walkers visit large DOM incrementally without selector-wide allocation',()=>{
+  const body=element('BODY','rgb(28, 29, 31)');
+  body.matches=selector=>selector.includes('body');
+  const tiny={tagName:'SPAN',closest:()=>null,matches:()=>false};
+  let visited=0,walkers=0;
+  const doc={body,
+    querySelectorAll:()=>{throw Error('unbounded selector materialization');},
+    createTreeWalker:(root,show)=>{
+      assert.equal(root,doc);
+      assert.equal(show,1);
+      walkers++;
+      let n=0;
+      return {nextNode:()=>{
+        if(++n>8100)throw Error('walker was not bounded');
+        visited++;
+        return n===1?body:tiny;
+      }};
+    }};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(_el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:'rgb(28, 29, 31)',backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+  assert.equal(result.scanned,1);
+  assert.equal(walkers,2);
+  assert.ok(visited<=8102);
+});
+test('P15: more than 1600 matching region nodes aborts without materializing results',()=>{
+  const body=element('BODY','rgb(28, 29, 31)');
+  body.matches=selector=>selector.includes('body');
+  const tiny={tagName:'SECTION',closest:()=>null,
+    matches:selector=>selector.includes('section'),
+    isConnected:true,parentElement:body,
+    getBoundingClientRect:()=>({width:1,height:1,top:0,bottom:1,left:0,right:1})};
+  let inspected=0;
+  const doc={body,
+    querySelectorAll:()=>{throw Error('unbounded selector materialization');},
+    createTreeWalker:()=>{let n=0;return {nextNode:()=>{
+      inspected++;
+      if(n++===0)return body;
+      if(n<1800)return tiny;
+      throw Error('must stop at region scan budget');
+    }};}};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(_el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:'rgb(28, 29, 31)',backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+  assert.equal(result.scanned,1601);
+  assert.equal(inspected,1601);
+});
