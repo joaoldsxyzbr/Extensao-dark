@@ -21,6 +21,7 @@ const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
 const {captureP11TextContext}=require('./p14-p11-context.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
+const {summarizeP15RiskCoverage}=require('./p15-risk-coverage.js');
 const {assessRegionStability}=require('./p15-dynamic-stability.js');
 const {summarizeP15Performance}=require('./p15-performance-contract.js');
 const {captureProtectedControls,countProtectedControlChanges}=
@@ -83,6 +84,7 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
       const first=await timedCapture();
       const graph=first.graph;
       const context=buildRegionFeatures(graph);
+      result.regionRiskDiagnostic=summarizeP15RiskCoverage(graph);
       // Two short, independent reads before any paint: a bounded stability
       // warning only, not proof of layout stability under user interaction.
       await new Promise(resolve=>setTimeout(resolve,60));
@@ -222,7 +224,7 @@ async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
-  const p11Diagnostics=[],regionDiagnostics=[],regionStabilityDiagnostics=[],
+  const p11Diagnostics=[],regionDiagnostics=[],regionRiskDiagnostics=[],regionStabilityDiagnostics=[],
     regionPerformanceSamples=[];
   try{
     for(const item of fixtures){
@@ -230,9 +232,10 @@ async function main(){
       const row=await explore(item,url,'p13-rule-baseline',p11Inputs);
       const gated=await explore(item,url,'7d-gated-p13-lab');
       const {decisionComparison,baselineDigest,p11ShadowDiagnostic,
-        regionDiagnostic,regionStabilityDiagnostic,regionPerformanceDiagnostic,
+        regionDiagnostic,regionRiskDiagnostic,regionStabilityDiagnostic,regionPerformanceDiagnostic,
         ...measurement}=row;
       if(regionPerformanceDiagnostic)regionPerformanceSamples.push(regionPerformanceDiagnostic);
+      if(regionRiskDiagnostic)regionRiskDiagnostics.push(regionRiskDiagnostic);
       if(regionStabilityDiagnostic)regionStabilityDiagnostics.push({
         caseId:item.id,split:item.split,...regionStabilityDiagnostic});
       if(regionDiagnostic)regionDiagnostics.push({
@@ -293,6 +296,24 @@ async function main(){
       .reduce((n,x)=>n+x.directTextRegions,0),
     performanceDiagnostic:summarizeP15Performance(regionPerformanceSamples,
       fixtures.length),
+    // Only aggregate risk COUNTS from exploratory synthetic fixtures;
+    // no DOM identifiers, page content, CSS strings or pixel-area claims.
+    riskCoverage:{
+      kind:'p15-aggregate-risk-counts-v1',
+      observedCases:regionRiskDiagnostics.filter(x=>x.status==='measured-exploratory').length,
+      inconclusiveCases:fixtures.length-
+        regionRiskDiagnostics.filter(x=>x.status==='measured-exploratory').length,
+      regionCount:regionRiskDiagnostics.filter(x=>x.regions!==null)
+        .reduce((n,x)=>n+x.regions,0),
+      confirmedLightIslands:regionRiskDiagnostics.filter(x=>x.confirmedLightIslands!==null)
+        .reduce((n,x)=>n+x.confirmedLightIslands,0),
+      reasons:Object.fromEntries([
+        'protectedDescendant','focus','nativeDark','pseudo','frame',
+        'occlusion','complexAncestor','motion','unknownPaint'
+      ].map(k=>[k,regionRiskDiagnostics.reduce((n,x)=>n+(x.reasons?.[k]??0),0)])),
+      units:'region-count-not-pixels',independentVisualReview:false,
+      applied:false,promotionEligible:false
+    },
     stabilityDiagnostic:{
       kind:'p15-two-snapshot-stability-no-user-interaction',
       comparedCases:regionStabilityDiagnostics.length,
@@ -339,6 +360,7 @@ async function main(){
     p15ObservedCases:p15RegionContext.observedCases,
     p15StableInSampleCases:p15RegionContext.stabilityDiagnostic.stableInSampleCases,
     p15CaptureP95Ms:p15RegionContext.performanceDiagnostic.firstCaptureMs?.p95??null,
+    p15RiskUncertainCases:p15RegionContext.riskCoverage.inconclusiveCases,
     p11Suggestions:p11Shadow.neuralSuggestions??null,
     promotionEligible:false
   }));
