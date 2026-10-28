@@ -370,6 +370,40 @@ async function main(){
       status:'ready',uncertain:linkRows.filter(x=>x.uncertain).length,
       applied:false,promotionEligible:false
     }));
+    // Large descendant trees must be bounded even without interactive
+    // controls; a clean smaller authored panel stays observable.
+    const descendantsHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{margin:0;min-height:400px;background:rgb(28,31,35)}'+
+      'main{display:block;margin:25px;width:450px;height:210px;'+
+      'background:rgb(246,247,248)}</style>'+
+      '<main></main><script>const root=document.querySelector("main");'+
+      'for(let g=0;g<4;g++){const w=document.createElement("span");'+
+      'for(let i=0;i<120;i++)w.append(document.createElement("span"));'+
+      'root.append(w)}window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(descendantsHtml),{fixtureReady:true});
+    const beforeDescendants=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(beforeDescendants.status,'ready');
+    assert.equal(beforeDescendants.nodes.length,2);
+    assert.equal(beforeDescendants.nodes[1].hasProtectedDescendants,false);
+    assert.equal(buildRegionFeatures(beforeDescendants).rows[1]
+      .confirmedLightIsland,true);
+    await browser.page.eval('(()=>{const w=document.querySelector("main span");'+
+      'for(let i=0;i<60;i++)w.append(document.createElement("span"))})()');
+    const afterDescendants=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(afterDescendants.status,'ready');
+    assert.equal(afterDescendants.nodes[1].hasProtectedDescendants,true);
+    assert.equal(buildRegionFeatures(afterDescendants).rows[1]
+      .confirmedLightIsland,false);
+    const subtreeChange=assessRegionStability(beforeDescendants,afterDescendants);
+    assert.equal(subtreeChange.status,'inconclusive');
+    assert.equal(subtreeChange.applied,false);
+    console.log('P15 bounded protected descendants Chromium',JSON.stringify({
+      before:'observed',after:'protected',status:subtreeChange.status,
+      applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
