@@ -100,7 +100,7 @@ async function main(){
       '<style>body{background:rgb(24,28,33);margin:20px}'+
       'main,section{display:block;width:400px;height:120px;'+
       'margin:15px;background:rgb(246,247,248)}'+
-      '@keyframes pulse{from{opacity:1}to{opacity:.8}}'+
+      '@keyframes pulse{from{transform:translateX(0px)}to{transform:translateX(6px)}}'+
       'section{animation:pulse 1s infinite alternate}</style>'+
       '<main tabindex="0"></main><section></section>'+
       '<script>window.__fixtureReady=true;</script>';
