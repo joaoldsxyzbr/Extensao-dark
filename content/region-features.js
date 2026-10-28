@@ -3,7 +3,8 @@
 // This stage suggests NO conversion, neural decision, or production style.
 const NODE_KEYS=['index','parent','background','ownLuma','effectiveLuma',
   'widthFraction','heightFraction','areaFraction','kind',
-  'hasDirectText','hasProtectedDescendants','focusWithin','nativeDark'];
+  'hasDirectText','hasProtectedDescendants','focusWithin','nativeDark',
+  'hasPseudoPaint'];
 const KINDS=new Set(['canvas','navigation','form','panel','table','region']);
 const BACKGROUNDS=new Set(['opaque','transparent','complex']);
 const within=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=1;
@@ -34,7 +35,7 @@ function buildRegionFeatures(graph){
       !BACKGROUNDS.has(n.background)||!KINDS.has(n.kind)||
       !within(n.widthFraction)||!within(n.heightFraction)||
       !within(n.areaFraction)||
-      ['hasDirectText','hasProtectedDescendants','focusWithin','nativeDark']
+      ['hasDirectText','hasProtectedDescendants','focusWithin','nativeDark','hasPseudoPaint']
         .some(k=>typeof n[k]!=='boolean')||
       (n.background==='opaque'?
         !within(n.ownLuma)||n.effectiveLuma!==n.ownLuma:
@@ -63,8 +64,9 @@ function buildRegionFeatures(graph){
       brightSiblings:siblings.filter(bright).length,
       hasDirectText:n.hasDirectText,
       hasProtectedDescendants:n.hasProtectedDescendants,
+      hasPseudoPaint:n.hasPseudoPaint,
       uncertain:n.background!=='opaque'||n.effectiveLuma===null||
-        n.hasProtectedDescendants||n.focusWithin||n.nativeDark};
+        n.hasProtectedDescendants||n.focusWithin||n.nativeDark||n.hasPseudoPaint};
   });
   return {kind:'p15-region-context-v1',status:'ready',
     regionCount:rows.length,uncertainRegions:rows.filter(x=>x.uncertain).length,
