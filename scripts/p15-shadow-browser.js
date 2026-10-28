@@ -94,6 +94,49 @@ async function main(){
     assert.equal(inserted.status,'inconclusive');
     assert.equal(inserted.reason,'region-count-changed');
     assert.equal(inserted.applied,false);
+    // Authored motion/interaction case: animation configuration and focus
+    // must never generate a safe light-island recommendation.
+    const motionHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{background:rgb(24,28,33);margin:20px}'+
+      'main,section{display:block;width:400px;height:120px;'+
+      'margin:15px;background:rgb(246,247,248)}'+
+      '@keyframes pulse{from{opacity:1}to{opacity:.8}}'+
+      'section{animation:pulse 1s infinite alternate}</style>'+
+      '<main tabindex="0"></main><section></section>'+
+      '<script>window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(motionHtml),{fixtureReady:true});
+    const beforeFocus=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const focusStart=buildRegionFeatures(beforeFocus);
+    assert.equal(focusStart.status,'ready');
+    assert.ok(focusStart.rows.some(x=>x.ownBright&&!x.hasMotionRisk&&
+      x.confirmedLightIsland));
+    assert.ok(focusStart.rows.some(x=>x.ownBright&&x.hasMotionRisk&&
+      !x.confirmedLightIsland));
+    await browser.page.eval('document.querySelector("main").focus()');
+    const focused=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const focusResult=assessRegionStability(beforeFocus,focused);
+    assert.equal(focusResult.status,'inconclusive');
+    assert.equal(focusResult.reason,'css-or-layout-changed');
+    assert.ok(buildRegionFeatures(focused).rows.some(x=>x.focusWithin&&
+      !x.confirmedLightIsland));
+    const viewportBefore=await browser.page.eval('({width:innerWidth,height:innerHeight})');
+    await browser.page.setViewport(860,650);
+    const viewportAfter=await browser.page.eval('({width:innerWidth,height:innerHeight})');
+    assert.notEqual(viewportBefore.width,viewportAfter.width);
+    assert.equal(viewportAfter.width,860);
+    const afterResize=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    const resize=assessRegionStability(focused,afterResize,{
+      before:viewportBefore,after:viewportAfter
+    });
+    assert.equal(resize.status,'inconclusive');
+    assert.equal(resize.reason,'viewport-changed');
+    assert.equal(resize.promotionEligible,false);
+    console.log('P15 motion-focus-resize Chromium',JSON.stringify({
+      animated:focusStart.rows.filter(x=>x.hasMotionRisk).length,
+      focusStatus:focusResult.status,resizeStatus:resize.status,
+      applied:false,promotionEligible:false
+    }));
     console.log('P15 dynamic CSS Chromium',JSON.stringify({
       staticStatus:still.status,changedStatus:changed.status,
       changedRegions:changed.changedRegions,
