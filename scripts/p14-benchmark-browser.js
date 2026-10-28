@@ -80,9 +80,7 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
         lightRegions:context.lightRegions,
         uncertainRegions:context.uncertainRegions,
         embeddedLightRegions:context.status==='ready'?
-          context.rows.filter(x=>x.ownBright&&x.parent>=0&&
-            !context.rows[x.parent].uncertain&&
-            !context.rows[x.parent].ownBright).length:null,
+          context.rows.filter(x=>x.confirmedLightIsland).length:null,
         directTextRegions:context.status==='ready'?
           context.rows.filter(x=>x.hasDirectText).length:null
       };
