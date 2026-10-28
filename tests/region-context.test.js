@@ -10,7 +10,8 @@ function entry(index,parent,background='opaque',luma=.9,extra={}){
     widthFraction:.5,heightFraction:.3,areaFraction:.15,
     kind:'region',hasDirectText:false,hasProtectedDescendants:false,
     focusWithin:false,nativeDark:false,hasPseudoPaint:false,inFrame:false,
-    hasOcclusionRisk:false,hasComplexAncestorPaint:false,...extra};
+    hasOcclusionRisk:false,hasComplexAncestorPaint:false,
+    hasMotionRisk:false,...extra};
 }
 function graph(nodes){return {kind:'p15-region-graph-v1',status:'ready',scanned:nodes.length,nodes};}
 test('P15: parent, children and siblings expose light islands but do not choose conversion',()=>{
@@ -443,5 +444,53 @@ test('P15: new risk flags require booleans and forbid user content',()=>{
   ])),/P15:/);
   assert.throws(()=>buildRegionFeatures(graph([
     entry(0,-1,'opaque',.1,{hasOcclusionRisk:true,rawSelector:'private'})
+  ])),/P15:/);
+});
+
+test('P15: keyframes and transitions mark both region and descendants uncertain',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const region=element('MAIN','rgb(245, 245, 245)',{parent:body});
+  const child=element('SECTION','rgb(248, 248, 248)',{parent:region});
+  const ctx={document:{body,querySelectorAll:()=>[body,region,child]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      animationName:el===body?'none':'pulse',
+      animationDuration:el===body?'0s':'0.7s',
+      transitionProperty:'none',transitionDuration:'0s'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[0].hasMotionRisk,false);
+  assert.equal(g.nodes[1].hasMotionRisk,true);
+  assert.equal(g.nodes[2].hasMotionRisk,true);
+  assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,false);
+});
+test('P15: nonzero CSS transitions on an ancestor block stable-paint claims',()=>{
+  const body=element('BODY','rgb(24, 26, 30)');
+  const panel=element('MAIN','rgb(247, 247, 247)',{parent:body});
+  const ctx={document:{body,querySelectorAll:()=>[body,panel]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      animationName:'none',animationDuration:'0s',
+      transitionProperty:el===body?'background-color':'none',
+      transitionDuration:el===body?'150ms':'0s'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[1].hasMotionRisk,true);
+  assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,false);
+});
+test('P15: malformed motion metadata is rejected and not silently accepted',()=>{
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{hasMotionRisk:'false'})
+  ])),/P15:/);
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{hasMotionRisk:null})
   ])),/P15:/);
 });
