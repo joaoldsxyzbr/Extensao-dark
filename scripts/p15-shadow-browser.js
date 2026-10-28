@@ -241,6 +241,12 @@ async function main(){
       '<script>window.__fixtureReady=true;</script>';
     await browser.page.navigate('data:text/html;charset=utf-8,'+
       encodeURIComponent(editorHtml),{fixtureReady:true});
+    const editorPixels=await compareAuthoredScreenshot(browser,[
+      {x:80,y:40,expected:'bright'}, // visually light editable surface
+      {x:700,y:100,expected:'dark'} // independent dark canvas
+    ]);
+    assert.equal(editorPixels.status,'matched');
+    assert.equal(editorPixels.mismatches,0);
     const editorGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
     assert.equal(editorGraph.status,'ready');
     const editorRows=buildRegionFeatures(editorGraph);
