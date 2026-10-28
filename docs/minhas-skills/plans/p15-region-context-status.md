@@ -24,3 +24,10 @@
 3. Retomar a comparação P14 em páginas públicas autorizadas e pareadas. Só depois treinar a P16, mantendo os pesos separados da distribuição.
 
 **Validação aplicável:** `node --test tests/region-context.test.js`, `node --test`, `node scripts/p14-benchmark-browser.js --p11-candidate=data/p11-descendant-ci-candidate.json` no GitHub Actions após treino P11. O teste de navegador pode levar mais tempo que o teste unitário e deve ser confirmado no commit final.
+
+## Incremento P15 — pseudo-elementos e controles selecionados (28/10/2026)
+
+- A extração agora consulta **somente a presença** de `::before` / `::after` com `content` gerado. Caso presentes, a região recebe `hasPseudoPaint=true` e **`uncertain=true`**, mesmo que sua cor de fundo computada seja clara. O valor de `content` não é retornado ou persistido; um estilo de pseudo-elemento não mensurável invalida a amostragem. Não se afirma detectar toda a área de sobreposições CSS.
+- A barreira para descendentes protegidos inclui estados `aria-pressed`, `aria-checked`, `role=checkbox`, `role=switch`, `:checked` e `:focus-visible`, além das proteções existentes. Eles só sinalizam incerteza na análise, **sem recolorir controles**.
+- Regressões adicionais em `tests/region-context.test.js` cobrem geração de pseudo-elementos, estado interativo e falta de metadados. O registro continua limitado a CSS/geométricos, sem texto, URLs, formulário nem permissões novas; relatórios P14 mostram apenas contagens.
+- Pendente: Shadow DOM aberto, frames acessíveis, pseudo-elementos com pintura independente de `content` gerado, stacking/oclusões e cobertura real das áreas brancas. Nenhum modelo treinado/promovido e nenhuma integração ao MV3.
