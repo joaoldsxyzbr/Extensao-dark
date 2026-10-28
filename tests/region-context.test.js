@@ -296,7 +296,7 @@ test('P15: excessive open roots fail closed with empty graph',()=>{
   const roots=Array.from({length:25},()=>({
     mode:'open',host,querySelectorAll:()=>[]}));
   const shadows=Array.from({length:25},(_,i)=>({
-    shadowRoot:roots[i],isConnected:true}));
+    shadowRoot:roots[i],isConnected:true,closest:()=>null}));
   const doc={body,querySelectorAll:selector=>selector==='*'?
     [body,...shadows]:[body]};
   const ctx={document:doc,innerWidth:1200,innerHeight:800,
