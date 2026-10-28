@@ -9,7 +9,7 @@ function entry(index,parent,background='opaque',luma=.9,extra={}){
     effectiveLuma:background==='complex'?null:luma,
     widthFraction:.5,heightFraction:.3,areaFraction:.15,
     kind:'region',hasDirectText:false,hasProtectedDescendants:false,
-    focusWithin:false,nativeDark:false,...extra};
+    focusWithin:false,nativeDark:false,hasPseudoPaint:false,...extra};
 }
 function graph(nodes){return {kind:'p15-region-graph-v1',status:'ready',scanned:nodes.length,nodes};}
 test('P15: parent, children and siblings expose light islands but do not choose conversion',()=>{
@@ -140,4 +140,63 @@ test('P15: region limits fail closed without leaking partial CSS observations',(
   assert.equal(result.status,'inconclusive');
   assert.equal(result.nodes.length,0);
   assert.equal(buildRegionFeatures(JSON.parse(JSON.stringify(result))).regionCount,null);
+});
+
+test('P15: pseudo-element generated paint makes the region uncertain',()=>{
+  const body=element('BODY','rgb(30, 32, 36)');
+  const surface=element('MAIN','rgb(249, 249, 249)',{parent:body});
+  surface._pseudo=true;
+  const context={document:{body,querySelectorAll:()=>[body,surface]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>{
+      if(pseudo)return {content:el._pseudo&&pseudo==='::before'?'""':'none'};
+      return {backgroundColor:el._background,backgroundImage:'none',
+        maskImage:'none',webkitMaskImage:'none',
+        opacity:'1',mixBlendMode:'normal',colorScheme:'light'};
+    }};
+  const captured=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',context)));
+  assert.equal(captured.status,'ready');
+  assert.equal(captured.nodes[1].hasPseudoPaint,true);
+  const features=buildRegionFeatures(captured);
+  assert.equal(features.rows[1].uncertain,true);
+  assert.equal(features.rows[1].hasPseudoPaint,true);
+  assert.equal(features.promotionEligible,false);
+});
+test('P15: selection, pressed, checked and focus controls are protected',()=>{
+  const body=element('BODY','rgb(29, 29, 29)');
+  const card=element('SECTION','rgb(248, 248, 248)',{parent:body});
+  const selectors=[];
+  card.querySelector=selector=>{selectors.push(selector);
+    return /aria-pressed/.test(selector)?{}:null;};
+  card.matches=selector=>selector===':focus-within';
+  const context={document:{body,querySelectorAll:()=>[body,card]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(_el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:'rgb(242, 242, 242)',backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'
+    }};
+  const captured=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',context)));
+  assert.equal(captured.status,'ready');
+  assert.ok(selectors.some(s=>s.includes('aria-pressed')));
+  assert.ok(selectors.some(s=>s.includes('aria-checked')));
+  assert.equal(captured.nodes[1].hasProtectedDescendants,true);
+  assert.equal(captured.nodes[1].focusWithin,true);
+  assert.equal(buildRegionFeatures(captured).rows[1].uncertain,true);
+});
+test('P15: unknown pseudo style aborts measurement instead of claiming safety',()=>{
+  const body=element('BODY','rgb(28, 28, 28)');
+  const ctx={document:{body,querySelectorAll:()=>[body]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(_el,pseudo)=>pseudo?null:{
+      backgroundColor:'rgb(28, 28, 28)',backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'
+    }};
+  const observed=vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx);
+  assert.equal(observed.status,'inconclusive');
+  assert.equal(observed.nodes.length,0);
+  assert.equal(buildRegionFeatures(JSON.parse(JSON.stringify(observed))).regionCount,null);
 });
