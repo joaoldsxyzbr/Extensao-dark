@@ -494,3 +494,21 @@ test('P15: malformed motion metadata is rejected and not silently accepted',()=>
     entry(0,-1,'opaque',.1,{hasMotionRisk:null})
   ])),/P15:/);
 });
+
+test('P15: default zero-duration CSS transitions remain non-animated',()=>{
+  const body=element('BODY','rgb(24, 26, 30)');
+  const panel=element('MAIN','rgb(247, 247, 247)',{parent:body});
+  const ctx={document:{body,querySelectorAll:()=>[body,panel]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      animationName:'none',animationDuration:'0s',
+      transitionProperty:'all',transitionDuration:'0s'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[1].hasMotionRisk,false);
+  assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,true);
+});
