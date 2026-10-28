@@ -9,7 +9,8 @@ function entry(index,parent,background='opaque',luma=.9,extra={}){
     effectiveLuma:background==='complex'?null:luma,
     widthFraction:.5,heightFraction:.3,areaFraction:.15,
     kind:'region',hasDirectText:false,hasProtectedDescendants:false,
-    focusWithin:false,nativeDark:false,hasPseudoPaint:false,inFrame:false,...extra};
+    focusWithin:false,nativeDark:false,hasPseudoPaint:false,inFrame:false,
+    hasOcclusionRisk:false,hasComplexAncestorPaint:false,...extra};
 }
 function graph(nodes){return {kind:'p15-region-graph-v1',status:'ready',scanned:nodes.length,nodes};}
 test('P15: parent, children and siblings expose light islands but do not choose conversion',()=>{
@@ -372,4 +373,75 @@ test('P15: malformed inFrame metadata is never silently accepted',()=>{
   ]));
   assert.equal(result.rows[1].confirmedLightIsland,false);
   assert.equal(result.rows[1].uncertain,true);
+});
+
+test('P15: overlapping unrelated element makes a light panel uncertain',()=>{
+  const body=element('BODY','rgb(25, 30, 36)');
+  const card=element('MAIN','rgb(249, 249, 249)',{parent:body});
+  const overlay=element('DIV','rgb(40, 40, 40)',{parent:body});
+  const doc={body,querySelectorAll:s=>s==='*'?
+    [body,card,overlay]:[body,card,overlay],
+    elementFromPoint:()=>overlay};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      position:'static',transform:'none',clipPath:'none'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[1].hasOcclusionRisk,true);
+  const features=buildRegionFeatures(g);
+  assert.equal(features.rows[1].uncertain,true);
+  assert.equal(features.rows[1].confirmedLightIsland,false);
+});
+test('P15: a descendant hit inside region does not count as external occlusion',()=>{
+  const body=element('BODY','rgb(25, 30, 36)');
+  const card=element('MAIN','rgb(249, 249, 249)',{parent:body});
+  const child=element('SPAN','rgb(249, 249, 249)',{parent:card});
+  const doc={body,querySelectorAll:s=>s==='*'?
+    [body,card,child]:[body,card],elementFromPoint:()=>child};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      position:'static',transform:'none',clipPath:'none'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[1].hasOcclusionRisk,false);
+  assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,true);
+});
+test('P15: transformed element or complex ancestral paint blocks confirmation',()=>{
+  const body=element('BODY','rgb(27, 30, 34)');
+  const card=element('MAIN','rgb(247, 247, 247)',{parent:body});
+  const doc={body,querySelectorAll:()=>[body,card]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',
+      transform:el===card?'matrix(1,0,0,1,4,0)':'none',
+      clipPath:'none',position:'static',
+      filter:el===body?'blur(1px)':'none'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.status,'ready');
+  assert.equal(g.nodes[1].hasComplexAncestorPaint,true);
+  assert.equal(g.nodes[1].hasOcclusionRisk,true);
+  const features=buildRegionFeatures(g);
+  assert.equal(features.rows[1].confirmedLightIsland,false);
+});
+test('P15: new risk flags require booleans and forbid user content',()=>{
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{hasOcclusionRisk:'false'})
+  ])),/P15:/);
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{hasComplexAncestorPaint:null})
+  ])),/P15:/);
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{hasOcclusionRisk:true,rawSelector:'private'})
+  ])),/P15:/);
 });
