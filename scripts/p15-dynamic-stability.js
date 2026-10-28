@@ -42,6 +42,10 @@ function assessRegionStability(before,after,viewports){
       changed++;
   }
   if(changed)return unknown('css-or-layout-changed',before.nodes.length,changed);
+  // Repeated CSS values during keyframes/transitions do not prove
+  // visual stability between sampling instants.
+  if(before.nodes.some(n=>n.hasMotionRisk))
+    return unknown('motion-risk-present',before.nodes.length,0);
   return {kind:'p15-two-snapshot-css-lab',status:'stable-in-sample',
     reason:'identical-bounded-observations',checkedRegions:before.nodes.length,
     changedRegions:0,applied:false,trained:false,promotionEligible:false};
