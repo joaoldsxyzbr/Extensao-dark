@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+'use strict';
+// P15 independent authored Chromium smoke, never the sealed P14 holdout.
+const assert=require('node:assert/strict');
+const {launch}=require('./browser-e2e.js');
+const {captureRegionGraph}=require('../content/region-graph.js');
+const {buildRegionFeatures}=require('../content/region-features.js');
+const HTML='<!doctype html><meta charset="utf-8">'+
+  '<style>body{background:rgb(27,31,36);margin:0;padding:25px}'+
+  '.mount{display:block;width:500px;height:230px;'+
+  'background:rgb(28,32,38);margin:20px}</style>'+
+  '<div class="mount" id="safe"></div><div class="mount" id="control"></div>'+
+  '<script>'+
+  'for(const id of ["safe","control"]){'+
+  'const root=document.getElementById(id).attachShadow({mode:"open"});'+
+  'const section=document.createElement("section");'+
+  'section.style.cssText="display:block;width:350px;height:140px;'+
+  'background:rgb(246,248,250);padding:10px";'+
+  'section.appendChild(document.createTextNode("Authored synthetic label"));'+
+  'root.append(section);'+
+  'if(id==="control"){const b=document.createElement("button");'+
+  'b.type="button";section.append(b)}'+
+  '}window.__fixtureReady=true;</script>';
+async function main(){
+  let browser;
+  try{
+    browser=await launch(null);
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(HTML),{fixtureReady:true});
+    const graph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(graph.status,'ready');
+    const result=buildRegionFeatures(graph);
+    assert.equal(result.status,'ready');
+    assert.ok(result.regionCount>=5);
+    const islands=result.rows.filter(x=>x.confirmedLightIsland);
+    assert.equal(islands.length,1,
+      'Only unprotected shadow regions count as confirmed light islands');
+    assert.ok(result.rows.some(x=>x.ownBright&&x.uncertain),
+      'Protected shadow control makes the surface uncertain');
+    assert.equal(result.applied,false);
+    assert.equal(result.promotionEligible,false);
+    assert.doesNotMatch(JSON.stringify(result),/Authored synthetic label|rgb\(|https?:\/\//);
+    console.log('P15 Shadow DOM Chromium',JSON.stringify({
+      status:result.status,regions:result.regionCount,
+      confirmedLightIslands:islands.length,
+      uncertainRegions:result.uncertainRegions,
+      applied:false,promotionEligible:false
+    }));
+  }finally{
+    if(browser)await browser.stop();
+  }
+}
+if(require.main===module)main().catch(error=>{
+  console.error('P15 Shadow DOM Chromium failed:',error.message);
+  process.exitCode=1;
+});
+module.exports=Object.freeze({main});
