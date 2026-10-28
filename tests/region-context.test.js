@@ -633,3 +633,38 @@ test('P15: editing surfaces and live announcements stay protected',()=>{
   assert.equal(buildRegionFeatures(result).rows[1].confirmedLightIsland,false);
   assert.doesNotMatch(JSON.stringify(result),/editable|textbox|aria-live/);
 });
+
+test('P15: childNodes scan is bounded and never materializes unbounded lists',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const section=element('SECTION','rgb(249, 249, 249)',{parent:body});
+  const children=Array.from({length:257},()=>({nodeType:1}));
+  children[256]={nodeType:3,data:'private content'};
+  section.childNodes=children;
+  const doc={body,querySelectorAll:s=>s==='*'?[body,section]:[body,section]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+  assert.doesNotMatch(JSON.stringify(result),/private content/);
+});
+test('P15: direct-text detection is structural, ignoring the private text value',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const panel=element('MAIN','rgb(248, 248, 248)',{parent:body});
+  panel.childNodes=[{nodeType:1},{nodeType:3,data:'never export me'}];
+  const doc={body,querySelectorAll:s=>s==='*'?[body,panel]:[body,panel]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'ready');
+  assert.equal(result.nodes[1].hasDirectText,true);
+  assert.doesNotMatch(JSON.stringify(result),/never export me/);
+});
