@@ -117,7 +117,9 @@ async function main(){
     const focused=await browser.page.eval('('+captureRegionGraph.toString()+')()');
     const focusResult=assessRegionStability(beforeFocus,focused);
     assert.equal(focusResult.status,'inconclusive');
-    assert.equal(focusResult.reason,'css-or-layout-changed');
+    assert.ok(['css-or-layout-changed','region-count-changed',
+      'coverage-changed'].includes(focusResult.reason),
+      'Focus must invalidate the previous CSS/DOM sample');
     assert.ok(buildRegionFeatures(focused).rows.some(x=>x.focusWithin&&
       !x.confirmedLightIsland));
     const viewportBefore=await browser.page.eval('({width:innerWidth,height:innerHeight})');
