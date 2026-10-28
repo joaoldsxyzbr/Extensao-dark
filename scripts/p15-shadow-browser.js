@@ -6,6 +6,7 @@ const {launch}=require('./browser-e2e.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
 const {summarizeP15RiskCoverage}=require('./p15-risk-coverage.js');
+const {compareAuthoredScreenshot}=require('./p15-authored-pixel-oracle.js');
 const {assessRegionStability}=require('./p15-dynamic-stability.js');
 const {summarizeP15Performance}=require('./p15-performance-contract.js');
 const HTML='<!doctype html><meta charset="utf-8">'+
@@ -75,6 +76,18 @@ async function main(){
       '<script>window.__fixtureReady=true;</script>';
     await browser.page.navigate('data:text/html;charset=utf-8,'+
       encodeURIComponent(cssHtml),{fixtureReady:true});
+    const visiblePixels=await compareAuthoredScreenshot(browser,[
+      {x:80,y:80,expected:'dark'}, // fixed overlay masks the white main
+      {x:445,y:100,expected:'bright'} // exposed portion of main is white
+    ]);
+    assert.equal(visiblePixels.status,'matched');
+    assert.equal(visiblePixels.mismatches,0);
+    assert.equal(visiblePixels.imageExported,false);
+    assert.equal(visiblePixels.promotionEligible,false);
+    console.log('P15 authored screenshot pixels Chromium',JSON.stringify({
+      status:visiblePixels.status,checks:visiblePixels.checks,
+      mismatches:visiblePixels.mismatches,promotionEligible:false
+    }));
     const cssGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
     assert.equal(cssGraph.status,'ready');
     assert.ok(cssGraph.nodes.some(x=>x.hasOcclusionRisk&&x.ownLuma>.75),
