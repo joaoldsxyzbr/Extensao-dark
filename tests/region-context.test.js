@@ -80,7 +80,7 @@ test('P15: DOM capture uses bounded browser computed style, no DOM handles in re
   const context={document:doc,innerWidth:1200,innerHeight:800,
     getComputedStyle:el=>({backgroundColor:el._background,
       backgroundImage:'none',maskImage:'none',webkitMaskImage:'none',
-      opacity:'1',mixBlendMode:'normal',colorScheme:'light'})};
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',content:'none'})};
   const result=vm.runInNewContext('('+captureRegionGraph.toString()+')()',context);
   assert.equal(result.status,'ready');
   assert.equal(result.nodes.length,3);
@@ -101,7 +101,7 @@ test('P15: transparent nested surface inherits known solid ancestor, gradients a
     getComputedStyle:el=>({backgroundColor:el._background,
       backgroundImage:el._gradient?'linear-gradient(red, blue)':'none',
       maskImage:'none',webkitMaskImage:'none',opacity:'1',
-      mixBlendMode:'normal',colorScheme:'light'})};
+      mixBlendMode:'normal',colorScheme:'light',content:'none'})};
   const captured=JSON.parse(JSON.stringify(
     vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx)));
   assert.equal(captured.status,'ready');
@@ -121,7 +121,7 @@ test('P15: reparented DOM produces a fresh graph, never stale region ancestry',(
   const ctx={document:doc,innerWidth:1200,innerHeight:800,
     getComputedStyle:el=>({backgroundColor:el._background,
       backgroundImage:'none',maskImage:'none',webkitMaskImage:'none',
-      opacity:'1',mixBlendMode:'normal',colorScheme:'light'})};
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',content:'none'})};
   const run=()=>JSON.parse(JSON.stringify(vm.runInNewContext(
     '('+captureRegionGraph.toString()+')()',ctx)));
   assert.equal(run().nodes[3].parent,1);
@@ -135,7 +135,7 @@ test('P15: region limits fail closed without leaking partial CSS observations',(
     innerWidth:1200,innerHeight:800,
     getComputedStyle:el=>({backgroundColor:el._background,
       backgroundImage:'none',maskImage:'none',webkitMaskImage:'none',
-      opacity:'1',mixBlendMode:'normal',colorScheme:'light'})};
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light',content:'none'})};
   const result=vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx);
   assert.equal(result.status,'inconclusive');
   assert.equal(result.nodes.length,0);
@@ -152,7 +152,7 @@ test('P15: pseudo-element generated paint makes the region uncertain',()=>{
       if(pseudo)return {content:el._pseudo&&pseudo==='::before'?'""':'none'};
       return {backgroundColor:el._background,backgroundImage:'none',
         maskImage:'none',webkitMaskImage:'none',
-        opacity:'1',mixBlendMode:'normal',colorScheme:'light'};
+        opacity:'1',mixBlendMode:'normal',colorScheme:'light',content:'none'};
     }};
   const captured=JSON.parse(JSON.stringify(vm.runInNewContext(
     '('+captureRegionGraph.toString()+')()',context)));
@@ -175,7 +175,7 @@ test('P15: selection, pressed, checked and focus controls are protected',()=>{
     getComputedStyle:(_el,pseudo)=>pseudo?{content:'none'}:{
       backgroundColor:'rgb(242, 242, 242)',backgroundImage:'none',
       maskImage:'none',webkitMaskImage:'none',opacity:'1',
-      mixBlendMode:'normal',colorScheme:'light'
+      mixBlendMode:'normal',colorScheme:'light',content:'none'
     }};
   const captured=JSON.parse(JSON.stringify(vm.runInNewContext(
     '('+captureRegionGraph.toString()+')()',context)));
@@ -193,7 +193,7 @@ test('P15: unknown pseudo style aborts measurement instead of claiming safety',(
     getComputedStyle:(_el,pseudo)=>pseudo?null:{
       backgroundColor:'rgb(28, 28, 28)',backgroundImage:'none',
       maskImage:'none',webkitMaskImage:'none',opacity:'1',
-      mixBlendMode:'normal',colorScheme:'light'
+      mixBlendMode:'normal',colorScheme:'light',content:'none'
     }};
   const observed=vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx);
   assert.equal(observed.status,'inconclusive');
