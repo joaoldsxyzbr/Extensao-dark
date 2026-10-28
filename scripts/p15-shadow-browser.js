@@ -180,6 +180,30 @@ async function main(){
       totalWallP95Ms:performanceReport.totalWallMs.p95,
       promotionEligible:false
     }));
+    // DOM load stress is synthetic and contains no user/site data.
+    // The extractor must stop with an empty graph at each hard budget.
+    for(const [tag,count,expectedScanned] of [
+      ['span',8300,1],['section',1700,1601]
+    ]){
+      const stressHtml='<!doctype html><meta charset="utf-8">'+
+        '<style>body{margin:0;min-height:150px;background:rgb(27,30,34)}'+
+        'section,span{display:inline-block;width:1px;height:1px}</style>'+
+        '<script>const nodes=document.createDocumentFragment();'+
+        'for(let i=0;i<'+count+';i++){nodes.append(document.createElement("'+
+        tag+'"))}document.body.append(nodes);'+
+        'window.__fixtureReady=true;</script>';
+      await browser.page.navigate('data:text/html;charset=utf-8,'+
+        encodeURIComponent(stressHtml),{fixtureReady:true});
+      const stress=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+      assert.equal(stress.status,'inconclusive');
+      assert.deepEqual(stress.nodes,[]);
+      assert.equal(stress.scanned,expectedScanned);
+      assert.equal(buildRegionFeatures(stress).promotionEligible,false);
+    }
+    console.log('P15 bounded DOM stress Chromium',JSON.stringify({
+      hostNodes:8300,regionCandidates:1700,
+      status:'inconclusive',applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
