@@ -6,6 +6,7 @@ const {launch}=require('./browser-e2e.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
 const {assessRegionStability}=require('./p15-dynamic-stability.js');
+const {summarizeP15Performance}=require('./p15-performance-contract.js');
 const HTML='<!doctype html><meta charset="utf-8">'+
   '<style>body{background:rgb(27,31,36);margin:0;padding:25px}'+
   '.mount{display:block;width:500px;height:230px;'+
@@ -150,6 +151,34 @@ async function main(){
       staticStatus:still.status,changedStatus:changed.status,
       changedRegions:changed.changedRegions,
       insertedStatus:inserted.status,promotionEligible:false
+    }));
+    // Real browser timing smoke, authored data only; no release threshold.
+    const timedCapture=()=>browser.page.eval('(()=>{const start=performance.now();'+
+      'const graph=('+captureRegionGraph.toString()+')();'+
+      'return {graph,elapsedMs:performance.now()-start};})()');
+    const timingStart=performance.now();
+    const sampleOne=await timedCapture();
+    await new Promise(resolve=>setTimeout(resolve,60));
+    const sampleTwo=await timedCapture();
+    const compareStart=performance.now();
+    const compared=assessRegionStability(sampleOne.graph,sampleTwo.graph);
+    const compareCost=performance.now()-compareStart;
+    const performanceReport=summarizeP15Performance([{
+      firstCaptureMs:Number(sampleOne.elapsedMs.toFixed(3)),
+      secondCaptureMs:Number(sampleTwo.elapsedMs.toFixed(3)),
+      compareMs:Number(compareCost.toFixed(3)),
+      totalWallMs:Number((performance.now()-timingStart).toFixed(3)),
+      status:compared.status
+    }],1);
+    assert.equal(performanceReport.status,'measured-exploratory');
+    assert.equal(performanceReport.measuredCases,1);
+    assert.equal(performanceReport.promotionEligible,false);
+    assert.equal(performanceReport.applied,false);
+    console.log('P15 performance smoke Chromium',JSON.stringify({
+      status:performanceReport.status,
+      firstCaptureP95Ms:performanceReport.firstCaptureMs.p95,
+      totalWallP95Ms:performanceReport.totalWallMs.p95,
+      promotionEligible:false
     }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
