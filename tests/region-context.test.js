@@ -574,3 +574,62 @@ test('P15: more than 1600 matching region nodes aborts without materializing res
   assert.equal(result.scanned,1601);
   assert.equal(inspected,1601);
 });
+
+test('P15: a mid-scan geometry exception fails closed without leaking partial regions',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const surface=element('MAIN','rgb(246, 247, 248)',{parent:body});
+  surface.getBoundingClientRect=()=>{throw Error('layout detached');};
+  const doc={body,querySelectorAll:()=>[body,surface]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',maskImage:'none',
+      webkitMaskImage:'none',opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const scan=()=>JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  const result=scan();
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+  assert.equal(result.scanned,2);
+});
+test('P15: shadow host DOM discovery errors cause bounded abstention',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const main=element('MAIN','rgb(246, 247, 248)',{parent:body});
+  const doc={body,querySelectorAll:s=>{
+    if(s==='*')throw Error('scope disconnected');
+    return [body,main];
+  }};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+  assert.equal(result.scanned,2);
+});
+test('P15: editing surfaces and live announcements stay protected',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const main=element('MAIN','rgb(245, 246, 247)',{parent:body});
+  const editor=element('DIV','rgb(247, 247, 249)',{parent:main});
+  const announcement=element('SECTION','rgb(249, 249, 249)',{parent:main});
+  const protects=s=>s.includes('contenteditable')&&s.includes('aria-live')&&
+    s.includes('role="textbox"');
+  editor.closest=s=>protects(s)?editor:null;
+  announcement.closest=s=>protects(s)?announcement:null;
+  main.querySelector=s=>protects(s)?editor:null;
+  const ctx={document:{body,querySelectorAll:()=>[body,main,editor,announcement]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'ready');
+  assert.equal(result.nodes.length,2);
+  assert.equal(result.nodes[1].hasProtectedDescendants,true);
+  assert.equal(buildRegionFeatures(result).rows[1].confirmedLightIsland,false);
+  assert.doesNotMatch(JSON.stringify(result),/editable|textbox|aria-live/);
+});
