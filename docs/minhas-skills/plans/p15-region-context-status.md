@@ -134,3 +134,11 @@ Evidência: [CI navegador #40687325522](https://github.com/joaoldsxyzbr/Extensao
 - Essa mudança protege contra falsos positivos da observação de superfícies quando o contêiner visualmente composto não é a própria região clara. É intencionalmente conservadora; não afirma ter detectado toda a área coberta por sobreposições e não substitui auditoria visual.
 - Regressões Node cobrem transform, clip-path, perspective, containment, isolation e will-change, além do cenário limpo que **deve continuar detectável**. Smoke Chromium autoral compara filho claro sob ancestral transformado/recortado contra filho claro sob ancestral sem composição especial.
 - O fluxo continua laboratório puro: `applied=false`, `promotionEligible=false`, corpus público/holdout P14 pendentes e nenhum treinamento P16, merge ou alteração da extensão distribuída.
+
+## Incremento P15 — riscos de composição ancestral e color-scheme nativo (28/10/2026)
+
+- O último SHA da etapa anterior `82fb940` concluiu em **success** os workflows de qualidade `#40691505273` e navegador `#40691505293`, incluindo a fixture de carga corrigida.
+- `content/region-graph.js` passou a considerar como **incerteza de composição de ancestral** o uso de `transform`, `clip-path`, `perspective`, isolamento, `contain:paint/content/strict` e `will-change` de composição, mesmo que o fundo do ancestral seja opaco. Isso sinaliza `hasComplexAncestorPaint=true`; o contrato de features não promove ilhas nessa condição.
+- `color-scheme` agora é interpretado como lista de tokens: `light dark`, `dark light`, `only dark` e `dark` levam a `nativeDark=true` (abstenção). A simples presença de `light` sem `dark` não bloqueia uma superfície opaca limpa. É uma precaução, não a detecção da preferência ativa do usuário.
+- Regressões Node cobrem variantes de composição e color-scheme; o smoke Chromium autoral inclui contêiner transformado/recortado, contêiner limpo e `color-scheme:light dark`. Os testes são novos e só estarão validados após o CI da revisão atual.
+- Esta etapa ainda não mede pixels, contraste visual final, telas de usuários nem corrige a extensão instalada. `applied=false`, `trained=false`, `promotionEligible=false`; `main` intacta, sem merge nem release.
