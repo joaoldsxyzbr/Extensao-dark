@@ -218,3 +218,92 @@ test('P15: uncertain child or uncertain parent cannot be a confirmed light islan
     root,entry(1,0,'opaque',.91,{hasProtectedDescendants:true})]));
   assert.equal(protectedChild.rows[1].confirmedLightIsland,false);
 });
+
+test('P15: captures open Shadow DOM hierarchy and direct text without exporting content',()=>{
+  const body=element('BODY','rgb(27, 31, 36)');
+  const host=element('DIV','rgb(27, 31, 36)',{parent:body});
+  const inner=element('SECTION','rgb(247, 247, 247)',{hasText:true});
+  const nested=element('ARTICLE','rgb(241, 241, 241)',{parent:inner});
+  const root={mode:'open',host,querySelectorAll:()=>[inner,nested]};
+  host.shadowRoot=root;
+  inner.getRootNode=()=>root;
+  nested.getRootNode=()=>root;
+  inner.childNodes=[{nodeType:3, data:'private text should not be read'}];
+  const ctx={document:{body,querySelectorAll:()=>[body,host]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const row=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(row.status,'ready');
+  assert.equal(row.nodes.length,4);
+  assert.equal(row.nodes[2].parent,1); // cross shadow boundary to host
+  assert.equal(row.nodes[3].parent,2); // native parent inside root
+  assert.equal(row.nodes[2].hasDirectText,true);
+  assert.equal(JSON.stringify(row).includes('private text'),false);
+  const features=buildRegionFeatures(row);
+  assert.equal(features.rows[2].confirmedLightIsland,true);
+  assert.equal(features.applied,false);
+});
+test('P15: discovers shadow hosts outside region selector, including nested roots',()=>{
+  const body=element('BODY','rgb(25, 28, 32)');
+  const host=element('SPAN','rgb(28, 30, 34)',{parent:body});
+  const inner=element('SECTION','rgb(250, 250, 250)');
+  const nestedHost=element('SPAN','rgb(29, 32, 36)',{parent:inner});
+  const leaf=element('ARTICLE','rgb(238, 238, 238)');
+  const root2={mode:'open',host:nestedHost,querySelectorAll:()=>[leaf]};
+  const root1={mode:'open',host,querySelectorAll:()=>[inner,nestedHost]};
+  host.shadowRoot=root1;nestedHost.shadowRoot=root2;
+  inner.getRootNode=()=>root1;nestedHost.getRootNode=()=>root1;
+  leaf.getRootNode=()=>root2;
+  const ctx={document:{body,querySelectorAll:selector=>selector==='*'?[body,host]:[body]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',maskImage:'none',
+      webkitMaskImage:'none',opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'ready');
+  assert.equal(result.nodes.length,3);
+  assert.equal(result.nodes[1].parent,0);
+  assert.equal(result.nodes[2].parent,1);
+  assert.equal(JSON.stringify(result).includes('SPAN'),false);
+});
+test('P15: protects interactive ancestor across open Shadow DOM boundary',()=>{
+  const body=element('BODY','rgb(30, 31, 32)');
+  const host=element('DIV','rgb(35, 36, 38)',{parent:body});
+  const inside=element('SECTION','rgb(248, 248, 248)');
+  host.closest=selector=>selector.includes('role="button"')?host:null;
+  const root={mode:'open',host,querySelectorAll:()=>[inside]};
+  host.shadowRoot=root;inside.getRootNode=()=>root;
+  const ctx={document:{body,querySelectorAll:()=>[body,host]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',maskImage:'none',
+      webkitMaskImage:'none',opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'ready');
+  assert.equal(result.nodes.length,1);
+  assert.equal(result.nodes[0].kind,'canvas');
+});
+test('P15: excessive open roots fail closed with empty graph',()=>{
+  const body=element('BODY','rgb(28, 31, 33)');
+  const host=element('SPAN','rgb(28, 31, 33)',{parent:body});
+  const roots=Array.from({length:25},()=>({
+    mode:'open',host,querySelectorAll:()=>[]}));
+  const shadows=Array.from({length:25},(_,i)=>({
+    shadowRoot:roots[i],isConnected:true}));
+  const doc={body,querySelectorAll:selector=>selector==='*'?
+    [body,...shadows]:[body]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',maskImage:'none',
+      webkitMaskImage:'none',opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const result=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(result.status,'inconclusive');
+  assert.deepEqual(result.nodes,[]);
+});
