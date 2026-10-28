@@ -90,3 +90,17 @@ Evidência: [CI navegador #40687325522](https://github.com/joaoldsxyzbr/Extensao
 - Smoke independente em Chromium descartável: uma captura autoral com p95 de **0,8 ms** e tempo total de **65,926 ms**, que inclui explicitamente a pausa de 60 ms, overhead CDP e comparação. Uma única fixture não é uma distribuição representativa.
 - O benchmark de pintura P13, distinto do P15: 10 casos sintéticos seguros, dois inconclusivos; 11 pares candidatos e 10 pares medidos. Estes números **não** são prova de qualidade visual independente nem comparação completa de First AI 7D/P11/P13.
 - Nenhuma amostra do holdout selado foi usada. Métricas `promotionEligible=false`; **P14/P15 não são concluídas** e continuam sem corpus público validado, avaliação visual independente e medição de carga. Não inferir um limite de desempenho aprovado a partir de 6,3 ms.
+
+## Incremento P15 — carga DOM e critérios de continuidade (28/10/2026)
+
+### Proteção implementada
+- A captura `content/region-graph.js` passou a usar `TreeWalker` incremental nos navegadores, tanto para localizar regiões quanto para descobrir hosts de Shadow DOM e iframes. Isso evita construir um `NodeList` gigante com `querySelectorAll('*')` antes de aplicar os limites.
+- Limites conservadores de laboratório: no máximo **8.000 elementos examinados na procura de regiões**, **1.600 candidatos correspondentes**, **8.000 elementos na descoberta de hosts**, **80 regiões retornadas**, **24 escopos**, **8 níveis** e **8 iframes**. Ao ultrapassar um limite, retorna `inconclusive` com `nodes:[]`, sem exportar parcial ou autorizar pintura. Fallback `querySelectorAll` existe apenas para doubles mínimos sem API `TreeWalker`.
+- Regressões Node simulam 8.100 elementos e 1.700 candidatos regionais com `querySelectorAll` indisponível, confirmando interrupção incremental. O smoke Chromium gera **8.300 `span`** e **1.700 `section`** autorais, validando o bloqueio dos limites sem tocar o holdout ou carregar páginas de usuários.
+- Como proteção adicional, o escopo continua apenas experimental: nenhum listener de produção, coleta persistente, permissão nova ou rede para capturar páginas foi adicionado. A medição de desempenho deve ser observada novamente após essa mudança; **não presumir** que o p95 anterior permaneceu igual.
+
+### Condições para uma futura conclusão da P15
+- Confirmar CI de qualidade, teste real Chromium sob carga e benchmark P14 **no mesmo SHA final**. Aprovado em outra revisão não substitui execução da revisão atual.
+- Ler os p50/p95 e contagens do relatório atualizado; diferenciar a latência de uma captura do tempo total CDP, que inclui pausa de 60 ms. Nenhum limite automático de aprovação foi estabelecido; se houver regressão, investigar e comparar no mesmo ambiente.
+- Manter `applied=false`, `promotionEligible=false`, holdout P14 selado e ausência de dados pessoais, mesmo quando os testes dão `success`.
+- P15 só pode ser tratada como finalizada após cobertura suficiente de cenários reais autorizados, revisão visual independente, limites conhecidos documentados e critérios de segurança definidos. Não iniciar promoção de pesos nem P19 com base nos testes sintéticos.
