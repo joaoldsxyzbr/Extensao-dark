@@ -42,11 +42,32 @@ function captureRegionGraph(){
     return {background:'complex',ownLuma:null};
   };
   const regions=[],positions=new Map();
-  let scanned=0;
-  for(const el of document.querySelectorAll(selector)){
-    if(++scanned>1600)return failed(scanned);
-    if(!el.isConnected)return failed(scanned);
-    if(el.closest(protectedSelector))continue;
+  let scanned=0,visited=0;
+  // Traverse document and reachable OPEN shadow roots only. Hosts need not
+  // match the region selector (e.g. a custom span). Each root is visited once.
+  const scopes=[{root:document,depth:0}],seen=new Set([document]);
+  const composedParent=el=>{
+    if(el.parentElement)return el.parentElement;
+    const root=el.getRootNode?.();
+    return root?.host||null;
+  };
+  const protectedAncestor=el=>{
+    // closest() stops at shadow boundaries, so inspect each host explicitly.
+    let cur=el;
+    for(let depth=0;cur&&depth<10;depth++){
+      if(cur.closest(protectedSelector))return true;
+      const root=cur.getRootNode?.();
+      if(!root?.host)return false;
+      cur=root.host;
+    }
+    return true; // unknown/deep chain: fail closed
+  };
+  for(let scopeIndex=0;scopeIndex<scopes.length;scopeIndex++){
+    const {root,depth}=scopes[scopeIndex];
+    for(const el of root.querySelectorAll(selector)){
+      if(++scanned>1600)return failed(scanned);
+      if(!el.isConnected)return failed(scanned);
+      if(protectedAncestor(el))continue;
     const rect=el.getBoundingClientRect();
     if(!Number.isFinite(rect.width)||!Number.isFinite(rect.height)||
       !Number.isFinite(rect.left)||!Number.isFinite(rect.top)||
@@ -70,18 +91,18 @@ function captureRegionGraph(){
     const own=paint(el);
     let effectiveLuma=own.ownLuma;
     if(own.background==='transparent'){
-      let parent=el.parentElement,hops=0;
+      let parent=composedParent(el),hops=0;
       while(parent&&hops++<12){
         const p=paint(parent);
         if(p.background==='opaque'){effectiveLuma=p.ownLuma;break;}
         if(p.background==='complex')break;
-        parent=parent.parentElement;
+        parent=composedParent(parent);
       }
     }
-    let parent=el.parentElement,parentIndex=-1;
-    while(parent){
+    let parent=composedParent(el),parentIndex=-1;
+    for(let hops=0;parent&&hops<24;hops++){
       if(positions.has(parent)){parentIndex=positions.get(parent);break;}
-      parent=parent.parentElement;
+      parent=composedParent(parent);
     }
     const hasDirectText=Array.from(el.childNodes).some(n=>n.nodeType===3);
     const node={index:regions.length,parent:parentIndex,
@@ -91,11 +112,24 @@ function captureRegionGraph(){
       areaFraction:Number(Math.min(1,rect.width*rect.height/
         (innerWidth*innerHeight)).toFixed(4)),
       kind:kind(el.tagName),hasDirectText,
-      hasProtectedDescendants:!!el.querySelector(protectedSelector),
+      hasProtectedDescendants:!!el.querySelector(protectedSelector)||
+        !!el.shadowRoot?.querySelector(protectedSelector),
       focusWithin:!!el.matches(':focus-within'),
       nativeDark:style.colorScheme==='dark',hasPseudoPaint};
-    positions.set(el,node.index);
-    regions.push(node);
+      positions.set(el,node.index);
+      regions.push(node);
+    }
+    // Bounded host search includes non-region custom elements, which may own
+    // a readable shadowRoot but no background or region role themselves.
+    for(const host of root.querySelectorAll('*')){
+      if(++visited>8000)return failed(scanned);
+      const child=host.shadowRoot;
+      if(!child||child.mode!=='open'||seen.has(child))continue;
+      if(protectedAncestor(host))continue;
+      if(depth>=8||scopes.length>=24)return failed(scanned);
+      seen.add(child);
+      scopes.push({root:child,depth:depth+1});
+    }
   }
   if(!regions.length)return failed(scanned);
   return {kind:'p15-region-graph-v1',status:'ready',scanned,nodes:regions};
