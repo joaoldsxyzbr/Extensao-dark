@@ -9,7 +9,7 @@ function entry(index,parent,background='opaque',luma=.9,extra={}){
     effectiveLuma:background==='complex'?null:luma,
     widthFraction:.5,heightFraction:.3,areaFraction:.15,
     kind:'region',hasDirectText:false,hasProtectedDescendants:false,
-    focusWithin:false,nativeDark:false,hasPseudoPaint:false,...extra};
+    focusWithin:false,nativeDark:false,hasPseudoPaint:false,inFrame:false,...extra};
 }
 function graph(nodes){return {kind:'p15-region-graph-v1',status:'ready',scanned:nodes.length,nodes};}
 test('P15: parent, children and siblings expose light islands but do not choose conversion',()=>{
@@ -308,4 +308,68 @@ test('P15: excessive open roots fail closed with empty graph',()=>{
     '('+captureRegionGraph.toString()+')()',ctx)));
   assert.equal(result.status,'inconclusive');
   assert.deepEqual(result.nodes,[]);
+});
+
+test('P15: same-origin iframe may be sampled, but never promotes a light island',()=>{
+  const body=element('BODY','rgb(31, 34, 39)');
+  const frame=element('IFRAME','rgb(31, 34, 39)',{parent:body});
+  const frameBody=element('BODY','rgb(34, 35, 39)');
+  const panel=element('MAIN','rgb(248, 248, 248)',{parent:frameBody,hasText:true});
+  const child={body:frameBody,querySelectorAll:s=>s==='*'?
+    [frameBody,panel]:[frameBody,panel]};
+  frame.contentDocument=child;
+  frameBody.getRootNode=()=>child;
+  child.defaultView={frameElement:frame};
+  panel.getRootNode=()=>child;
+  const ctx={document:{body,querySelectorAll:s=>s==='*'?
+    [body,frame]:[body]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const captured=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(captured.status,'ready');
+  assert.equal(captured.nodes.length,3);
+  assert.equal(captured.nodes[1].parent,0);
+  assert.equal(captured.nodes[1].inFrame,true);
+  assert.equal(captured.nodes[2].inFrame,true);
+  const features=buildRegionFeatures(captured);
+  assert.equal(features.rows[2].ownBright,true);
+  assert.equal(features.rows[2].uncertain,true);
+  assert.equal(features.rows[2].confirmedLightIsland,false);
+  assert.equal(features.applied,false);
+});
+test('P15: inaccessible frame or invalid frame document fails closed',()=>{
+  const body=element('BODY','rgb(31, 34, 39)');
+  const frame=element('IFRAME','rgb(31, 34, 39)',{parent:body});
+  const doc={body,querySelectorAll:s=>s==='*'?[body,frame]:[body]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const scan=()=>JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  frame.contentDocument=null;
+  assert.equal(scan().status,'inconclusive');
+  Object.defineProperty(frame,'contentDocument',{get(){throw Error('SecurityError');}});
+  const unknown=scan();
+  assert.equal(unknown.status,'inconclusive');
+  assert.deepEqual(unknown.nodes,[]);
+});
+test('P15: malformed inFrame metadata is never silently accepted',()=>{
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{inFrame:'false'})
+  ])),/P15:/);
+  assert.throws(()=>buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1,{inFrame:false,src:'private-url'})
+  ])),/P15:/);
+  const result=buildRegionFeatures(graph([
+    entry(0,-1,'opaque',.1),
+    entry(1,0,'opaque',.9,{inFrame:true})
+  ]));
+  assert.equal(result.rows[1].confirmedLightIsland,false);
+  assert.equal(result.rows[1].uncertain,true);
 });
