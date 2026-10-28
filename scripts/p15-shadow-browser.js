@@ -404,6 +404,42 @@ async function main(){
       before:'observed',after:'protected',status:subtreeChange.status,
       applied:false,promotionEligible:false
     }));
+    // A nested open Shadow DOM control is not visible to native
+    // querySelector on its light-DOM parent. It must still protect the
+    // bright parent, then allow observation after the control disappears.
+    const nestedHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{margin:0;background:rgb(28,30,34)}'+
+      'main{display:block;width:440px;height:190px;'+
+      'background:rgb(247,248,249)}</style>'+
+      '<main><span id="host"></span></main>'+
+      '<script>const root=document.getElementById("host")'+
+      '.attachShadow({mode:"open"});'+
+      'root.append(document.createElement("button"));'+
+      'window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(nestedHtml),{fixtureReady:true});
+    const nestedProtected=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(nestedProtected.status,'ready');
+    assert.equal(nestedProtected.nodes.length,2);
+    assert.equal(nestedProtected.nodes[1].hasProtectedDescendants,true);
+    assert.equal(buildRegionFeatures(nestedProtected).rows[1]
+      .confirmedLightIsland,false);
+    await browser.page.eval(
+      'document.querySelector("#host").shadowRoot.replaceChildren()');
+    const nestedClear=await browser.page.eval(
+      '('+captureRegionGraph.toString()+')()');
+    assert.equal(nestedClear.status,'ready');
+    assert.equal(nestedClear.nodes[1].hasProtectedDescendants,false);
+    assert.equal(buildRegionFeatures(nestedClear).rows[1]
+      .confirmedLightIsland,true);
+    const nestedChange=assessRegionStability(nestedProtected,nestedClear);
+    assert.equal(nestedChange.status,'inconclusive');
+    assert.equal(nestedChange.promotionEligible,false);
+    console.log('P15 nested shadow controls Chromium',JSON.stringify({
+      protectedBefore:true,protectedAfter:false,
+      status:nestedChange.status,applied:false,promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
