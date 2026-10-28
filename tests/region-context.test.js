@@ -718,3 +718,34 @@ test('P15: safe opaque untransformed ancestor keeps eligible light island',()=>{
   assert.equal(g.nodes[2].hasComplexAncestorPaint,false);
   assert.equal(buildRegionFeatures(g).rows[2].confirmedLightIsland,true);
 });
+
+test('P15: native dark-capable color-scheme tokens abstain, light-only remains observable',()=>{
+  for(const declared of ['dark','light dark','dark light','only dark']){
+    const body=element('BODY','rgb(27, 30, 34)');
+    const panel=element('MAIN','rgb(248, 248, 248)',{parent:body});
+    const ctx={document:{body,querySelectorAll:()=>[body,panel]},
+      innerWidth:1200,innerHeight:800,
+      getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+        backgroundColor:el._background,backgroundImage:'none',
+        maskImage:'none',webkitMaskImage:'none',
+        opacity:'1',mixBlendMode:'normal',
+        colorScheme:el===panel?declared:'light'}};
+    const graph=JSON.parse(JSON.stringify(vm.runInNewContext(
+      '('+captureRegionGraph.toString()+')()',ctx)));
+    assert.equal(graph.status,'ready');
+    assert.equal(graph.nodes[1].nativeDark,true,declared);
+    assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,false);
+  }
+  const safe=element('BODY','rgb(28, 30, 33)');
+  const panel=element('MAIN','rgb(249, 249, 249)',{parent:safe});
+  const ctx={document:{body:safe,querySelectorAll:()=>[safe,panel]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(g.nodes[1].nativeDark,false);
+  assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,true);
+});
