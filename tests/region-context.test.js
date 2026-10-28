@@ -772,3 +772,40 @@ test('P15: links, navigation actions and disclosure controls block light-island 
   assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,false);
   assert.doesNotMatch(JSON.stringify(graph),/href=|https?:\/\//);
 });
+
+test('P15: protected descendants traversal is bounded and preserves clean panels',()=>{
+  for(const [descendants,lateControl,expectedProtected] of [
+    [510,false,false],[500,true,true],[513,false,true]
+  ]){
+    const body=element('BODY','rgb(27, 30, 33)');
+    const panel=element('MAIN','rgb(247, 248, 249)',{parent:body});
+    const children=Array.from({length:descendants},()=>({
+      tagName:'SPAN',matches:()=>false
+    }));
+    if(lateControl)children.push({tagName:'BUTTON',
+      matches:s=>s.includes('button')});
+    body.matches=s=>s.includes('body');
+    panel.matches=s=>s.includes('main');
+    panel.querySelector=()=>{throw Error('unbounded querySelector');};
+    const doc={body,createTreeWalker:(root,show)=>{
+      assert.equal(show,1);
+      const values=root===doc?[body,panel]:
+        root===body?[panel]:root===panel?children:[];
+      let index=0;
+      return {nextNode:()=>values[index++]||null};
+    }};
+    body.ownerDocument=doc;panel.ownerDocument=doc;
+    const ctx={document:doc,innerWidth:1200,innerHeight:800,
+      getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+        backgroundColor:el._background,backgroundImage:'none',
+        maskImage:'none',webkitMaskImage:'none',
+        opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+    const g=JSON.parse(JSON.stringify(vm.runInNewContext(
+      '('+captureRegionGraph.toString()+')()',ctx)));
+    assert.equal(g.status,'ready');
+    assert.equal(g.nodes.length,2);
+    assert.equal(g.nodes[1].hasProtectedDescendants,expectedProtected);
+    assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,
+      !expectedProtected);
+  }
+});
