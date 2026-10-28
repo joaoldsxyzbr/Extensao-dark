@@ -9,7 +9,7 @@ function entry(index,parent,extra={}){
     areaFraction:.12,kind:'panel',hasDirectText:false,
     hasProtectedDescendants:false,focusWithin:false,nativeDark:false,
     hasPseudoPaint:false,inFrame:false,hasOcclusionRisk:false,
-    hasComplexAncestorPaint:false,...extra};
+    hasComplexAncestorPaint:false,hasMotionRisk:false,...extra};
 }
 function snapshot(nodes,scanned=nodes.length){
   return {kind:'p15-region-graph-v1',status:'ready',scanned,nodes};
@@ -68,4 +68,46 @@ test('P15: invalid/partial samples never produce misleading counts',()=>{
     assert.equal(r.promotionEligible,false);
     assert.doesNotMatch(JSON.stringify(r),/sensitive|https?:\/\/|rgb\(/);
   }
+});
+
+test('P15: same CSS but changed viewport must invalidate temporal comparison',()=>{
+  const a=snapshot([entry(0,-1),entry(1,0)]);
+  const result=assessRegionStability(a,a,{
+    before:{width:1200,height:800},after:{width:960,height:800}
+  });
+  assert.equal(result.status,'inconclusive');
+  assert.equal(result.reason,'viewport-changed');
+  assert.equal(result.checkedRegions,2);
+  assert.equal(result.changedRegions,null);
+  assert.equal(result.applied,false);
+  assert.equal(result.promotionEligible,false);
+  const stable=assessRegionStability(a,a,{
+    before:{width:1200,height:800},after:{width:1200,height:800}
+  });
+  assert.equal(stable.status,'stable-in-sample');
+  assert.equal(stable.promotionEligible,false);
+});
+test('P15: invalid viewport metadata fails closed, no unsafe geometry',()=>{
+  const a=snapshot([entry(0,-1)]);
+  for(const info of [
+    {before:{width:1200,height:800},after:null},
+    {before:{width:1200,height:800},after:{width:0,height:800}},
+    {before:{width:1200,height:800},after:{width:'1200',height:800}},
+    {before:{width:1200,height:800,url:'secret'},after:{width:1200,height:800}},
+    {before:{width:1200,height:800},after:{width:1200,height:9000}}
+  ]){
+    const r=assessRegionStability(a,a,info);
+    assert.equal(r.status,'inconclusive');
+    assert.equal(r.reason,'viewport-unavailable');
+    assert.equal(r.promotionEligible,false);
+    assert.doesNotMatch(JSON.stringify(r),/secret|https?:\/\//);
+  }
+});
+test('P15: animation and focus-state samples may not claim stability after changes',()=>{
+  const a=snapshot([entry(0,-1),entry(1,0)]);
+  const animated=snapshot([entry(0,-1),entry(1,0,{hasMotionRisk:true})]);
+  assert.equal(assessRegionStability(a,animated).status,'inconclusive');
+  assert.equal(assessRegionStability(a,animated).reason,'css-or-layout-changed');
+  const focused=snapshot([entry(0,-1),entry(1,0,{focusWithin:true})]);
+  assert.equal(assessRegionStability(a,focused).status,'inconclusive');
 });
