@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const {launch}=require('./browser-e2e.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {buildRegionFeatures}=require('../content/region-features.js');
+const {summarizeP15RiskCoverage}=require('./p15-risk-coverage.js');
 const {assessRegionStability}=require('./p15-dynamic-stability.js');
 const {summarizeP15Performance}=require('./p15-performance-contract.js');
 const HTML='<!doctype html><meta charset="utf-8">'+
@@ -49,6 +50,15 @@ async function main(){
       'Same-origin iframe stays diagnostic-only, never safe-to-paint');
     assert.equal(result.applied,false);
     assert.equal(result.promotionEligible,false);
+    const riskCoverage=summarizeP15RiskCoverage(graph);
+    assert.equal(riskCoverage.status,'measured-exploratory');
+    assert.equal(riskCoverage.confirmedLightIslands,islands.length);
+    assert.ok(riskCoverage.reasons.protectedDescendant>=1);
+    assert.ok(riskCoverage.reasons.frame>=1);
+    assert.equal(riskCoverage.pixelAreaMeasured,false);
+    assert.equal(riskCoverage.promotionEligible,false);
+    assert.doesNotMatch(JSON.stringify(riskCoverage),
+      /Authored synthetic label|https?:\/\/|rgb\(/);
     assert.doesNotMatch(JSON.stringify(result),/Authored synthetic label|rgb\(|https?:\/\//);
     // Independent synthetic CSS stress case. No holdout or external site.
     const cssHtml='<!doctype html><meta charset="utf-8">'+
@@ -229,6 +239,12 @@ async function main(){
     console.log('P15 protected edit and live Chromium',JSON.stringify({
       protectedRegions:editorRows.rows.filter(x=>x.hasProtectedDescendants).length,
       status:'ready',applied:false,promotionEligible:false
+    }));
+    console.log('P15 risk counts Chromium',JSON.stringify({
+      status:riskCoverage.status,regions:riskCoverage.regions,
+      uncertainRegions:riskCoverage.uncertainRegions,
+      confirmedLightIslands:riskCoverage.confirmedLightIslands,
+      applied:false,promotionEligible:false
     }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
