@@ -89,3 +89,55 @@ test('P15: DOM capture uses bounded browser computed style, no DOM handles in re
   assert.equal(JSON.stringify(result).includes('rgb('),false);
   assert.equal(buildRegionFeatures(JSON.parse(JSON.stringify(result))).status,'ready');
 });
+
+test('P15: transparent nested surface inherits known solid ancestor, gradients abstain',()=>{
+  const body=element('BODY','rgb(28, 31, 36)');
+  const layer=element('MAIN','rgba(0, 0, 0, 0)',{parent:body});
+  const gradient=element('SECTION','rgb(245, 245, 245)',{parent:layer});
+  gradient._gradient=true;
+  const doc={body,documentElement:{},
+    querySelectorAll:()=>[body,layer,gradient]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:el=>({backgroundColor:el._background,
+      backgroundImage:el._gradient?'linear-gradient(red, blue)':'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'})};
+  const captured=JSON.parse(JSON.stringify(
+    vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(captured.status,'ready');
+  assert.equal(captured.nodes[1].background,'transparent');
+  assert.ok(captured.nodes[1].effectiveLuma<.04);
+  assert.equal(captured.nodes[2].background,'complex');
+  assert.equal(captured.nodes[2].effectiveLuma,null);
+  const result=buildRegionFeatures(captured);
+  assert.equal(result.uncertainRegions,2);
+});
+test('P15: reparented DOM produces a fresh graph, never stale region ancestry',()=>{
+  const body=element('BODY','rgb(25, 25, 25)');
+  const parent=element('MAIN','rgb(245, 245, 245)',{parent:body});
+  const other=element('SECTION','rgb(243, 243, 243)',{parent:body});
+  const card=element('SECTION','rgb(250, 250, 250)',{parent});
+  const doc={body,querySelectorAll:()=>[body,parent,other,card]};
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:el=>({backgroundColor:el._background,
+      backgroundImage:'none',maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'})};
+  const run=()=>JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(run().nodes[3].parent,1);
+  card.parentElement=other;
+  assert.equal(run().nodes[3].parent,2);
+});
+test('P15: region limits fail closed without leaking partial CSS observations',()=>{
+  const body=element('BODY','rgb(25, 25, 25)');
+  const sections=Array.from({length:80},()=>element('SECTION','rgb(250, 250, 250)',{parent:body}));
+  const ctx={document:{body,querySelectorAll:()=>[body,...sections]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:el=>({backgroundColor:el._background,
+      backgroundImage:'none',maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'})};
+  const result=vm.runInNewContext('('+captureRegionGraph.toString()+')()',ctx);
+  assert.equal(result.status,'inconclusive');
+  assert.equal(result.nodes.length,0);
+  assert.equal(buildRegionFeatures(JSON.parse(JSON.stringify(result))).regionCount,null);
+});
