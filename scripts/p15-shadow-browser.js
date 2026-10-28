@@ -20,7 +20,12 @@ const HTML='<!doctype html><meta charset="utf-8">'+
   'root.append(section);'+
   'if(id==="control"){const b=document.createElement("button");'+
   'b.type="button";section.append(b)}'+
-  '}window.__fixtureReady=true;</script>';
+  '}'+
+  'const frame=document.createElement("iframe");'+
+  'frame.style.cssText="display:block;width:500px;height:230px";'+
+  'frame.onload=()=>window.__fixtureReady=!!frame.contentDocument?.querySelector("main");'+
+  'frame.srcdoc="<body style=\'background:rgb(35,36,39)\'><main style=\'background:rgb(244,246,247);width:350px;height:140px\'>Authored frame</main></body>";'+
+  'document.body.append(frame);</script>';
 async function main(){
   let browser;
   try{
@@ -35,8 +40,11 @@ async function main(){
     const islands=result.rows.filter(x=>x.confirmedLightIsland);
     assert.equal(islands.length,1,
       'Only unprotected shadow regions count as confirmed light islands');
-    assert.ok(result.rows.some(x=>x.ownBright&&x.uncertain),
+    assert.ok(result.rows.some(x=>x.ownBright&&x.uncertain&&!x.inFrame),
       'Protected shadow control makes the surface uncertain');
+    assert.ok(result.rows.some(x=>x.inFrame&&x.ownBright&&x.uncertain&&
+      !x.confirmedLightIsland),
+      'Same-origin iframe stays diagnostic-only, never safe-to-paint');
     assert.equal(result.applied,false);
     assert.equal(result.promotionEligible,false);
     assert.doesNotMatch(JSON.stringify(result),/Authored synthetic label|rgb\(|https?:\/\//);
