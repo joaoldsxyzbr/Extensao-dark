@@ -68,6 +68,14 @@ function buildRegionFeatures(graph){
       uncertain:n.background!=='opaque'||n.effectiveLuma===null||
         n.hasProtectedDescendants||n.focusWithin||n.nativeDark||n.hasPseudoPaint};
   });
+  // A light region is a confirmed inner island ONLY when both itself and
+  // its dark immediate parent have enough CSS evidence to assess safely.
+  // An uncertain pseudo/selection/gradient is never evidence of an island.
+  for(const row of rows){
+    const parent=row.parent>=0?rows[row.parent]:null;
+    row.confirmedLightIsland=!!(parent&&row.ownBright&&!row.uncertain&&
+      !parent.ownBright&&!parent.uncertain);
+  }
   return {kind:'p15-region-context-v1',status:'ready',
     regionCount:rows.length,uncertainRegions:rows.filter(x=>x.uncertain).length,
     lightRegions:rows.filter(x=>x.ownBright).length,
