@@ -78,8 +78,15 @@ function buildRegionFeatures(graph){
   // An uncertain pseudo/selection/gradient is never evidence of an island.
   for(const row of rows){
     const parent=row.parent>=0?rows[row.parent]:null;
+    const p=row.parent>=0?graph.nodes[row.parent]:null;
+    // Parent having protected descendants is not, by itself, evidence
+    // that a different, clean child surface has unsafe paint. The child
+    // MUST still pass its own protected-descendant/occlusion gates.
+    const parentPaintKnown=!!(p&&p.background==='opaque'&&p.ownLuma<.75&&
+      !p.focusWithin&&!p.nativeDark&&!p.hasPseudoPaint&&!p.inFrame&&
+      !p.hasOcclusionRisk&&!p.hasComplexAncestorPaint&&!p.hasMotionRisk);
     row.confirmedLightIsland=!!(parent&&row.ownBright&&!row.uncertain&&
-      !parent.ownBright&&!parent.uncertain);
+      parentPaintKnown);
   }
   return {kind:'p15-region-context-v1',status:'ready',
     regionCount:rows.length,uncertainRegions:rows.filter(x=>x.uncertain).length,
