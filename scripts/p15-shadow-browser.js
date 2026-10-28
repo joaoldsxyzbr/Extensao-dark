@@ -246,6 +246,22 @@ async function main(){
       confirmedLightIslands:riskCoverage.confirmedLightIslands,
       applied:false,promotionEligible:false
     }));
+    const childStressHtml='<!doctype html><meta charset="utf-8">'+
+      '<style>body{background:rgb(26,28,32)}main{display:block;'+
+      'width:440px;height:150px;background:rgb(246,247,248)}</style>'+
+      '<main></main><script>const root=document.querySelector("main");'+
+      'for(let i=0;i<257;i++)root.append(document.createElement("span"));'+
+      'window.__fixtureReady=true;</script>';
+    await browser.page.navigate('data:text/html;charset=utf-8,'+
+      encodeURIComponent(childStressHtml),{fixtureReady:true});
+    const manyChildren=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(manyChildren.status,'inconclusive');
+    assert.deepEqual(manyChildren.nodes,[]);
+    assert.equal(buildRegionFeatures(manyChildren).promotionEligible,false);
+    console.log('P15 direct-child bound Chromium',JSON.stringify({
+      directChildren:257,status:'inconclusive',applied:false,
+      promotionEligible:false
+    }));
     console.log('P15 CSS overlap Chromium',JSON.stringify({
       status:cssOutput.status,uncertainRegions:cssOutput.uncertainRegions,
       confirmedLightIslands:0,applied:false,promotionEligible:false
