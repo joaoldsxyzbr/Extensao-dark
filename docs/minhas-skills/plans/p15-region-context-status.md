@@ -32,3 +32,11 @@
 - Regressões adicionais em `tests/region-context.test.js` cobrem geração de pseudo-elementos, estado interativo e falta de metadados. O registro continua limitado a CSS/geométricos, sem texto, URLs, formulário nem permissões novas; relatórios P14 mostram apenas contagens.
 - O campo `confirmedLightIsland` só marca uma região como ilha clara observável quando seu CSS é opaco/seguro e seu pai imediato é não claro e também confiável. A métrica do Chromium usa esse campo e **não** conta regiões claras com pseudo-elemento, controles protegidos ou estados incertos. A contagem permanece estrutural/amostral, nunca área real de pixels.
 - Pendente: Shadow DOM aberto, frames acessíveis, pseudo-elementos com pintura independente de `content` gerado, stacking/oclusões e cobertura real das áreas brancas. Nenhum modelo treinado/promovido e nenhuma integração ao MV3.
+
+## Incremento: Shadow DOM aberto (28/10/2026)
+
+A captura P15 agora atravessa raízes Shadow DOM abertas, inclusive quando o host não é região visual. Conserva limites de 24 escopos, 8 níveis, 1600 candidatos, 8000 elementos examinados e 80 regiões. A hierarquia usa o host como elo, inclusive para fundos herdados e proteção de controles. Excesso retorna inconclusivo sem linhas parciais.
+
+O teste Node cobre raízes aninhadas, hosts não-regionais, ancestrais protegidos, privacidade e limites. Um teste independente e autoral no Chromium verifica a superfície clara dentro de shadow root e o bloqueio de controle protegido; não utiliza o conjunto reservado da P14.
+
+A limpeza do perfil temporário de Chromium recebeu retries nativos após falha ENOTEMPTY observada no CI. Continuam pendentes raízes fechadas, iframes, sobreposições, CSS complexo e validação visual. Nenhuma mudança na extensão instalada, manifesto ou pesos.
