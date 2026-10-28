@@ -809,3 +809,75 @@ test('P15: protected descendants traversal is bounded and preserves clean panels
       !expectedProtected);
   }
 });
+
+test('P15: an interactive control hidden in a descendant open shadow root protects the bright parent',()=>{
+  for(const withButton of [true,false]){
+    const body=element('BODY','rgb(28, 30, 34)');
+    const panel=element('MAIN','rgb(247, 248, 249)',{parent:body});
+    const host=element('X-WIDGET','rgba(0, 0, 0, 0)',{parent:panel});
+    const shadow={mode:'open',host};
+    host.shadowRoot=shadow;
+    const control={tagName:withButton?'BUTTON':'SPAN',
+      isConnected:true,matches:s=>withButton&&s.includes('button'),
+      closest:()=>withButton?control:null,
+      parentElement:null,getRootNode:()=>shadow};
+    const doc={body,querySelectorAll:()=>{throw Error('unbounded selectors')},
+      createTreeWalker:(root,show)=>{
+        assert.equal(show,1);
+        const nodes=root===doc?[body,panel,host]:
+          root===body?[panel,host]:root===panel?[host]:
+          root===shadow?[control]:[];
+        let offset=0;
+        return {nextNode:()=>nodes[offset++]||null};
+      }};
+    for(const el of [body,panel,host,control])el.ownerDocument=doc;
+    shadow.ownerDocument=doc;
+    body.matches=s=>s.includes('body');
+    panel.matches=s=>s.includes('main');
+    host.matches=()=>false;
+    const ctx={document:doc,innerWidth:1200,innerHeight:800,
+      getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+        backgroundColor:el._background,backgroundImage:'none',
+        maskImage:'none',webkitMaskImage:'none',opacity:'1',
+        mixBlendMode:'normal',colorScheme:'light'}};
+    const graph=JSON.parse(JSON.stringify(vm.runInNewContext(
+      '('+captureRegionGraph.toString()+')()',ctx)));
+    assert.equal(graph.status,'ready');
+    assert.equal(graph.nodes.length,2);
+    assert.equal(graph.nodes[1].hasProtectedDescendants,withButton);
+    assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,
+      !withButton);
+  }
+});
+test('P15: total protected-control budget includes open shadow descendants',()=>{
+  const body=element('BODY','rgb(28, 30, 34)');
+  const panel=element('MAIN','rgb(247, 248, 249)',{parent:body});
+  const host=element('X-WIDGET','rgba(0, 0, 0, 0)',{parent:panel});
+  const shadow={mode:'open',host};
+  host.shadowRoot=shadow;
+  const children=Array.from({length:513},()=>({
+    tagName:'SPAN',matches:()=>false
+  }));
+  const doc={body,createTreeWalker:(root,show)=>{
+    assert.equal(show,1);
+    const values=root===doc?[body,panel,host]:
+      root===body?[panel,host]:root===panel?[host]:
+      root===shadow?children:[];
+    let i=0;return {nextNode:()=>values[i++]||null};
+  }};
+  for(const el of [body,panel,host])el.ownerDocument=doc;
+  shadow.ownerDocument=doc;
+  body.matches=s=>s.includes('body');
+  panel.matches=s=>s.includes('main');
+  host.matches=()=>false;
+  const ctx={document:doc,innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',opacity:'1',
+      mixBlendMode:'normal',colorScheme:'light'}};
+  const graph=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(graph.status,'ready');
+  assert.equal(graph.nodes[1].hasProtectedDescendants,true);
+  assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,false);
+});
