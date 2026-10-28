@@ -98,7 +98,7 @@ function captureRegionGraph(){
       if(typeof value!=='string'||!value.trim())return false;
       return value.split(',').some(unit=>{
         const s=unit.trim();
-        if(!/^(?:\\d+\\.?\\d*|\\.\\d+)(?:ms|s)$/.test(s))return true;
+        if(!/^(?:\d+\.?\d*|\.\d+)(?:ms|s)$/.test(s))return true;
         return Number.parseFloat(s)>0;
       });
     };
