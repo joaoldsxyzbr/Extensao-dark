@@ -19,6 +19,8 @@ const {pairSyntheticModes}=require('./p14-pairing.js');
 const {verifySampledRollback}=require('./p14-rollback-audit.js');
 const {compareP11TextRepairs}=require('./p14-p11-shadow.js');
 const {captureP11TextContext}=require('./p14-p11-context.js');
+const {captureRegionGraph}=require('../content/region-graph.js');
+const {buildRegionFeatures}=require('../content/region-features.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const OUTPUT=path.join(ROOT,'browser-results/p14-first-ai');
@@ -70,6 +72,19 @@ async function explore(item,baseUrl,mode='p13-rule-baseline',p11Inputs=null){
     }
     started=true;
     result.candidateSurfaces=ready.samples.length;
+    if(mode==='p13-rule-baseline'){
+      const graph=await browser.page.eval(JS(captureRegionGraph));
+      const context=buildRegionFeatures(graph);
+      result.regionDiagnostic={
+        status:context.status,regions:context.regionCount,
+        lightRegions:context.lightRegions,
+        uncertainRegions:context.uncertainRegions,
+        embeddedLightRegions:context.status==='ready'?
+          context.rows.filter(x=>x.ownBright&&x.parent>=0).length:null,
+        directTextRegions:context.status==='ready'?
+          context.rows.filter(x=>x.hasDirectText).length:null
+      };
+    }
     baseline=await browser.page.eval(JS(islandSession,'audit'));
     // Observe semantic flags BEFORE any P13 paint or text recolor.
     const p11Context=p11Inputs&&mode==='p13-rule-baseline'?
@@ -183,13 +198,16 @@ async function main(){
   fs.mkdirSync(OUTPUT,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const observations=[],gatedObservations=[],pairedP13=[],pairedGated=[],decisionComparisons=[];
-  const p11Diagnostics=[];
+  const p11Diagnostics=[],regionDiagnostics=[];
   try{
     for(const item of fixtures){
       const url='http://127.0.0.1:'+server.address().port;
       const row=await explore(item,url,'p13-rule-baseline',p11Inputs);
       const gated=await explore(item,url,'7d-gated-p13-lab');
-      const {decisionComparison,baselineDigest,p11ShadowDiagnostic,...measurement}=row;
+      const {decisionComparison,baselineDigest,p11ShadowDiagnostic,
+        regionDiagnostic,...measurement}=row;
+      if(regionDiagnostic)regionDiagnostics.push({
+        caseId:item.id,split:item.split,...regionDiagnostic});
       if(p11ShadowDiagnostic)p11Diagnostics.push({caseId:item.id,
         split:item.split,...p11ShadowDiagnostic});
       const {decisionComparison:unusedGated,baselineDigest:gatedDigest,
@@ -230,6 +248,25 @@ async function main(){
     kind:'p14-p11-shadow-not-requested',evaluatedCases:0,
     matchedFullEngines:false,promotionEligible:false
   };
+  const p15RegionContext={
+    kind:'p15-region-graph-exploration-not-inference',
+    exploratoryCases:fixtures.length,
+    observedCases:regionDiagnostics.filter(x=>x.status==='ready').length,
+    inconclusiveCases:fixtures.length-
+      regionDiagnostics.filter(x=>x.status==='ready').length,
+    lightRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.lightRegions,0),
+    uncertainRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.uncertainRegions,0),
+    embeddedLightRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.embeddedLightRegions,0),
+    directTextRegions:regionDiagnostics.filter(x=>x.status==='ready')
+      .reduce((n,x)=>n+x.directTextRegions,0),
+    outputMeaning:'css-geometry-samples-not-pixel-area',
+    applied:false,trained:false,
+    independentVisualReview:false,promotionEligible:false,
+    cases:regionDiagnostics
+  };
   const report={...buildReport(aggregateP13),
     kind:'p14-synthetic-browser-baseline',
     evidence:'isolated-authored-fixtures-not-real-user-sites',
@@ -237,6 +274,7 @@ async function main(){
     availableModes:['p13-rule-baseline','7d-gated-p13-lab'],
     gatedLabAggregate:aggregateGated,
     pairedSyntheticPaint,p11TextShadowDiagnostic:p11Shadow,
+    p15RegionContext,
     proposalGateDiagnostic:{kind:'same-computed-css-vote-only',
       comparedCases:decisionComparisons.length,
       comparedSurfaceVotes:decisionComparisons.reduce((n,x)=>n+x.inputSurfaces,0),
@@ -255,6 +293,7 @@ async function main(){
     pairedSyntheticCases:pairedSyntheticPaint.matchedSyntheticCases,
     measuredSyntheticPairs:pairedSyntheticPaint.measuredPairs,
     p11ShadowCases:p11Diagnostics.length,
+    p15ObservedCases:p15RegionContext.observedCases,
     p11Suggestions:p11Shadow.neuralSuggestions??null,
     promotionEligible:false
   }));
