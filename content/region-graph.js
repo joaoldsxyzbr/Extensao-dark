@@ -204,7 +204,15 @@ function captureRegionGraph(){
       if(positions.has(parent)){parentIndex=positions.get(parent);break;}
       parent=composedParent(parent);
     }
-    const hasDirectText=Array.from(el.childNodes).some(n=>n.nodeType===3);
+    // Inspect node TYPES only, never character data. A large/unusual
+    // direct-child collection is not safe to classify from a partial scan.
+    const childNodes=el.childNodes;
+    if(!childNodes||!Number.isSafeInteger(childNodes.length)||
+      childNodes.length>256)return failed(scanned);
+    let hasDirectText=false;
+    for(let i=0;i<childNodes.length;i++){
+      if(childNodes[i]?.nodeType===3){hasDirectText=true;break;}
+    }
     const node={index:regions.length,parent:parentIndex,
       background:own.background,ownLuma:own.ownLuma,effectiveLuma,
       widthFraction:Number(Math.min(1,rect.width/vw).toFixed(4)),
