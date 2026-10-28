@@ -749,3 +749,26 @@ test('P15: native dark-capable color-scheme tokens abstain, light-only remains o
   assert.equal(g.nodes[1].nativeDark,false);
   assert.equal(buildRegionFeatures(g).rows[1].confirmedLightIsland,true);
 });
+
+test('P15: links, navigation actions and disclosure controls block light-island confirmation',()=>{
+  const body=element('BODY','rgb(26, 29, 34)');
+  const panel=element('MAIN','rgb(248, 248, 248)',{parent:body});
+  const link=element('A','rgba(0, 0, 0, 0)',{parent:panel});
+  const expected=['a[href]','[role="link"]','[role="tab"]',
+    '[role="menuitem"]','summary'];
+  link.closest=s=>expected.every(token=>s.includes(token))?link:null;
+  panel.querySelector=s=>expected.every(token=>s.includes(token))?link:null;
+  const ctx={document:{body,querySelectorAll:()=>[body,panel,link]},
+    innerWidth:1200,innerHeight:800,
+    getComputedStyle:(el,pseudo)=>pseudo?{content:'none'}:{
+      backgroundColor:el._background,backgroundImage:'none',
+      maskImage:'none',webkitMaskImage:'none',
+      opacity:'1',mixBlendMode:'normal',colorScheme:'light'}};
+  const graph=JSON.parse(JSON.stringify(vm.runInNewContext(
+    '('+captureRegionGraph.toString()+')()',ctx)));
+  assert.equal(graph.status,'ready');
+  assert.equal(graph.nodes.length,2);
+  assert.equal(graph.nodes[1].hasProtectedDescendants,true);
+  assert.equal(buildRegionFeatures(graph).rows[1].confirmedLightIsland,false);
+  assert.doesNotMatch(JSON.stringify(graph),/href=|https?:\/\//);
+});
