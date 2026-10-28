@@ -111,3 +111,16 @@ test('P15: animation and focus-state samples may not claim stability after chang
   const focused=snapshot([entry(0,-1),entry(1,0,{focusWithin:true})]);
   assert.equal(assessRegionStability(a,focused).status,'inconclusive');
 });
+
+test('P15: identical captures during an active animation are still inconclusive',()=>{
+  const animated=snapshot([entry(0,-1),entry(1,0,{hasMotionRisk:true})]);
+  const result=assessRegionStability(animated,animated,{
+    before:{width:1200,height:800},after:{width:1200,height:800}
+  });
+  assert.equal(result.status,'inconclusive');
+  assert.equal(result.reason,'motion-risk-present');
+  assert.equal(result.checkedRegions,2);
+  assert.equal(result.changedRegions,0);
+  assert.equal(result.promotionEligible,false);
+  assert.equal(result.applied,false);
+});
