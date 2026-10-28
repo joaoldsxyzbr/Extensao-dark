@@ -199,9 +199,10 @@ async function main(){
         '<style>body{margin:0;min-height:150px;background:rgb(27,30,34)}'+
         'section,span{display:inline-block;width:1px;height:1px}</style><body>'+
         '<script>const nodes=document.createDocumentFragment();'+
-        'for(let i=0;i<'+count+';i++){nodes.append(document.createElement("'+
-        tag+'"))}document.body.append(nodes);'+
-        'window.__fixtureReady=true;</script>';
+        'let group=null;for(let i=0;i<'+count+';i++){'+
+        'if(i%170===0){group=document.createElement("span");nodes.append(group)}'+
+        'group.append(document.createElement("'+tag+'"))}'+
+        'document.body.append(nodes);window.__fixtureReady=true;</script>';
       await browser.page.navigate('data:text/html;charset=utf-8,'+
         encodeURIComponent(stressHtml),{fixtureReady:true});
       const stress=await browser.page.eval('('+captureRegionGraph.toString()+')()');
