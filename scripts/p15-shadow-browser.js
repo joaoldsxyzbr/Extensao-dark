@@ -99,6 +99,39 @@ async function main(){
     assert.equal(cssOutput.rows.filter(x=>x.confirmedLightIsland).length,0);
     assert.equal(cssOutput.applied,false);
     assert.equal(cssOutput.promotionEligible,false);
+    // Confirm the screenshot oracle can detect a WRONG expectation, not just
+    // accept hand-selected landmarks. An actual UI state change must invert
+    // the pixel under the overlay without inventing a painting action.
+    await browser.page.eval('document.querySelector("aside").style.display="none"');
+    const revealedPixels=await compareAuthoredScreenshot(browser,[
+      {x:80,y:80,expected:'bright'}
+    ]);
+    const stalePixels=await compareAuthoredScreenshot(browser,[
+      {x:80,y:80,expected:'dark'}
+    ]);
+    assert.equal(revealedPixels.status,'matched');
+    assert.equal(revealedPixels.mismatches,0);
+    assert.equal(stalePixels.status,'mismatch');
+    assert.equal(stalePixels.mismatches,1);
+    assert.equal(stalePixels.imageExported,false);
+    const revealedGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(revealedGraph.status,'ready');
+    assert.ok(revealedGraph.nodes.some(n=>
+      n.ownLuma>.75&&!n.hasOcclusionRisk),
+      'Revealing the bright surface must remove the sampled occlusion');
+    const overlayTransition=assessRegionStability(cssGraph,revealedGraph);
+    assert.equal(overlayTransition.status,'inconclusive');
+    assert.equal(overlayTransition.promotionEligible,false);
+    await browser.page.eval('document.querySelector("aside").style.display=""');
+    const restoredOverlay=await browser.page.eval('('+captureRegionGraph.toString()+')()');
+    assert.equal(assessRegionStability(cssGraph,restoredOverlay).status,
+      'stable-in-sample');
+    console.log('P15 screenshot negative-state Chromium',JSON.stringify({
+      hiddenOverlay:revealedPixels.status,
+      wrongExpectation:stalePixels.status,
+      cssTransition:overlayTransition.status,
+      applied:false,promotionEligible:false
+    }));
     // A dynamic stylesheet change must invalidate the original capture.
     const sameGraph=await browser.page.eval('('+captureRegionGraph.toString()+')()');
     const still=assessRegionStability(cssGraph,sameGraph);
