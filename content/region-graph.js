@@ -42,7 +42,26 @@ function captureRegionGraph(){
     return {background:'complex',ownLuma:null};
   };
   const regions=[],positions=new Map();
-  let scanned=0,visited=0,frameCount=0;
+  let scanned=0,visited=0,frameCount=0,regionWalked=0;
+  // Browser-native TreeWalker avoids allocating an unbounded querySelectorAll
+  // NodeList before the count gates can stop scanning a huge page.
+  // Legacy querySelectorAll is only a fallback for minimal test doubles.
+  function* elements(root,onlyRegions){
+    const doc=typeof root.createTreeWalker==='function'?
+      root:root.ownerDocument;
+    const walker=doc?.createTreeWalker?.(root,1);
+    if(walker){
+      for(let el=walker.nextNode();el;el=walker.nextNode()){
+        if(onlyRegions&&++regionWalked>8000){yield null;return;}
+        if(!onlyRegions||el.matches(selector))yield el;
+      }
+    }else{
+      for(const el of root.querySelectorAll(onlyRegions?selector:'*')){
+        if(onlyRegions&&++regionWalked>8000){yield null;return;}
+        yield el;
+      }
+    }
+  }
   // Traverse document and reachable OPEN shadow roots only. Hosts need not
   // match the region selector (e.g. a custom span). Each root is visited once.
   const scopes=[{root:document,depth:0,inFrame:false}],seen=new Set([document]);
@@ -133,7 +152,8 @@ function captureRegionGraph(){
   };
   for(let scopeIndex=0;scopeIndex<scopes.length;scopeIndex++){
     const {root,depth,inFrame}=scopes[scopeIndex];
-    for(const el of root.querySelectorAll(selector)){
+    for(const el of elements(root,true)){
+      if(!el)return failed(scanned);
       if(++scanned>1600)return failed(scanned);
       if(!el.isConnected)return failed(scanned);
       if(protectedAncestor(el))continue;
@@ -199,7 +219,8 @@ function captureRegionGraph(){
     }
     // Bounded host search includes non-region custom elements, which may own
     // a readable shadowRoot but no background or region role themselves.
-    for(const host of root.querySelectorAll('*')){
+    for(const host of elements(root,false)){
+      if(!host)return failed(scanned);
       if(++visited>8000)return failed(scanned);
       const shadow=host.shadowRoot;
       if(shadow?.mode==='open'&&!seen.has(shadow)){
