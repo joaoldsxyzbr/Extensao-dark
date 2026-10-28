@@ -13,7 +13,7 @@
 
 - É uma **amostra de retângulos e CSS computado**, não cobertura em pixels e não um mapa completo de stacking/oclusões. Presença de nó de texto direto inclui nós com espaços e não comprova texto visível.
 - A composição só reconhece cor RGB opaca ou transparência zero com ancestral opaco simples. **Gradientes, máscaras, filtros, misturas, opacidade parcial e cores complexas** são inconclusivos. `color-scheme: dark` marca incerteza, não promoção.
-- Ainda não percorre Shadow DOM aberto e iframes na instrumentação P15; não captura pseudo-elementos nem estados hover, nem aplica mudanças. Não cobre roots fechadas, CSSOM complexo ou todos os padrões de layout. A lista de região é finita, logo cortes retornam inconclusivo sem aproveitar amostras parciais.
+- Agora percorre Shadow DOM aberto com limites, mas ainda não atravessa iframes e raízes fechadas. Detecta presença de pseudo-elementos gerados, sem estimar sua área de pintura; não captura hover nem aplica mudanças. Não cobre roots fechadas, CSSOM complexo ou todos os padrões de layout. A lista de região é finita, logo cortes retornam inconclusivo sem aproveitar amostras parciais.
 - Nenhuma nova permissão, dependência, telemetria, leitura de texto de usuário, histórico, navegação ou treino em sites reais. O holdout sintético e domínios públicos reservados da P14 continuam intocados.
 - **`promotionEligible=false` e `applied=false`**. Este incremento não resolve as áreas brancas da extensão publicada, nem valida qualidade visual humana.
 
