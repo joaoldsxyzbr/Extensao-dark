@@ -113,6 +113,9 @@ async function main(){
       x.confirmedLightIsland));
     assert.ok(focusStart.rows.some(x=>x.ownBright&&x.hasMotionRisk&&
       !x.confirmedLightIsland));
+    const repeatedAnimation=assessRegionStability(beforeFocus,beforeFocus);
+    assert.equal(repeatedAnimation.status,'inconclusive');
+    assert.equal(repeatedAnimation.reason,'motion-risk-present');
     await browser.page.eval('document.querySelector("main").focus()');
     const focused=await browser.page.eval('('+captureRegionGraph.toString()+')()');
     const focusResult=assessRegionStability(beforeFocus,focused);
