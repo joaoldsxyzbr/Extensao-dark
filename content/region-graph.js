@@ -158,8 +158,9 @@ function captureRegionGraph(){
   // TreeWalker and fail closed after 512 elements per scope.
   const protectedDescendants=el=>{
     const scan=root=>{
-      const owner=root.ownerDocument||document;
-      const walker=owner.createTreeWalker?.(root,1);
+      // Genuine DOM roots always have ownerDocument. Sparse test doubles
+      // without it keep the legacy querySelector fallback.
+      const walker=root.ownerDocument?.createTreeWalker?.(root,1);
       if(!walker)return !!root.querySelector(protectedSelector);
       let count=0;
       for(let child=walker.nextNode();child;child=walker.nextNode()){
