@@ -225,7 +225,9 @@
     if(!background && visual.action==='convert' && originalBackground &&
        originalText && originalBackground.a>=.999 &&
        colors.luminance(originalBackground)>=.85 &&
-       colors.luminance(originalText)<=.22) {
+       colors.luminance(originalText)<=.22 &&
+       typeof element.getBoundingClientRect==='function' &&
+       typeof innerWidth==='number' && typeof innerHeight==='number') {
       const rect=element.getBoundingClientRect();
       if(colors.shouldRecoverBrightCanvas(originalBackground,originalText,visual,{
         width:rect.width,height:rect.height,
