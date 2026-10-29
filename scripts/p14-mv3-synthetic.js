@@ -5,6 +5,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const http=require('node:http');
+const crypto=require('node:crypto');
 const path=require('node:path');
 const {ROOT}=require('./p14-dataset-contract.js');
 const {getExplorationFixtures,buildPage}=require('./p14-fixture-pages.js');
@@ -33,9 +34,13 @@ async function capture(url,extension,caseId){
     }
     await sleep(350);
     // Screenshots contain only local authored fixture content.
-    await browser.page.screenshot(path.join(OUTPUT,caseId+'-'+
-      (extension?'legacy-mv3':'original')+'.png'));
-    return {active:await browser.page.eval(
+    const shot=path.join(OUTPUT,caseId+'-'+
+      (extension?'legacy-mv3':'original')+'.png');
+    await browser.page.screenshot(shot);
+    // Hashes remain in memory. The report records only equality, not raw digests.
+    const screenshotDigest=crypto.createHash('sha256')
+      .update(fs.readFileSync(shot)).digest('hex');
+    return {screenshotDigest,active:await browser.page.eval(
         'document.documentElement.getAttribute("data-extensao-dark")==="on"'),
       grid:await browser.page.eval(JS(sampleBackgroundGrid)),
       controls:await browser.page.eval(JS(captureProtectedControls)),
@@ -88,7 +93,7 @@ async function main(){
   assert.equal(report.holdoutEvaluated,false);
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     '### P14 — MV3 7D real, somente fixtures sintéticas\n'+
-    'Observadas: '+report.observed+'; nativo inativo: '+report.nativeDarkInactive+
+    'Observadas: '+report.observed+'; captura nativa idêntica: '+report.nativeDarkScreenshotMatched+
     '; revisão necessária: '+report.needsReview+'; inconclusivas: '+report.inconclusive+
     '. Sem comparação pareada de motores completos, holdout ou promoção.\n');
 }
