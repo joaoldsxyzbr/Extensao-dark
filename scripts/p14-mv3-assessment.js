@@ -21,8 +21,8 @@ function assessMv3Pair(item,plain,legacy){
     return base;
   base.active=legacy.active;
   if(item.theme==='native-dark'){
-    base.status=legacy.active?'needs-review':'native-dark-preserved-in-sample';
-    base.reason=legacy.active?'native-dark-engine-active':'native-theme-protected';
+    base.status=legacy.active?'needs-review':'native-dark-inactive-observed';
+    base.reason=legacy.active?'native-dark-engine-active':'native-dark-no-engine-marker';
     return base;
   }
   if(!legacy.active){base.reason='engine-not-active';return base;}
@@ -50,7 +50,7 @@ function summarizeMv3(rows){
     throw Error('P14 MV3: expected exactly six independent exploration rows');
   return {kind:'p14-legacy-mv3-synthetic-observation',
     fixtures:rows.length,observed:rows.filter(x=>x.status==='observed-only').length,
-    nativeThemePreserved:rows.filter(x=>x.status==='native-dark-preserved-in-sample').length,
+    nativeDarkInactive:rows.filter(x=>x.status==='native-dark-inactive-observed').length,
     needsReview:rows.filter(x=>x.status==='needs-review').length,
     inconclusive:rows.filter(x=>x.status==='inconclusive').length,
     siteKind:'authored-local-fixtures-not-public-sites',
