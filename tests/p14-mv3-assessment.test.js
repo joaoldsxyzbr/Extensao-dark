@@ -27,7 +27,7 @@ test('P14 MV3: do not mask protected-control differences or inconclusive samples
 });
 test('P14 MV3: native dark untouched is not counted as successful darkening',()=>{
   const a=assessMv3Pair(fixture('native-dark','native-dark'),plain(),legacy(false));
-  assert.equal(a.status,'native-dark-preserved-in-sample');
+  assert.equal(a.status,'native-dark-inactive-observed');
   assert.equal(a.legacyDarkFraction,null);
   assert.equal(assessMv3Pair(fixture('native-dark','native-dark'),plain(),legacy()).status,'needs-review');
 });
