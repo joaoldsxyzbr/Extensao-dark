@@ -35,6 +35,7 @@ function validateReviewLedger(ledger,plan=loadPublicDomains()){
     exactKeys(row,ENTRY_KEYS,'entry');
     if(typeof row.caseId!=='string'||!/^case-[a-z0-9-]{3,48}$/.test(row.caseId)||
        ids.has(row.caseId)||typeof row.rootDomain!=='string'||
+       !permitted.has(row.rootDomain)||!['train','validation'].includes(row.split)||
        permitted.get(row.rootDomain)!==row.split||
        !SCENARIOS.has(row.scenarioClass)||!VIEWPORTS.has(row.viewport)||
        !STATES.has(row.reviewStatus)||!ANSWERS.has(row.visibleWhiteIsland)||
