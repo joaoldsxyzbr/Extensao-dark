@@ -13,6 +13,9 @@ const {chooseSites,isAllowedLanding,assessPair,promotionGate}=require('./real-si
 const {EXPRESSION,summarize}=require('./real-site-snapshot.js');
 const {sampleBackgroundGrid}=require('./p14-benchmark-browser.js');
 const {diagnoseKnownSiteGrid}=require('./p14-known-public-grid.js');
+const {captureBrightSources,validateBrightSources}=
+  require('./p14-bright-source-diagnostic.js');
+const BRIGHT_SOURCE_EXPR='('+captureBrightSources.toString()+')()';
 const GRID_EXPR='('+sampleBackgroundGrid.toString()+')()';
 const opt=name=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3);
 const OUTPUT=path.resolve(opt('output')||path.join(os.tmpdir(),'extensao-dark-real-sites'));
@@ -68,13 +71,14 @@ async function observe(site,model,extension) {
       return {kind:'inconclusive',reason:'página não forneceu amostras suficientes',durationMs:ms};
     // P14: viewport-grid numbers only; no page contents leave this lab.
     const grid=await page.eval(GRID_EXPR);
+    const brightSources=validateBrightSources(await page.eval(BRIGHT_SOURCE_EXPR));
     // Somente capturas de páginas públicas abertas num perfil novo sem login.
     const filename=site.id+'-'+model+'.png';
     let captured=false;
     try{await page.screenshot(path.join(OUTPUT,filename));captured=true;}
     catch{ /* captura indisponível não vira aprovação visual */ }
     return {kind:'observed',durationMs:ms,capture:captured?filename:null,
-      summary:result,grid};
+      summary:result,grid,brightSources};
   }catch(error){
     // Erros de páginas remotas NÃO são interpretados como defeitos da extensão.
     return {kind:'inconclusive',reason:'navegação, rede, CDP ou leitura indisponíveis',
@@ -116,6 +120,8 @@ async function main(){
       const p14Grid=diagnoseKnownSiteGrid(site.id,baseline,candidate,assessment);
       report.results.push({
         site:site.id,group:site.group,assessment,p14KnownPublicGrid:p14Grid,
+        p14BrightCssSources:{baseline:baseline.brightSources||null,
+          candidate:candidate.brightSources||null},
         baseline:{kind:baseline.kind,durationMs:baseline.durationMs,
           capture:baseline.capture||null,...(baseline.reason?{reason:baseline.reason}:{})},
         candidate:{kind:candidate.kind,durationMs:candidate.durationMs,
