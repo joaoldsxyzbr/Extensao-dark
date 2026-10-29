@@ -16,6 +16,7 @@ const {captureProtectedControls,countProtectedControlChanges}=
 const {assessMv3Pair,summarizeMv3}=require('./p14-mv3-assessment.js');
 const {captureFormAppearance,assessFormAppearance}=
   require('./p14-form-control-audit.js');
+const {writeGallery}=require('./p14-review-gallery.js');
 const IDS=Object.freeze(['canvas-shell','sidebar-navigation','card-grid',
   'direct-alert','form-toolbar','native-dark']);
 const OUTPUT=path.join(ROOT,'browser-results/p14-mv3-synthetic');
@@ -89,6 +90,7 @@ async function main(){
   }finally{await new Promise(resolve=>server.close(resolve));}
   const report=summarizeMv3(records);
   fs.writeFileSync(path.join(OUTPUT,'report.json'),JSON.stringify(report,null,2)+'\n');
+  writeGallery(OUTPUT);
   assert.equal(report.promotionEligible,false);
   assert.equal(report.holdoutEvaluated,false);
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
