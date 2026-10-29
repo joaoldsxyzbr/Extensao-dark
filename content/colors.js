@@ -319,8 +319,14 @@
   // untreated, recover only opaque and legible background surfaces. This is
   // deliberately not a rule for specific websites or small decorative cards.
   function shouldRecoverBrightCanvas(background, foreground, context={},geometry={}) {
+    const foregroundLuminance=foreground?luminance(foreground):null;
+    const inheritedOnDark=foregroundLuminance!==null&&
+      foregroundLuminance>=.55&&typeof geometry.ancestorLuminance==='number'&&
+      Number.isFinite(geometry.ancestorLuminance)&&
+      geometry.ancestorLuminance<.22;
     if(!background||!foreground||background.a<.999||foreground.a<.999||
-        luminance(background)<.85||luminance(foreground)>.22||
+        luminance(background)<.85||
+        (foregroundLuminance>.22&&!inheritedOnDark)||
         context.action!=='convert'||context.control||context.selected||
         context.disabled||context.nativeDark||context.backgroundImage||
         context.masked||context.clipped||context.pseudo||context.translucent||
