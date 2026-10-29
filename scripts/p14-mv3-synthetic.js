@@ -17,7 +17,8 @@ const IDS=Object.freeze(['canvas-shell','sidebar-navigation','card-grid',
   'direct-alert','form-toolbar','native-dark']);
 const OUTPUT=path.join(ROOT,'browser-results/p14-mv3-synthetic');
 const JS=fn=>'('+fn.toString()+')()';
-async function capture(url,extension){
+async function capture(url,extension,caseId){
+  if(!IDS.includes(caseId))throw Error('P14 MV3: screenshot outside fixture allowlist');
   const browser=await launch(extension?ROOT:null);
   try{
     await browser.page.navigate(url,{fixtureReady:true});
@@ -29,6 +30,9 @@ async function capture(url,extension){
       catch{/* Native-dark skip or missing activation remains observable. */}
     }
     await sleep(350);
+    // Screenshots contain only local authored fixture content.
+    await browser.page.screenshot(path.join(OUTPUT,caseId+'-'+
+      (extension?'legacy-mv3':'original')+'.png'));
     return {active:await browser.page.eval(
         'document.documentElement.getAttribute("data-extensao-dark")==="on"'),
       grid:await browser.page.eval(JS(sampleBackgroundGrid)),
@@ -57,8 +61,8 @@ async function main(){
   try{
     for(const item of fixtures){
       const url='http://127.0.0.1:'+server.address().port+'/'+item.id;
-      const original=await capture(url,false);
-      const mv3=await capture(url,true);
+      const original=await capture(url,false,item.id);
+      const mv3=await capture(url,true,item.id);
       // Compare CSS controls only in ephemeral memory. Do not persist their values.
       mv3.controlChanges=countProtectedControlChanges(original.controls,mv3.controls);
       const row=assessMv3Pair(item,original,mv3);
