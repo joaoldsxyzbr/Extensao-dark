@@ -315,6 +315,25 @@
   // P4: separa confiança do modelo de autorização para modificar um
   // componente. Nunca converte grafismos, transparências ou superfícies
   // já escuras. O candidato contextual exige margem extra de confiança.
+  // P14: when a neural vote leaves a near-white, viewport-sized canvas
+  // untreated, recover only opaque and legible background surfaces. This is
+  // deliberately not a rule for specific websites or small decorative cards.
+  function shouldRecoverBrightCanvas(background, foreground, context={},geometry={}) {
+    if(!background||!foreground||background.a<.999||foreground.a<.999||
+        luminance(background)<.85||luminance(foreground)>.22||
+        context.action!=='convert'||context.control||context.selected||
+        context.disabled||context.nativeDark||context.backgroundImage||
+        context.masked||context.clipped||context.pseudo||context.translucent||
+        context.kind==='graphic')return false;
+    const {width,height,viewportWidth,viewportHeight,position,opacity}=geometry;
+    if([width,height,viewportWidth,viewportHeight].some(v=>
+        typeof v!=='number'||!Number.isFinite(v)||v<=0)||
+        viewportWidth<100||viewportHeight<100||
+        width<viewportWidth*.65||height<viewportHeight*.45||
+        ['fixed','sticky'].includes(position)||opacity!==1)return false;
+    return true;
+  }
+
   function neuralDecision(score, context, modelInputs=7) {
     if (!context || !Number.isFinite(score) || score<0 || score>1 ||
         ![7,18].includes(modelInputs)) return {convert:false,reason:'invalid'};
@@ -348,7 +367,7 @@
     return true;
   }
 
-  const api = Object.freeze({parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, advancedStyleFeatures, advancedContextFeatures, ADVANCED_FEATURE_NAMES, ADVANCED_FEATURE_COUNT, neuralDecision, isEnabledForSite, isEnabledForFrame});
+  const api = Object.freeze({shouldRecoverBrightCanvas, parseColor, luminance, mapBackground, mapNativeBackground, mapTranslucentBackground, mapBorder, mapText, isVividAccent, contrastRatio, neuralFeatures, compositeColor, ensureContrast, textContrastThreshold, isNativeDarkSurface, visualContext, contextFeatures, CONTEXT_FEATURE_COUNT, advancedStyleFeatures, advancedContextFeatures, ADVANCED_FEATURE_NAMES, ADVANCED_FEATURE_COUNT, neuralDecision, isEnabledForSite, isEnabledForFrame});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DarkExtensionColors = api;
 })(globalThis);
