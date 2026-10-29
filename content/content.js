@@ -225,14 +225,18 @@
     if(!background && visual.action==='convert' && originalBackground &&
        originalText && originalBackground.a>=.999 &&
        colors.luminance(originalBackground)>=.85 &&
-       colors.luminance(originalText)<=.22 &&
+       (colors.luminance(originalText)<=.22 ||
+        colors.luminance(originalText)>=.55) &&
        typeof element.getBoundingClientRect==='function' &&
        typeof innerWidth==='number' && typeof innerHeight==='number') {
       const rect=element.getBoundingClientRect();
       if(colors.shouldRecoverBrightCanvas(originalBackground,originalText,visual,{
         width:rect.width,height:rect.height,
         viewportWidth:innerWidth,viewportHeight:innerHeight,
-        position:style.position,opacity:Number(style.opacity)
+        position:style.position,opacity:Number(style.opacity),
+        ancestorLuminance:colors.luminance(originalText)>.22 ?
+          (()=>{const parent=inheritedBackground(element);
+            return parent&&parent.a>=.99?colors.luminance(parent):null;})():null
       })) background=colors.mapBackground(originalBackground,settings.theme);
     }
     const surface = effectiveBackground(element, background, style);
