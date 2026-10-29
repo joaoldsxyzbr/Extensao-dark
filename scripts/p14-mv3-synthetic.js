@@ -13,6 +13,8 @@ const {sampleBackgroundGrid}=require('./p14-benchmark-browser.js');
 const {captureProtectedControls,countProtectedControlChanges}=
   require('./p14-protected-controls.js');
 const {assessMv3Pair,summarizeMv3}=require('./p14-mv3-assessment.js');
+const {captureFormAppearance,assessFormAppearance}=
+  require('./p14-form-control-audit.js');
 const IDS=Object.freeze(['canvas-shell','sidebar-navigation','card-grid',
   'direct-alert','form-toolbar','native-dark']);
 const OUTPUT=path.join(ROOT,'browser-results/p14-mv3-synthetic');
@@ -36,7 +38,9 @@ async function capture(url,extension,caseId){
     return {active:await browser.page.eval(
         'document.documentElement.getAttribute("data-extensao-dark")==="on"'),
       grid:await browser.page.eval(JS(sampleBackgroundGrid)),
-      controls:await browser.page.eval(JS(captureProtectedControls))};
+      controls:await browser.page.eval(JS(captureProtectedControls)),
+      form:caseId==='form-toolbar'?
+        await browser.page.eval(JS(captureFormAppearance)):null};
   }finally{await browser.stop();}
 }
 async function main(){
@@ -66,6 +70,14 @@ async function main(){
       // Compare CSS controls only in ephemeral memory. Do not persist their values.
       mv3.controlChanges=countProtectedControlChanges(original.controls,mv3.controls);
       const row=assessMv3Pair(item,original,mv3);
+      if(item.id==='form-toolbar'){
+        const audit=assessFormAppearance(original.form,mv3.form);
+        row.formControlContrast=audit; // Counts/ratios only; no CSS values.
+        if(audit.status==='contrast-regression'){
+          row.status='needs-review';
+          row.reason='form-control-text-contrast-regression';
+        }
+      }
       records.push(row);
       console.log('P14 MV3',item.id,row.status,row.reason);
     }
