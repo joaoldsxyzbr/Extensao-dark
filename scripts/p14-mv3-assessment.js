@@ -14,15 +14,28 @@ function assessMv3Pair(item,plain,legacy){
     status:'inconclusive',reason:'missing-snapshot',active:null,
     originalDarkFraction:null,legacyDarkFraction:null,
     darkFractionDelta:null,protectedControlsChanged:null,
-    sampledPointsOnly:true,independentVisualReview:false,promotionEligible:false};
+    sampledPointsOnly:true,nativeDarkScreenshotIdentical:null,
+    independentVisualReview:false,promotionEligible:false};
   if(!plain||!legacy||!validGrid(plain.grid)||!validGrid(legacy.grid)||
     typeof legacy.active!=='boolean'||typeof plain.active!=='boolean'||
     plain.active||!['number','object'].includes(typeof legacy.controlChanges))
     return base;
   base.active=legacy.active;
   if(item.theme==='native-dark'){
-    base.status=legacy.active?'needs-review':'native-dark-inactive-observed';
-    base.reason=legacy.active?'native-dark-engine-active':'native-dark-no-engine-marker';
+    if(legacy.active){
+      base.status='needs-review';base.reason='native-dark-engine-active';
+      return base;
+    }
+    const digest=/^[a-f0-9]{64}$/;
+    if(!digest.test(plain.screenshotDigest)||!digest.test(legacy.screenshotDigest)){
+      base.reason='native-dark-screenshot-evidence-missing';
+      return base;
+    }
+    base.nativeDarkScreenshotIdentical=plain.screenshotDigest===legacy.screenshotDigest;
+    base.status=base.nativeDarkScreenshotIdentical?
+      'native-dark-screenshot-identical-in-sample':'needs-review';
+    base.reason=base.nativeDarkScreenshotIdentical?
+      'native-dark-screenshot-bytes-identical':'native-dark-screenshot-bytes-differ';
     return base;
   }
   if(!legacy.active){base.reason='engine-not-active';return base;}
@@ -50,7 +63,7 @@ function summarizeMv3(rows){
     throw Error('P14 MV3: expected exactly six independent exploration rows');
   return {kind:'p14-legacy-mv3-synthetic-observation',
     fixtures:rows.length,observed:rows.filter(x=>x.status==='observed-only').length,
-    nativeDarkInactive:rows.filter(x=>x.status==='native-dark-inactive-observed').length,
+    nativeDarkScreenshotMatched:rows.filter(x=>x.status==='native-dark-screenshot-identical-in-sample').length,
     needsReview:rows.filter(x=>x.status==='needs-review').length,
     inconclusive:rows.filter(x=>x.status==='inconclusive').length,
     siteKind:'authored-local-fixtures-not-public-sites',
