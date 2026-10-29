@@ -219,6 +219,20 @@
       // Modo tradicional disponível no popup e também como fallback seguro.
       if (!isTranslucent) background = colors.mapBackground(originalBackground, settings.theme);
     }
+    // P14: avoid an all-white app shell when the neural threshold rejects
+    // a very large, simple opaque light canvas. Keep the original CSS
+    // protections: icons, media, gradients, controls and native-dark skip.
+    if(!background && visual.action==='convert' && originalBackground &&
+       originalText && originalBackground.a>=.999 &&
+       colors.luminance(originalBackground)>=.85 &&
+       colors.luminance(originalText)<=.22) {
+      const rect=element.getBoundingClientRect();
+      if(colors.shouldRecoverBrightCanvas(originalBackground,originalText,visual,{
+        width:rect.width,height:rect.height,
+        viewportWidth:innerWidth,viewportHeight:innerHeight,
+        position:style.position,opacity:Number(style.opacity)
+      })) background=colors.mapBackground(originalBackground,settings.theme);
+    }
     const surface = effectiveBackground(element, background, style);
     let foreground = null;
     if (surface && originalText) {
