@@ -25,11 +25,24 @@ test('P14 MV3: do not mask protected-control differences or inconclusive samples
   assert.equal(coverage.status,'inconclusive');
   assert.equal(assessMv3Pair(fixture(),plain(),legacy(false)).status,'inconclusive');
 });
-test('P14 MV3: native dark untouched is not counted as successful darkening',()=>{
-  const a=assessMv3Pair(fixture('native-dark','native-dark'),plain(),legacy(false));
-  assert.equal(a.status,'native-dark-inactive-observed');
-  assert.equal(a.legacyDarkFraction,null);
-  assert.equal(assessMv3Pair(fixture('native-dark','native-dark'),plain(),legacy()).status,'needs-review');
+test('P14 MV3: native-dark requires matching screenshots, not only an inactive engine',()=>{
+  const item=fixture('native-dark','native-dark');
+  const missing=assessMv3Pair(item,plain(),legacy(false));
+  assert.equal(missing.status,'inconclusive');
+  assert.equal(missing.reason,'native-dark-screenshot-evidence-missing');
+  const same=assessMv3Pair(item,
+    {...plain(),screenshotDigest:'a'.repeat(64)},
+    {...legacy(false),screenshotDigest:'a'.repeat(64)});
+  assert.equal(same.status,'native-dark-screenshot-identical-in-sample');
+  assert.equal(same.nativeDarkScreenshotIdentical,true);
+  assert.equal(same.legacyDarkFraction,null);
+  assert.equal(same.promotionEligible,false);
+  const changed=assessMv3Pair(item,
+    {...plain(),screenshotDigest:'a'.repeat(64)},
+    {...legacy(false),screenshotDigest:'b'.repeat(64)});
+  assert.equal(changed.status,'needs-review');
+  assert.equal(changed.reason,'native-dark-screenshot-bytes-differ');
+  assert.equal(assessMv3Pair(item,plain(),legacy()).status,'needs-review');
 });
 test('P14 MV3: forbid holdout, corrupt samples, private fields and fabricated promotion',()=>{
   assert.throws(()=>assessMv3Pair({...fixture(),split:'holdout'},plain(),legacy()),/holdout/);
