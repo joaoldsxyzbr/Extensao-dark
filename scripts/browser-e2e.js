@@ -53,6 +53,39 @@ class CDP {
   }
   close(){this.socket.close();}
 }
+// Wait for Chromium to exit before deleting its profile: Chrome writes files
+// briefly after SIGTERM. Bounded waits and rmSync retries prevent ENOTEMPTY
+// teardown failures without hiding failures from the browser scenarios.
+function waitForBrowserClose(child,timeoutMs){
+  if(child.exitCode!==null||child.signalCode!==null)return Promise.resolve(true);
+  return new Promise(resolve=>{
+    let settled=false;
+    const finish=closed=>{
+      if(settled)return;
+      settled=true;clearTimeout(timer);
+      child.removeListener('close',onClose);
+      child.removeListener('error',onClose);
+      resolve(closed);
+    };
+    const onClose=()=>finish(true);
+    child.once('close',onClose);
+    child.once('error',onClose);
+    const timer=setTimeout(()=>finish(false),timeoutMs);
+  });
+}
+async function cleanupBrowser(child,profile,{timeoutMs=800}={}){
+  if(child.exitCode===null&&child.signalCode===null){
+    const closed=waitForBrowserClose(child,timeoutMs);
+    child.kill('SIGTERM');
+    if(!await closed){
+      const forced=waitForBrowserClose(child,timeoutMs);
+      child.kill('SIGKILL');
+      await forced;
+    }
+  }
+  // Node retries only transient filesystem errors (ENOTEMPTY/EBUSY/EPERM).
+  fs.rmSync(profile,{recursive:true,force:true,maxRetries:8,retryDelay:100});
+}
 async function launch(extension) {
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-cdp-'));
   const args=['--headless=new','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
@@ -88,8 +121,8 @@ async function launch(extension) {
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
-    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});}};
-  }catch(err){child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});throw err;}
+    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();await cleanupBrowser(child,profile);}};
+  }catch(err){await cleanupBrowser(child,profile);throw err;}
 }
 async function waitFor(fn,timeout=5000){const start=performance.now();while(performance.now()-start<timeout){if(await fn())return;await sleep(60);}throw Error('Condição não atingida em '+timeout+'ms');}
 const metrics = `(()=>{
@@ -259,4 +292,4 @@ async function main(){
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
 if(require.main===module)main().catch(err=>{console.error('P3 browser E2E falhou:',err.stack||err);process.exitCode=1;});
-module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT});
+module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT,cleanupBrowser});
