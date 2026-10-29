@@ -94,3 +94,9 @@ O workflow model-ci valida contratos e testes. O browser-e2e executa a bancada e
 - `scripts/p14-mv3-assessment.js` impede contabilizar tema nativo preservado como conversão. Amostras ausentes/truncadas, motor inativo ou controles incomparáveis são inconclusivos; controles modificados exigem revisão e não são aprovados automaticamente. Testes Node em `tests/p14-mv3-assessment.test.js`.
 - O workflow de Chromium passa a executar a observação separadamente do benchmark existente. **Não é comparação completa em condição igual de 7D × P11 × P13**, não mede latência de inferência, área real em pixels, acessibilidade completa nem qualidade estética. Nenhuma rede ou CSS experimental é promovido.
 - Antes de concluir: conferir CI no SHA final, analisar as observações de risco e depois validar pages públicas e revisão humana independente com permissão. Os 10 domínios de holdout continuam selados; `promotionEligible=false` sempre.
+
+### Evidência visual do diagnóstico MV3
+
+O laboratório adicional agora grava **somente screenshots das seis páginas sintéticas autorais** em `browser-results/p14-mv3-synthetic/`: um `*-original.png` e um `*-legacy-mv3.png` por fixture. O artefato efêmero do workflow permite análise humana posterior sem expor páginas ou dados de usuários; não contém nenhum domínio de holdout.
+
+A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é registrada como `native-dark-inactive-observed`, e **não** como prova de fidelidade visual. Mesmo com screenshots disponíveis, revisão humana, métricas de contraste completo e comparação justa com P13/P11 permanecem pendentes. Confirmar o CI do commit mais novo.
