@@ -16,6 +16,8 @@ const {captureProtectedControls,countProtectedControlChanges}=
 const {assessMv3Pair,summarizeMv3}=require('./p14-mv3-assessment.js');
 const {captureFormAppearance,assessFormAppearance}=
   require('./p14-form-control-audit.js');
+const {captureFormFocus,assessFormFocus}=
+  require('./p14-form-focus-audit.js');
 const {writeGallery}=require('./p14-review-gallery.js');
 const IDS=Object.freeze(['canvas-shell','sidebar-navigation','card-grid',
   'direct-alert','form-toolbar','native-dark']);
@@ -46,7 +48,9 @@ async function capture(url,extension,caseId){
       grid:await browser.page.eval(JS(sampleBackgroundGrid)),
       controls:await browser.page.eval(JS(captureProtectedControls)),
       form:caseId==='form-toolbar'?
-        await browser.page.eval(JS(captureFormAppearance)):null};
+        await browser.page.eval(JS(captureFormAppearance)):null,
+      focus:caseId==='form-toolbar'?
+        await browser.page.eval(JS(captureFormFocus)):null};
   }finally{await browser.stop();}
 }
 async function main(){
@@ -79,6 +83,11 @@ async function main(){
       if(item.id==='form-toolbar'){
         const audit=assessFormAppearance(original.form,mv3.form);
         row.formControlContrast=audit; // Counts/ratios only; no CSS values.
+        const focus=assessFormFocus(original.focus,mv3.focus);
+        row.formFocusOutline=focus;
+        if(focus.status==='needs-review'){
+          row.status='needs-review';row.reason='form-focus-indicator-risk';
+        }
         if(audit.status==='contrast-regression'){
           row.status='needs-review';
           row.reason='form-control-text-contrast-regression';
