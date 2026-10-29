@@ -72,7 +72,7 @@ async function main(){
   assert.equal(report.holdoutEvaluated,false);
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     '### P14 — MV3 7D real, somente fixtures sintéticas\n'+
-    'Observadas: '+report.observed+'; nativo preservado: '+report.nativeThemePreserved+
+    'Observadas: '+report.observed+'; nativo inativo: '+report.nativeDarkInactive+
     '; revisão necessária: '+report.needsReview+'; inconclusivas: '+report.inconclusive+
     '. Sem comparação pareada de motores completos, holdout ou promoção.\n');
 }
