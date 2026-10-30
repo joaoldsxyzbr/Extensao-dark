@@ -24,8 +24,8 @@ function corpus(){
 test('P16 empty template cannot authorize a trainer or fabricate review evidence',()=>{
  const result=auditTrainingReadiness(EMPTY());
  assert.equal(result.status,'blocked-unverified-supervision');
- assert.equal(result.train.regions,0);
- assert.equal(result.validation.regions,0);
+ assert.equal(result.train.rows,0);
+ assert.equal(result.validation.rows,0);
  assert.equal(result.trainingAuthorized,false);
  assert.equal(result.modelTrained,false);
  assert.equal(result.promotionEligible,false);
@@ -36,8 +36,8 @@ test('P16 empty template cannot authorize a trainer or fabricate review evidence
 });
 test('P16 declared synthetic consensus remains unverified even with both classes',()=>{
  const result=auditTrainingReadiness(corpus());
- assert.equal(result.train.regions,24);
- assert.equal(result.validation.regions,8);
+ assert.equal(result.train.rows,24);
+ assert.equal(result.validation.rows,8);
  assert.equal(result.train.convert,6);
  assert.equal(result.train.preserve,18);
  assert.equal(result.trainingAuthorized,false);
