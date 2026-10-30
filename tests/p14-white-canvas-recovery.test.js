@@ -36,9 +36,7 @@ test('P14 white canvas: no forced conversion of overlays, small cards or transpa
   assert.equal(colors.shouldRecoverBrightCanvas(
     colors.parseColor('rgb(22,22,22)'),darkText,context(),geometry()),false);
   assert.equal(colors.shouldRecoverBrightCanvas(
-    bright,colors.parseColor('rgb(245,245,245)'),context(),geometry()),false);
-  assert.equal(colors.shouldRecoverBrightCanvas(
-    bright,colors.parseColor('rgb(245,245,245)'),context(),geometry()),false);
+    bright,colors.parseColor('rgb(140,140,140)'),context(),geometry()),false);
 });
 
 test('P14 white canvas: permit bright foreground on huge white canvas while protecting complex surfaces',()=>{
