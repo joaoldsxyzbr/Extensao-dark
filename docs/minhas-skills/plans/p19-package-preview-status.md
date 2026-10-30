@@ -9,3 +9,7 @@ Estado: pré-gate automático em laboratório. Não é aprovação de publicaç�
 - Auditoria estática por padrões é parcial: são necessárias revisão humana de comportamento, dependências, licenças, compatibilidade, histórico de vulnerabilidades, qualidade visual em páginas reais e gates independentes P14–P18.
 
 Resultado seguro mesmo com CI verde: releaseEligible=false, regionalModelApproved=false, archiveWrittenToDisk=false. Sem merge, sem release, sem novas permissões e sem pesos distribuídos.
+
+## Reforço do parser HTML do popup (30/10/2026)
+
+O gate P19 agora bloqueia também manipuladores HTML `on*`, `style` inline, URLs em `href/src` fora da lista permitida, `meta refresh`, pré-carregamento externo, `form`, `style` e mídia embutida, além de atributos duplicados. São dez mutações maliciosas cobertas por novo teste Python. Este controle de superfície não substitui análise de execução, CSP efetiva e revisão humana.

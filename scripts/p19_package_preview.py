@@ -41,16 +41,46 @@ class Popup(HTMLParser):
         self.inline = False
 
     def handle_starttag(self, tag, pairs):
+        # HTMLParser does not reject duplicate attribute names by itself.
+        names = [name for name, _ in pairs]
+        if len(set(names)) != len(names):
+            raise ValueError("P19: duplicated HTML attribute")
         a = dict(pairs)
-        if tag in ("iframe", "embed", "object", "base"):
-            raise ValueError("P19: embedded or external resource")
+        if (tag in ("iframe", "embed", "object", "base", "style",
+                    "form", "svg", "math", "video", "audio", "source",
+                    "track", "template") or
+            any(name.startswith("on") or
+                name in ("style", "srcset", "action", "formaction", "poster",
+                         "background") for name in names)):
+            raise ValueError("P19: inline code, media or active HTML")
+        # Block unapproved resource loads and navigation schemes on any tag.
         if tag == "script":
+            if set(a) != {"src", "defer"} or a["defer"] is not None:
+                raise ValueError("P19: unexpected script attributes")
             self.in_script = True
-            self.js.append(a.get("src"))
-        if tag == "link" and a.get("rel") == "stylesheet":
-            self.css.append(a.get("href"))
-        if tag == "img":
-            self.images.append(a.get("src"))
+            self.js.append(a["src"])
+        elif tag == "link":
+            if a != {"rel": "stylesheet", "href": "popup.css"}:
+                raise ValueError("P19: unapproved stylesheet or preload")
+            self.css.append(a["href"])
+        elif tag == "img":
+            if a.get("src") != "../icons/icon-48.png":
+                raise ValueError("P19: unapproved image source")
+            self.images.append(a["src"])
+        elif tag == "meta":
+            if a not in (
+                {"charset": "utf-8"},
+                {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+                {"name": "color-scheme", "content": "dark"},
+            ):
+                raise ValueError("P19: metadata redirect or policy override")
+        if tag not in ("script", "link", "img") and ("href" in a or "src" in a):
+            raise ValueError("P19: unexpected navigation or resource URL")
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag == "script":
+            raise ValueError("P19: self-closing script is forbidden")
 
     def handle_endtag(self, tag):
         if tag == "script":

@@ -61,6 +61,25 @@ class P19PackageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 p19.validate_popup(altered)
 
+    def test_popup_blocks_handlers_links_inline_styles_and_redirects(self):
+        html = (ROOT / "popup/index.html").read_text(encoding="utf8")
+        attacks = [
+            html.replace('<button type="button"', '<button onclick="alert(1)" type="button"', 1),
+            html.replace('<input id="enabled"', '<input style="display:none" id="enabled"', 1),
+            html.replace('<main class="app">', '<main class="app"><a href="javascript:alert(1)">X</a>', 1),
+            html.replace('<main class="app">', '<main class="app"><img src="//evil.example/track.png">', 1),
+            html.replace('<main class="app">', '<main class="app"><form action="https://evil.example"></form>', 1),
+            html.replace('</head>', '<meta http-equiv="refresh" content="0;url=https://evil.example"></head>', 1),
+            html.replace('</head>', '<link rel="preload" href="https://evil.example/script.js"></head>', 1),
+            html.replace('</head>', '<style>body{color:red}</style></head>', 1),
+            html.replace('src="popup.js" defer', 'src="popup.js" src="popup.js" defer', 1),
+            html.replace('</head>', '<script src="popup.js" onload="alert(1)"></script></head>', 1),
+        ]
+        self.assertEqual(len(attacks), 10)
+        for attack in attacks:
+            with self.subTest(index=attacks.index(attack)), self.assertRaises(ValueError):
+                p19.validate_popup(attack)
+
     def test_runtime_source_filters_executable_remote_code_and_bad_png(self):
         for name, data in [
             ("content/neural.js", b"fetch('https://example.com')"),
