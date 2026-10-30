@@ -74,9 +74,14 @@ async function cleanupChromium(child,profile){
     }
   }
 }
-async function launch(extension) {
+async function launch(extension,options={}) {
+  if(!options||typeof options!=='object'||Array.isArray(options)||
+    Object.keys(options).some(k=>k!=='headed')||
+    (options.headed!==undefined&&typeof options.headed!=='boolean'))
+    throw TypeError('Browser E2E: invalid launch mode');
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-cdp-'));
-  const args=['--headless=new','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
+  const args=['--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
+  if(!options.headed)args.unshift('--headless=new');
   if(extension)args.unshift(`--disable-extensions-except=${extension}`,`--load-extension=${extension}`);
   const child=spawn(browserPath(),args,{stdio:['ignore','pipe','pipe']});
   let diagnostic='';

@@ -28,6 +28,8 @@ jobs:
         run: python3 scripts/prepare-browser-fixtures.py
       - name: Validar extração P15 em Shadow DOM aberto (Chrome descartável)
         run: node scripts/p15-shadow-browser.js
+      - name: Validar indices de regioes P16 na fixture autoral do Chromium
+        run: node scripts/p16-review-markers-browser.js
       - name: Executar navegador real e comparar capturas
         run: node scripts/browser-e2e.js --output=browser-results --compare-extension="$DARK_READER_TEST_PATH"
       - name: Treinar P7 e P8 somente para auditoria em modo sombra
