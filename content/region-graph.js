@@ -1,7 +1,7 @@
 'use strict';
 // P15 laboratory-only bounded DOM region capture. It never reads page text,
 // URLs, form values, selectors, cookies, nor persists DOM handles.
-function captureRegionGraph(){
+function captureRegionGraph(onRegion=null){
   const failed=scanned=>({kind:'p15-region-graph-v1',
     status:'inconclusive',scanned,nodes:[]});
   if(!document.body||!Number.isFinite(innerWidth)||innerWidth<=0||
@@ -270,6 +270,8 @@ function captureRegionGraph(){
       hasOcclusionRisk,hasComplexAncestorPaint,hasMotionRisk};
       positions.set(el,node.index);
       regions.push(node);
+      // Reviewer callback gets DOM handles only in ephemeral page memory.
+      if(typeof onRegion==='function')onRegion(el,node.index,rect);
     }
     // Bounded host search includes non-region custom elements, which may own
     // a readable shadowRoot but no background or region role themselves.

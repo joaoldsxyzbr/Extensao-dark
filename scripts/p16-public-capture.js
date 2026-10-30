@@ -8,6 +8,7 @@ const crypto=require('node:crypto');
 const {getExplorationCandidates}=require('./p14-public-domains.js');
 const {validateLedger,LOCAL}=require('./p16-review-intake.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
+const {captureReviewFrame}=require('./p16-review-markers.js');
 const {vectorize}=require('../content/region-ai.js');
 const ID=/^case-[a-z0-9-]{4,48}$/;
 const EMPTY=()=>({schemaVersion:1,kind:'p16-local-region-reviews-v1',
@@ -74,9 +75,10 @@ function saveLocal(ledger){
   fs.renameSync(temp,LOCAL);
  }finally{if(fs.existsSync(temp))fs.rmSync(temp);}
 }
-async function collect(choice,{launch,extract=captureRegionGraph}){
+async function collect(choice,{launch,extract=captureRegionGraph,review=false,onInspect=null}){
  if(typeof launch!=='function')throw Error('P16 public: Chromium unavailable');
- const browser=await launch(null);
+ if(review&&typeof onInspect!=='function')throw Error('P16 visual: reviewer interaction required');
+ const browser=await launch(null,review?{headed:true}:{});
  try{
   await browser.page.navigate('https://'+choice.host+'/',{fixtureReady:false});
   // Evaluate policy inside Chromium: never return path/query/cookie strings.
@@ -91,7 +93,17 @@ async function collect(choice,{launch,extract=captureRegionGraph}){
    'input[autocomplete=cc-number],input[autocomplete=one-time-code]"))()';
   if(await browser.page.eval(safe)!==true)
    throw Error('P16 public: redirected or sensitive page; no data saved');
-  return draft(await browser.page.eval('('+extract.toString()+')()'),choice);
+  if(!review)return draft(await browser.page.eval('('+extract.toString()+')()'),choice);
+  const result=await browser.page.eval('('+captureReviewFrame.toString()+')('+
+    extract.toString()+')');
+  if(!result||result.status!=='local-visual-unverified'||
+     result.markerCount!==result.graph?.nodes?.length||
+     result.verifiedHumanLabels!==false||result.trainingAuthorized!==false||
+     result.promotionEligible!==false)
+   throw Error('P16 visual: marker mismatch');
+  const rows=draft(result.graph,choice);
+  await onInspect({markers:result.markerCount,rows:rows.length});
+  return rows;
  }finally{await browser.stop();}
 }
 async function main(args=process.argv.slice(2)){
@@ -105,16 +117,27 @@ async function main(args=process.argv.slice(2)){
     trainingAuthorized:false,promotionEligible:false}));
   return;
  }
- if(args.length!==2||!args[0].startsWith('--domain=')||
+ const review=args.length===3&&args[2]==='--review';
+ if(!(args.length===2||review)||!args[0].startsWith('--domain=')||
    !args[1].startsWith('--case='))
-  throw Error('P16 public: use --plan or --domain=ROOT --case=case-... (no URL)');
+  throw Error('P16 public: --plan or --domain=ROOT --case=case-... [--review]');
+ if(review&&!process.stdin.isTTY)throw Error('P16 visual: terminal required');
  const choice=target(args[0].slice(9),args[1].slice(7));
  const existing=readLocal();
  validateLedger(existing);
  if(existing.entries.some(r=>r.caseId===choice.caseId))
   throw Error('P16 public: case already exists');
  const {launch}=require('./browser-e2e.js');
- const captured=await collect(choice,{launch});
+ const inspect=review?async({markers,rows})=>{
+  const readline=require('node:readline/promises');
+  const terminal=readline.createInterface({input:process.stdin,output:process.stdout});
+  try{
+   process.stdout.write('P16: '+markers+' marcadores R0...; '+
+    rows+' registros pendentes. Nenhum parecer aprovado.\n');
+   await terminal.question('Inspecione o Chrome e pressione ENTER para fechar: ');
+  }finally{terminal.close();}
+ }:null;
+ const captured=await collect(choice,{launch,review,onInspect:inspect});
  const {ledger,report}=merge(existing,choice,captured);
  saveLocal(ledger);
  console.log(JSON.stringify({kind:'p16-public-review-capture-v1',
