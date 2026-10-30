@@ -37,7 +37,7 @@ test('P14 initial paint: first eight bounded slices run promptly, later work idl
     MutationObserver:class{observe(){}disconnect(){}},
     getComputedStyle:()=>({backgroundColor:'rgba(0,0,0,0)',color:'rgb(30,30,30)'}),
     setTimeout:callback=>fast.push(callback),
-    requestIdleCallback:callback=>idle.push(callback),
+    requestIdleCallback:(callback,options)=>idle.push({callback,options}),
     DarkExtensionColors:colors
   };
   sandbox.globalThis=sandbox;
@@ -53,6 +53,9 @@ test('P14 initial paint: first eight bounded slices run promptly, later work idl
   }
   assert.equal(fast.length,0,'do not keep using rapid slices indefinitely');
   assert.equal(idle.length,1,'remaining work must yield to browser idle time');
-  idle.shift()();
+  const scheduledIdle=idle.shift();
+  assert.equal(scheduledIdle.options.timeout,75,
+    'pending elements must not wait for repeated 250ms idle timeouts');
+  scheduledIdle.callback();
   assert.equal(idle.length,0,'last slice should drain remaining work');
 });

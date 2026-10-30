@@ -12,6 +12,7 @@
   const work = [];
   const MAX_PENDING_ROOTS = 40;
   const INITIAL_FAST_WORK_SLICES = 8; // 8 x 160 nodes before regular idle work.
+  const PENDING_WORK_IDLE_TIMEOUT_MS = 75; // Bounded fallback under ongoing page work.
   const predictionCache = new Map();
   let settings = DEFAULTS;
   let generation = 0;
@@ -363,14 +364,14 @@
       if (scheduledGeneration !== generation) return;
       flushWork();
     };
-    // In the first paint, repeated 250ms idle waits can leave large pages
-    // bright while the bounded work queue slowly drains. Schedule only the
-    // first eight 160-element slices promptly; then revert to idle work.
+    // Avoid repeatedly delaying large live pages while protecting responsiveness.
+    // Run at most eight 160-element slices promptly; thereafter yield to idle,
+    // with a bounded fallback if page activity keeps the browser busy.
     if (fastWorkSlices < INITIAL_FAST_WORK_SLICES) {
       fastWorkSlices++;
       setTimeout(callback, 0);
     } else if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(callback, {timeout: 250});
+      requestIdleCallback(callback, {timeout: PENDING_WORK_IDLE_TIMEOUT_MS});
     } else {
       setTimeout(callback, 0);
     }

@@ -268,3 +268,10 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - **Validação pendente:** CI completo da branch, especialmente o Chromium de sites conhecidos, para determinar se as primeiras amostras melhoram sem regressões de performance ou tema nativo. Não promover candidato nem declarar as telas definitivamente corrigidas com base apenas nesse ensaio.
 
 - Ajuste de CI: corrigida a importação de `diagnoseKnownPublicGridTiming` no teste Node que já fazia referência ao helper. Esse problema era a causa exata da falha de qualidade no SHA `39fbc074`. Os testes anteriores do Chromium passaram; necessário verificar novamente a suíte após a correção.
+
+## P14 — reduzir espera entre lotes após o primeiro desenho (30/10/2026)
+
+- Os workflows de qualidade e Chromium do commit `4fab7f0d` passaram. No artefato do Chromium, YouTube tinha 8/96 pontos CSS claros na primeira amostra (7D e 18D, em ambos os modos), caindo para 0 após 1,2 s. No GitHub, modo forçado havia 55/96 pontos claros no candidato, caindo para 1; o modo automático apresentou resultados variáveis entre perfis (15 no candidato, 55 no baseline) e não permite inferir melhoria universal. Há superfície clara visível na captura inicial do GitHub.
+- Hipótese de desempenho, **ainda não comprovada por comparação pareada**: depois das oito primeiras fatias rápidas, o agendador tolerava `requestIdleCallback(...,{timeout:250})` repetidamente. O timeout foi reduzido a 75 ms enquanto há trabalho na fila; o limite de 160 elementos por fatia, o teto de oito fatias iniciais e o retorno da execução ao período ocioso foram preservados. O timeout é máximo de espera, **não** bloqueio fixo de 250 ms; a melhora deve ser medida no Chromium.
+- Teste do agendador ampliado para exigir `timeout=75` após o orçamento rápido e verificar que a fila termina. Sem regras específicas para GitHub/YouTube, sem alteração de pesos, detecção nativa, permissões, sites de holdout ou branch `main`.
+- A evidência de CSS não substitui revisão humana de capturas e testes independentes. Candidato 18D permanece sem promoção, e P14/P15–P19 têm pendências de validação.
