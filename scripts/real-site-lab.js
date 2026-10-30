@@ -135,6 +135,19 @@ async function main(){
           ? (baseline.reason||candidate.reason||assessment.reason) : '');
     }
     report.promotion=promotionGate(report.results);
+    // A nominal P3 contrast status must not conceal a major P14 CSS signal.
+    // This is diagnostic-only: never override the human release gate.
+    report.p14VisualRisk={
+      kind:'known-public-grid-review-only',
+      possibleMajorBrightRegressions:report.results.filter(x=>
+        x.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression')
+        .map(x=>x.site),
+      sitesNeedingVisualReview:report.results.filter(x=>
+        x.p14KnownPublicGrid?.status==='needs-visual-review')
+        .map(x=>x.site),
+      independentValidation:false,holdoutEvaluated:false,
+      promotionEligible:false
+    };
     report.completed=true;
     update(report);
     const warnings=report.results.filter(item=>
