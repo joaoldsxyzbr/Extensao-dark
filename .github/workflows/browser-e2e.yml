@@ -46,6 +46,8 @@ jobs:
           python3 -m training.train_p11_descendant --epochs 12
       - name: Comparar P11 com professor seguro em templates locais novos
         run: node scripts/p12-descendant-browser.js --output=browser-results/p12-descendant
+      - name: Validar opt-in e rollback P17 em MV3 descartavel
+        run: node scripts/p17-beta-mv3-e2e.js
       - name: Auditar P11 em domínios públicos inéditos (modo sombra sem conteúdo)
         run: node scripts/p12-public-site-audit.js
       - name: Renderizar P11 e professor em DOM publico isolado sem extensao

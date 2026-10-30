@@ -177,6 +177,20 @@ async function observe(site,predict){
     return {site:site.id,status:'inconclusive',reason:'navigation-or-screenshot-unavailable'};
   }finally{if(launched)await launched.stop();}
 }
+// Network-dependent public CSS is diagnostic, never a deterministic CI
+// requirement. Insufficient coverage stays an explicit failed *evidence* gate.
+function assessPublicCoverage(results){
+  if(!Array.isArray(results)||results.length!==SITES.length||
+    results.some((r,i)=>!r||r.site!==SITES[i].id||
+      !['observed','inconclusive'].includes(r.status)||
+      (r.status==='observed'&&(!Number.isSafeInteger(r.samples)||r.samples<8))))
+    throw TypeError('P12: invalid public coverage results');
+  const observed=results.filter(x=>x.status==='observed').length;
+  return {status:observed>=2?'diagnostic-coverage-sufficient':
+    'inconclusive-insufficient-public-coverage',
+    observed,inconclusive:results.length-observed,
+    evidenceSufficient:observed>=2,promotionEligible:false};
+}
 async function main(){
   if(OUTPUT!==OUTPUT_DIR)throw Error('P12: destino de artefatos nao autorizado');
   fs.mkdirSync(OUTPUT,{recursive:true});
@@ -196,11 +210,15 @@ async function main(){
         accepted:result.accepted,rejected:result.rejected,
         difference:result.meanRgbDifference}):result.reason);
   }
-  report.observed=report.results.filter(row=>row.status==='observed').length;
-  report.inconclusive=report.results.length-report.observed;
+  const coverage=assessPublicCoverage(report.results);
+  report.observed=coverage.observed;
+  report.inconclusive=coverage.inconclusive;
+  report.coverageStatus=coverage.status;
+  report.evidenceSufficient=coverage.evidenceSufficient;
   report.completed=true;
   fs.writeFileSync(path.join(OUTPUT,'p12-external-report.json'),JSON.stringify(report,null,2)+'\n');
-  if(report.observed<2)throw Error('P12: menos de dois sites públicos observados; sem evidencia suficiente');
+  if(!coverage.evidenceSufficient)console.warn(
+    '::warning::P12 cobertura pública inconclusiva; não promover candidato');
   console.log('P12 external summary',JSON.stringify({observed:report.observed,
     inconclusive:report.inconclusive,promotionEligible:false}));
   if(process.env.GITHUB_STEP_SUMMARY){
@@ -214,4 +232,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(e=>{console.error('P12 external falhou:',e.message);process.exitCode=1;});
-module.exports=Object.freeze({SITES,assess,makePalette,validateRows,OUTPUT_DIR,allowedLanding});
+module.exports=Object.freeze({SITES,assess,makePalette,validateRows,OUTPUT_DIR,allowedLanding,assessPublicCoverage});

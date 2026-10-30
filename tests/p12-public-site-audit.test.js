@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const colors=require('../content/colors.js');
-const {SITES,assess,makePalette,validateRows,OUTPUT_DIR}=require('../scripts/p12-public-site-audit.js');
+const {SITES,assess,makePalette,validateRows,OUTPUT_DIR,assessPublicCoverage}=require('../scripts/p12-public-site-audit.js');
 
 const sample=(fg='rgb(25, 45, 71)',tag='P')=>({
   color:fg,background:'rgb(252, 252, 252)',tag,fontSize:16,fontWeight:400
@@ -57,4 +57,20 @@ test('P12 sites: SVG contém apenas cores e rótulos sintéticos, sem texto do s
   assert.match(svg,/Rede P11/);
   assert.ok(!svg.includes('<script'));
   assert.ok(OUTPUT_DIR.endsWith('browser-results/p12-public-sites'));
+});
+
+test('P12 incomplete external connectivity cannot masquerade as public coverage',()=>{
+  const results=SITES.map((s,i)=>({site:s.id,status:i<1?'observed':'inconclusive',
+    ...(i<1?{samples:11}:{reason:'navigation-unavailable'})}));
+  const poor=assessPublicCoverage(results);
+  assert.equal(poor.evidenceSufficient,false);
+  assert.equal(poor.status,'inconclusive-insufficient-public-coverage');
+  assert.equal(poor.promotionEligible,false);
+  const adequate=SITES.map((s,i)=>({site:s.id,status:i<2?'observed':'inconclusive',
+    ...(i<2?{samples:12}:{reason:'not-enough-css'})}));
+  assert.equal(assessPublicCoverage(adequate).evidenceSufficient,true);
+  assert.equal(assessPublicCoverage(adequate).promotionEligible,false);
+  assert.throws(()=>assessPublicCoverage(results.slice(1)),/P12:/);
+  assert.throws(()=>assessPublicCoverage(results.map(x=>({...x,status:'approved'}))),/P12:/);
+  assert.throws(()=>assessPublicCoverage(results.map((x,i)=>i?x:{...x,samples:3})),/P12:/);
 });
