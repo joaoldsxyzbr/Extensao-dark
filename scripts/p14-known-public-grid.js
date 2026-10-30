@@ -79,8 +79,35 @@ function summarizeKnownPublicGridRisks(rows){
     !['needs-visual-review','inconclusive','not-applicable-native-theme',
       'observed-no-large-bright-grid-signal'].includes(row.p14KnownPublicGrid.status)))
     throw Error('P14 known-grid: invalid known-public risk summary');
+  // Initial white flashes can disappear by the delayed reading, but still
+  // require investigation. All observations remain public P3 diagnostics.
+  const majority=t=>t?.kind==='p14-known-public-css-timing'&&
+    Number.isSafeInteger(t.firstValidPoints)&&t.firstValidPoints>=48&&
+    Number.isSafeInteger(t.firstBrightPoints)&&t.firstBrightPoints>=24&&
+    t.firstBrightPoints/t.firstValidPoints>=.5;
+  const cleared=t=>majority(t)&&Number.isSafeInteger(t.laterValidPoints)&&
+    t.laterValidPoints>=48&&Math.abs(t.firstValidPoints-t.laterValidPoints)<=12&&
+    Number.isSafeInteger(t.laterBrightPoints)&&t.laterBrightPoints<=8&&
+    t.laterBrightPoints/t.laterValidPoints<=.15;
+  const initialCandidateFlash=rows.filter(row=>cleared(row.p14KnownPublicTiming?.candidate))
+    .map(row=>row.site);
+  const initialCandidateOnlyFlash=rows.filter(row=>{
+    const t=row.p14KnownPublicTiming;
+    return cleared(t?.candidate)&&t.baseline?.kind==='p14-known-public-css-timing'&&
+      Number.isSafeInteger(t.baseline.firstValidPoints)&&
+      t.baseline.firstValidPoints>=48&&
+      Number.isSafeInteger(t.baseline.firstBrightPoints)&&
+      t.baseline.firstBrightPoints/t.baseline.firstValidPoints<.15;
+  }).map(row=>row.site);
+  const stillBrightAfterDelay=rows.filter(row=>{
+    const t=row.p14KnownPublicTiming?.candidate;
+    return majority(t)&&Number.isSafeInteger(t.laterValidPoints)&&
+      t.laterValidPoints>=48&&Number.isSafeInteger(t.laterBrightPoints)&&
+      t.laterBrightPoints>=24&&t.laterBrightPoints/t.laterValidPoints>=.5;
+  }).map(row=>row.site);
   return {
     kind:'p14-known-public-grid-risk-summary',
+    initialCandidateFlash,initialCandidateOnlyFlash,stillBrightAfterDelay,
     possibleMajorBrightRegressions:rows.filter(row=>
       row.p14KnownPublicGrid.reason==='possible-major-bright-css-regression')
       .map(row=>row.site),
@@ -140,7 +167,12 @@ function formatKnownPublicVisualSummary(rows, risk){
   lines.push('','**Revisão de lançamento: bloqueada.**',
     'Áreas claras em CSS amostrado não equivalem a pixels; sites conhecidos não são holdout P14.',
     'Possíveis grandes pioras: '+(risk.possibleMajorBrightRegressions.join(', ')||'nenhuma sinalizada')+'.',
-    'Cobertura majoritariamente clara: '+(risk.unresolvedMajorBrightCoverage.join(', ')||'nenhuma sinalizada')+'.','');
+    'Cobertura majoritariamente clara: '+(risk.unresolvedMajorBrightCoverage.join(', ')||'nenhuma sinalizada')+'.',
+    'Flash claro inicial do candidato com redução tardia: '+
+      (risk.initialCandidateFlash.join(', ')||'nenhum sinalizado')+'.',
+    'Flash inicial só no 18D: '+(risk.initialCandidateOnlyFlash.join(', ')||'nenhum sinalizado')+'.',
+    'Área ainda majoritariamente clara após atraso: '+
+      (risk.stillBrightAfterDelay.join(', ')||'nenhuma sinalizada')+'.','');
   return lines.join('\n');
 }
 

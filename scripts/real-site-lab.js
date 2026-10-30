@@ -163,13 +163,18 @@ async function main(){
       item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'||
       (item.p14KnownPublicGrid?.candidateValidPoints>=48&&
        item.p14KnownPublicGrid?.candidateBrightPoints>=24&&
-       item.p14KnownPublicGrid?.candidateBrightFraction>=.5));
+       item.p14KnownPublicGrid?.candidateBrightFraction>=.5)||
+      report.p14VisualRisk.initialCandidateFlash.includes(item.site));
     for(const item of warnings) console.warn(
       '::warning title=P3 '+item.site+'::'+item.assessment.status+
       (item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'
         ? '; P14 possible-major-bright-css-regression' : '')+
       (report.p14VisualRisk.unresolvedMajorBrightCoverage.includes(item.site)
-        ? '; P14 unresolved-majority-bright-css-viewport' : ''));
+        ? '; P14 unresolved-majority-bright-css-viewport' : '')+
+      (report.p14VisualRisk.initialCandidateFlash.includes(item.site)
+        ? '; P14 transient-initial-bright-css-viewport' : '')+
+      (report.p14VisualRisk.initialCandidateOnlyFlash.includes(item.site)
+        ? '; P14 candidate-only-initial-bright-css-viewport' : ''));
     if(process.env.GITHUB_STEP_SUMMARY){
       const lines=[
         '### Laboratório P3 — '+report.mode,

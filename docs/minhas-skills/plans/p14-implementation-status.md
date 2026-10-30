@@ -275,3 +275,10 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - Hipótese de desempenho, **ainda não comprovada por comparação pareada**: depois das oito primeiras fatias rápidas, o agendador tolerava `requestIdleCallback(...,{timeout:250})` repetidamente. O timeout foi reduzido a 75 ms enquanto há trabalho na fila; o limite de 160 elementos por fatia, o teto de oito fatias iniciais e o retorno da execução ao período ocioso foram preservados. O timeout é máximo de espera, **não** bloqueio fixo de 250 ms; a melhora deve ser medida no Chromium.
 - Teste do agendador ampliado para exigir `timeout=75` após o orçamento rápido e verificar que a fila termina. Sem regras específicas para GitHub/YouTube, sem alteração de pesos, detecção nativa, permissões, sites de holdout ou branch `main`.
 - A evidência de CSS não substitui revisão humana de capturas e testes independentes. Candidato 18D permanece sem promoção, e P14/P15–P19 têm pendências de validação.
+
+## P14 — distinguir flash inicial de superfície clara persistente (30/10/2026)
+
+- Ambos workflows do commit `08553f8a` concluíram com sucesso. No Chromium automático, GitHub: 7D com 1/60 ponto CSS claro, candidato 18D com 54/60 no primeiro snapshot; ambos 1/65 após 1,2 s. YouTube: 8/96 inicial em ambos e 0/96 após atraso. No modo forçado GitHub começou escuro em ambos. A diferença não confirma causalidade, pois perfis remotos carregam de maneira independente.
+- O sumário P14 agora registra grande flash temporário do candidato, flash apenas no 18D (ausente no baseline 7D) e superfícies majoritariamente claras que continuam claras após atraso. Não oculta o risco só porque o fim do carregamento ficou escuro; não altera o gate de aprovação.
+- Novos testes cobrem flash apenas no 18D, flash nos dois motores, persistência e ausência de amostra tardia. O laboratório gera avisos de CI. Não foram alterados estilo, inferência, pesos, permissões, holdout ou `main`.
+- Próximas pendências: reproduzir o flash inicial em cenários pareados determinísticos, avaliar desempenho/estabilidade e conduzir a validação independente P14/P15 antes de promover candidato.

@@ -158,3 +158,43 @@ test('P14 known public timing: delayed white CSS change remains review-only',()=
   assert.throws(()=>diagnoseKnownPublicGridTiming('go.dev',grid(0),grid(0)),
     /outside existing P3 diagnostic allowlist/);
 });
+
+test('P14 timing: candidate-only bright flash still blocks promotion after page darkens',()=>{
+  const row={site:'github',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'github',observed(1),observed(54),assessment),
+    p14KnownPublicTiming:{
+      baseline:diagnoseKnownPublicGridTiming('github',grid(1,60),grid(1,65)),
+      candidate:diagnoseKnownPublicGridTiming('github',grid(54,60),grid(1,65))
+    }};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,['github']);
+  assert.deepEqual(risk.initialCandidateOnlyFlash,['github']);
+  assert.deepEqual(risk.stillBrightAfterDelay,[]);
+  assert.equal(risk.releaseReview.status,'blocked');
+  assert.match(formatKnownPublicVisualSummary([row],risk),/Flash inicial só no 18D: github/);
+});
+test('P14 timing: shared initial flash is not a candidate-only regression',()=>{
+  const row={site:'youtube',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'youtube',observed(54),observed(54),assessment),
+    p14KnownPublicTiming:{
+      baseline:diagnoseKnownPublicGridTiming('youtube',grid(54),grid(0)),
+      candidate:diagnoseKnownPublicGridTiming('youtube',grid(54),grid(0))
+    }};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,['youtube']);
+  assert.deepEqual(risk.initialCandidateOnlyFlash,[]);
+});
+test('P14 timing: persistent bright page or unavailable delay is not clearance',()=>{
+  const row={site:'github',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'github',observed(54),observed(54),assessment),
+    p14KnownPublicTiming:{candidate:diagnoseKnownPublicGridTiming(
+      'github',grid(54),grid(50))}};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,[]);
+  assert.deepEqual(risk.stillBrightAfterDelay,['github']);
+  const missing=summarizeKnownPublicGridRisks([
+    {site:'github',p14KnownPublicGrid:row.p14KnownPublicGrid}
+  ]);
+  assert.deepEqual(missing.stillBrightAfterDelay,[]);
+  assert.equal(missing.promotionEligible,false);
+});
