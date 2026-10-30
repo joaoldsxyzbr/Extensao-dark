@@ -88,6 +88,14 @@ function summarizeKnownPublicGridRisks(rows){
         Number.isInteger(g.candidateBrightPoints)&&g.candidateBrightPoints>=24&&
         g.candidateBrightFraction>=.5;
     }).map(row=>row.site),
+    releaseReview:{
+      status:'blocked',
+      reason:rows.some(row=>row.p14KnownPublicGrid.status==='needs-visual-review')
+        ?'known-public-visual-problems-unresolved'
+        :'independent-visual-validation-not-done',
+      requiresIndependentVisualReview:true,
+      requiresHoldoutReview:true
+    },
     independentValidation:false,holdoutEvaluated:false,promotionEligible:false
   };
 }
