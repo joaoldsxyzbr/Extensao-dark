@@ -13,7 +13,15 @@ const make=(index,parent,luma)=>({
 });
 const graph={kind:'p15-region-graph-v1',status:'ready',scanned:3,nodes:[
  make(0,-1,.05),make(1,0,.92),make(2,0,.96)]};
-const caseRows=(domain,id)=>draft(graph,target(domain,id));
+const caseRows=(domain,id)=>{
+ // Distinct public domains must not accidentally share identical vectors:
+ // this is a test of the frozen split isolation contract.
+ const extra=domain==='astro.build'?.001:0;
+ const unique={...graph,nodes:graph.nodes.map(n=>({
+  ...n,areaFraction:n.areaFraction+extra
+ }))};
+ return draft(unique,target(domain,id));
+};
 test('P16 readiness audit reports empty template as zero independently reviewed',()=>{
  const result=audit(EMPTY());
  assert.equal(result.status,'empty-review-queue');
