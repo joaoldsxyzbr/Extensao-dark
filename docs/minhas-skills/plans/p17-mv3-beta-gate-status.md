@@ -9,3 +9,7 @@
 - **Falta para um beta útil:** evidências independentes P14/P15, rótulos e treino P16 revisados, vínculo DOM↔região sob proteção, transações P17 integradas ao content script em perfil descartável e benchmarks P18/P19. Não habilitar visualmente a opção no popup nem declarar First AI disponível antes desses gates.
 
 Nenhuma alteração à `main`, release, pesos publicados ou permissões. PR empilhada na P18, experimental.
+
+## CI: indisponibilidade de sites públicos (30/10/2026)
+
+O diagnóstico P12 depende de páginas externas que podem falhar no runner sem regressão no motor. O relatório agora marca `coverageStatus: inconclusive-insufficient-public-coverage`, `evidenceSufficient:false` e `promotionEligible:false` quando menos de dois sites podem ser observados. A falha de coleta **não é convertida em aprovação**, e o CI pode continuar verificando os testes determinísticos, inclusive o MV3. Esquemas inválidos ainda geram erro. A cobertura pública pendente continua bloqueando os gates independentes de P14–P19.
