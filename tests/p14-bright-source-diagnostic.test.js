@@ -8,7 +8,8 @@ function base(){return {
   largeSurface:24,fixedOrSticky:2,textDark:20,textLight:8,
   textOtherOrUnknown:2,inlineImportant:0,
   blockedByGeometry:6,blockedByGraphicContext:0,
-  eligibleByCanvasGate:20,blockedByContext:4
+  eligibleByCanvasGate:20,blockedByContext:4,
+  shadowRootSource:0,shadowRootSample:0
 };}
 test('P14 bright sources: only fixed numeric CSS aggregates persist',()=>{
   const result=validateBrightSources(base());
