@@ -68,7 +68,8 @@ function captureBrightSources(){
       style.opacity!=='1')result.blockedByGeometry++;
     else if(style.backgroundImage!=='none'||style.maskImage!=='none'||
       style.webkitMaskImage!=='none')result.blockedByGraphicContext++;
-    else if(fg&&luminance(fg)<=.22)
+    else if(fg&&(luminance(fg)<=.22||luminance(fg)>=.55))
+      // This is pre-context eligibility, not evidence that the engine painted.
       result.eligibleByCanvasGate++;
     else result.blockedByContext++;
   }
