@@ -53,6 +53,11 @@ function diagnoseKnownSiteGrid(siteId,baseline,candidate,assessment){
   result.candidateBrightFraction=Number((c.bright/c.valid).toFixed(4));
   result.changeInBrightFraction=Number(
     (result.candidateBrightFraction-result.baselineBrightFraction).toFixed(4));
+  // Observed bright fraction can be misleading when large portions of the
+  // viewport have unknown CSS backgrounds. Keep a separate explicit coverage
+  // diagnostic; never treat low coverage as a visual success.
+  result.candidateKnownGridFraction=Number((c.valid/96).toFixed(4));
+  result.baselineKnownGridFraction=Number((b.valid/96).toFixed(4));
   const residual=c.bright>=3&&result.candidateBrightFraction>=.08;
   const newBright=c.bright>=2&&result.changeInBrightFraction>=.05;
   // A pronounced difference can indicate a regression, but known public
