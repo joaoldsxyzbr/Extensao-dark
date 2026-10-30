@@ -45,17 +45,27 @@ test('P16 rejects partial graphs, private fields, duplicate cases and illegal sp
  assert.throws(()=>merge({...EMPTY(),entries:rows},choice,rows),/P16 public:/);
  assert.throws(()=>merge(EMPTY(),choice,[{...rows[0],split:'holdout'}]),/P16 intake:/);
 });
-test('P16 discards redirected public sites and always destroys disposable profile',async()=>{
- let closed=0;
+test('P16 refuses redirects, login/sensitive surfaces and always closes browser',async()=>{
+ let closed=0,checks=0;
  const choice=target('go.dev','case-go-sample');
- const browser=(host)=>async()=>({
-  page:{navigate:async()=>{},eval:async exp=>
-   exp==='location.hostname'?host:graph},stop:async()=>{closed++}
+ const browser=(allowed)=>async()=>({
+  page:{navigate:async()=>{},eval:async exp=>{
+   if(exp.includes('location.protocol')){
+    checks++;
+    assert.match(exp,/location.search/);
+    assert.match(exp,/input\[type=password\]/);
+    assert.match(exp,/location.pathname/);
+    assert.doesNotMatch(exp,/location.href/);
+    return allowed;
+   }
+   return graph;
+  }},stop:async()=>{closed++}
  });
- await assert.rejects(collect(choice,{launch:browser('other.example')}),/redirect/);
+ await assert.rejects(collect(choice,{launch:browser(false)}),/sensitive page/);
  assert.equal(closed,1);
- assert.equal((await collect(choice,{launch:browser('go.dev')})).length,3);
+ assert.equal((await collect(choice,{launch:browser(true)})).length,3);
  assert.equal(closed,2);
+ assert.equal(checks,2);
 });
 test('P16 capture never runs in CI automatically or reads page secrets',()=>{
  const s=fs.readFileSync(require('node:path').join(
