@@ -103,6 +103,8 @@ jobs:
         run: node scripts/verify-neural-model.js
       - name: Gerar pequeno corpus P16 sintético isolado
         run: node scripts/p16-build-demo.js
+      - name: Validar template offline de revisão P16 sem dados humanos
+        run: node scripts/p16-review-intake.js
       - name: Testar treinamento Python da extensão
         run: python3 -m unittest discover -s training_tests -v
       - name: Treinar duas cabeças regionais demonstrativas (somente sintético)

@@ -23,3 +23,10 @@ Nenhuma mudança em permissões, motor principal, pesos distribuídos, sites de 
 - Treinamento Python local (BCE e MSE) com redes pequenas e 8 épocas, somente no treino. O CI salva modelo e métricas exclusivamente em `data/p16-demo-ci-*.json`, ignorados pelo Git; nenhum peso de produção é alterado.
 - Um verificador usa o Neural Core JS real para comparar decisões e RGB entre Python/JS na validação com tolerância de 1e-4. Testes de regressão cobrem splits, vetores duplicados, campos privados e ausência de promoção.
 - **Este é somente um smoke test da infraestrutura**, não um modelo aprovado: falta anotação humana, generalização em sites independentes, avaliação P14/P15 e P17–P19. Nenhum holdout foi aberto nem existe alteração do MV3 publicado.
+
+## P16 — preparar revisão humana local segura (30/10/2026)
+
+- Adicionado `scripts/p16-review-intake.js` e template **vazio** `training/datasets/p16-review-template.json`. O CI valida somente o template, sem dados reais. O comando `node scripts/p16-review-intake.js --local` permite validar posteriormente `training/reviews/p16-local-labels.json` sem enviar os rótulos ao Git; esse caminho é ignorado em `.gitignore`.
+- O registro aceita apenas IDs opacos, domínio raiz público **já reservado** para treino/validação P14 (nunca holdout), índice regional (0–79), os 20 atributos P16 normalizados, duas respostas sem identidades pessoais e paleta RGB apenas se os dois pareceres concordarem com transformação **e** os gates de segurança aceitarem.
+- Campos extras (URL, conteúdo, cookies, nomes de avaliadores, texto), duplicatas de vetor, abuso de split e conversão insegura são rejeitados. Relatório imprime só contagens agregadas, sem vetores, domínios ou amostras.
+- Nenhum parecer foi coletado nesta etapa. Mesmo quando duas respostas concordam, o programa **não consegue autenticar avaliadores ou comprovar independência**, então retorna sempre `verifiedIndependentReviews:0`, `trainingAuthorized:false`, `promotionEligible:false`. Nenhuma amostra do holdout foi aberta, nenhum treinamento humano foi feito e nenhuma extensão foi modificada.

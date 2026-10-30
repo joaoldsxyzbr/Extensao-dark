@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "p16-local-region-reviews-v1",
+  "origin": "manually-entered-unverified",
+  "scope": "train-validation-only",
+  "independenceVerified": false,
+  "entries": []
+}
