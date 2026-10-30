@@ -35,7 +35,7 @@ function auditTrainingReadiness(ledger){
   ['validation-convert',MIN.validationConvert,va.convert],
   ['train-preserve',MIN.trainPreserve,tr.preserve],
   ['validation-preserve',MIN.validationPreserve,va.preserve],
- ])require(actual>=minimum,'insufficient-'+key);
+ ])requirement(actual>=minimum,'insufficient-'+key);
  let nearPairs=0;
  for(const a of train){
   for(const b of validation){
