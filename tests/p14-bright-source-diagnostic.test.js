@@ -38,3 +38,13 @@ test('P14 bright sources: open shadow roots are inspected without extracting con
   assert.equal(validateBrightSources({...base(),shadowRootSample:7,shadowRootSource:4}).shadowRootSample,7);
   assert.throws(()=>validateBrightSources({...base(),shadowRootSample:31}),/malformed aggregate/);
 });
+
+test('P14 bright sources: diagnostic accepts light text as pre-context eligibility',()=>{
+  const source=captureBrightSources.toString();
+  assert.match(source,/luminance\(fg\)>=\.55/);
+  assert.match(source,/result\.eligibleByCanvasGate\+\+/);
+  const result=validateBrightSources({...base(),
+    eligibleByCanvasGate:24,blockedByContext:0});
+  assert.equal(result.eligibleByCanvasGate,24);
+  assert.equal(result.promotionEligible,false);
+});
