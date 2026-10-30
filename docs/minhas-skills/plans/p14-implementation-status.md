@@ -227,3 +227,10 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - Adicionado ao resumo `p14VisualRisk` um campo `releaseReview` com `status:'blocked'`, distinguindo problemas visuais conhecidos ainda não resolvidos da ausência de revisão independente/holdout, mesmo caso os sites diagnósticos conhecidos pareçam bons. Isso é evidência de qualidade, **não** um sinal automático de autorização para ler holdout ou publicar.
 - Testes verificam as duas causas de bloqueio, inclusive uma página com CSS aparentemente resolvido mas sem avaliação independente. Sem alteração de pesos, permissões, branch main ou produção.
 - Permanecem pendentes as correções visuais reais do GitHub, a comparação independente com revisão humana da P14/P15, a evolução P16/P17, a preparação P18/P19 e eventual integração autorizada por decisão de produto. Não é correto marcar o projeto como pronto sem essas verificações.
+
+## P14 — diferença entre cobertura da amostragem e área clara (30/10/2026)
+
+- O CI de qualidade do commit anterior `e61a4d82` foi observado como aprovado; o workflow de navegador ainda estava em execução na consulta inicial desta etapa.
+- A regra do diagnóstico exige pelo menos 24 pontos CSS conhecidos em cada perfil, mas a proporção clara calculada sobre os pontos válidos **não** representa automaticamente a proporção de toda a viewport quando há áreas desconhecidas. Agora o relatório de sites públicos conhecidos expõe `baselineKnownGridFraction` e `candidateKnownGridFraction`, além de `baselineBrightFraction` e `candidateBrightFraction`.
+- Teste cobre o caso em que a cobertura do candidato cai de 80 para 30 pontos em 96, mesmo quando uma fração alta dos pontos conhecidos está clara. Não foi alterado o classificador da extensão, nenhum peso neural nem o gate humano de release. A interpretação continua conservadora: CSS incompleto e ausência de regressão **não** constituem aprovação visual.
+- Próximo passo: conferir CI do SHA final e, com evidência suficiente, isolar o motivo da falta de conversão nos sites públicos conhecidos. P14 independente, holdout e P15–P19 não estão concluídos.
