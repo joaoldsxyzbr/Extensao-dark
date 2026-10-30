@@ -51,3 +51,21 @@ test('P14 known public: reject non-P3 sites including P14 final holdout',()=>{
       /outside existing P3 diagnostic allowlist/);
   }
 });
+
+test('P14 known public: severe white viewport regression must outrank residual warning',()=>{
+  const before={kind:'observed',grid:grid(13)};
+  const after={kind:'observed',grid:grid(96)};
+  const result=diagnoseKnownSiteGrid('youtube',before,after,assessment);
+  assert.equal(result.status,'needs-visual-review');
+  assert.equal(result.reason,'possible-major-bright-css-regression');
+  assert.equal(result.baselineBrightPoints,13);
+  assert.equal(result.candidateBrightPoints,96);
+  assert.equal(result.promotionEligible,false);
+});
+test('P14 known public: missing matched coverage never gets a severe label',()=>{
+  const result=diagnoseKnownSiteGrid('youtube',
+    {kind:'observed',grid:grid(2,30)},
+    {kind:'observed',grid:grid(80,96)},assessment);
+  assert.equal(result.reason,'bright-css-increase');
+  assert.equal(result.promotionEligible,false);
+});
