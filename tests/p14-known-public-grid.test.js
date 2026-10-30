@@ -79,8 +79,20 @@ test('P14 known public: risk summary exposes major visual regression without rel
   ]);
   assert.deepEqual(summary.possibleMajorBrightRegressions,['youtube']);
   assert.deepEqual(summary.sitesNeedingVisualReview,['youtube','github']);
+  assert.deepEqual(summary.unresolvedMajorBrightCoverage,['youtube']);
   assert.equal(summary.promotionEligible,false);
   assert.equal(summary.holdoutEvaluated,false);
   assert.throws(()=>summarizeKnownPublicGridRisks([
     {site:'julialang.org',p14KnownPublicGrid:youtube}]),/invalid known-public/);
+});
+
+test('P14 known public: persistent majority-white page is unresolved despite no regression',()=>{
+  const original=observed(54);
+  const candidate=observed(54);
+  const g=diagnoseKnownSiteGrid('github',original,candidate,assessment);
+  assert.equal(g.reason,'residual-bright-css-points');
+  const summary=summarizeKnownPublicGridRisks([{site:'github',p14KnownPublicGrid:g}]);
+  assert.deepEqual(summary.possibleMajorBrightRegressions,[]);
+  assert.deepEqual(summary.unresolvedMajorBrightCoverage,['github']);
+  assert.equal(summary.promotionEligible,false);
 });
