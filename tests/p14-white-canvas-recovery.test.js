@@ -45,10 +45,12 @@ test('P14 white canvas: permit inherited bright text only over a verified dark p
   const lightText=colors.parseColor('rgb(240, 240, 240)');
   assert.equal(colors.shouldRecoverBrightCanvas(bright,lightText,context(),
     {...geometry(),ancestorLuminance:.07}),true);
+  // A bright foreground on white is itself an illegible pairing: conversion
+  // improves contrast regardless of whether the ancestor is light or dark.
   assert.equal(colors.shouldRecoverBrightCanvas(bright,lightText,context(),
-    {...geometry(),ancestorLuminance:.75}),false);
+    {...geometry(),ancestorLuminance:.75}),true);
   assert.equal(colors.shouldRecoverBrightCanvas(bright,lightText,context(),
-    geometry()),false);
+    geometry()),true);
   assert.equal(colors.shouldRecoverBrightCanvas(bright,lightText,
     {...context(),backgroundImage:true},
     {...geometry(),ancestorLuminance:.07}),false);
