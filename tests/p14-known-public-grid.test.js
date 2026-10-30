@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks}=
+const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary}=
   require('../scripts/p14-known-public-grid.js');
 const grid=(bright,valid=96,dark=valid-bright)=>({
   gridPoints:96,valid,dark,bright,unknown:96-valid
@@ -117,4 +117,17 @@ test('P14 known public: report CSS coverage separately from bright fraction',()=
   assert.equal(result.candidateKnownGridFraction,.3125);
   assert.equal(result.status,'needs-visual-review');
   assert.equal(result.promotionEligible,false);
+});
+
+test('P14 summary: expose bright CSS and unknown coverage alongside old P3 status',()=>{
+  const site={site:'github',
+    assessment:{status:'observed-no-regression'},
+    p14KnownPublicGrid:diagnoseKnownSiteGrid('github',observed(54),observed(54),assessment)};
+  const risk=summarizeKnownPublicGridRisks([site]);
+  const output=formatKnownPublicVisualSummary([site],risk);
+  assert.match(output,/github \| observed-no-regression \| 54\/96 \| 96\/96 \| needs-visual-review/);
+  assert.match(output,/Revisão de lançamento: bloqueada/);
+  assert.match(output,/Cobertura majoritariamente clara: github/);
+  assert.throws(()=>formatKnownPublicVisualSummary([
+    {...site,site:'private.example'}],risk),/invalid summary row/);
 });

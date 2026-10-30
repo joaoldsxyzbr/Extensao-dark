@@ -234,3 +234,9 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - A regra do diagnóstico exige pelo menos 24 pontos CSS conhecidos em cada perfil, mas a proporção clara calculada sobre os pontos válidos **não** representa automaticamente a proporção de toda a viewport quando há áreas desconhecidas. Agora o relatório de sites públicos conhecidos expõe `baselineKnownGridFraction` e `candidateKnownGridFraction`, além de `baselineBrightFraction` e `candidateBrightFraction`.
 - Teste cobre o caso em que a cobertura do candidato cai de 80 para 30 pontos em 96, mesmo quando uma fração alta dos pontos conhecidos está clara. Não foi alterado o classificador da extensão, nenhum peso neural nem o gate humano de release. A interpretação continua conservadora: CSS incompleto e ausência de regressão **não** constituem aprovação visual.
 - Próximo passo: conferir CI do SHA final e, com evidência suficiente, isolar o motivo da falta de conversão nos sites públicos conhecidos. P14 independente, holdout e P15–P19 não estão concluídos.
+
+## CI consolidado de diagnóstico visual (30/10/2026)
+
+- Após revisão das pendências na P14, o resumo de Actions passou a apresentar **na mesma execução** a classificação P3 de contraste, contagem de pontos CSS claros do candidato, cobertura de CSS conhecida e estado P14 de revisão visual. A observação anterior podia parecer aprovada mesmo quando uma grande área branca persistia.
+- A formatação é pura, restrita à allowlist de seis sites públicos P3 e coberta por regressão; não registra texto ou atributos de páginas, nem inspeciona domínios P14 de holdout. A mensagem de revisão **continua bloqueada** e nenhum gate de promoção foi afrouxado.
+- Implementação e testes foram agrupados num único commit Git para validar com um par de workflows, sem disparar CI para cada arquivo. A execução completa deve ser confirmada antes de considerar esta mudança validada; problemas visuais reais e P15–P19 permanecem pendentes.

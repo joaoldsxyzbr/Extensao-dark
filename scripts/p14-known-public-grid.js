@@ -104,4 +104,40 @@ function summarizeKnownPublicGridRisks(rows){
     independentValidation:false,holdoutEvaluated:false,promotionEligible:false
   };
 }
-module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks});
+// Summary for GitHub Actions, never a release approval or visual audit.
+function formatKnownPublicVisualSummary(rows, risk){
+  if(!Array.isArray(rows)||!risk||
+     risk.kind!=='p14-known-public-grid-risk-summary'||
+     risk.releaseReview?.status!=='blocked')
+    throw Error('P14 known-grid: invalid summary input');
+  const lines=[
+    '### P14 — CSS visível em sites públicos conhecidos (diagnóstico)',
+    '',
+    '| Site | P3 | Pontos CSS claros no candidato | Cobertura CSS | P14 |',
+    '|---|---|---:|---:|---|'
+  ];
+  for(const row of rows){
+    if(!row||typeof row.site!=='string'||!KNOWN.has(row.site)||
+       !row.p14KnownPublicGrid||row.p14KnownPublicGrid.site!==row.site)
+      throw Error('P14 known-grid: invalid summary row');
+    const g=row.p14KnownPublicGrid;
+    const fraction=Number.isInteger(g.candidateBrightPoints)&&
+      Number.isInteger(g.candidateValidPoints)
+        ? String(g.candidateBrightPoints)+'/'+String(g.candidateValidPoints)
+        : 'indisponível';
+    const coverage=Number.isInteger(g.candidateValidPoints)
+      ? String(g.candidateValidPoints)+'/96'
+      : 'indisponível';
+    const p3=row.assessment?.status;
+    const p3Status=['observed-no-regression','needs-review',
+      'expected-native-dark-skip','inconclusive'].includes(p3)?p3:'inconclusive';
+    lines.push('| '+row.site+' | '+p3Status+' | '+fraction+
+      ' | '+coverage+' | '+g.status+' |');
+  }
+  lines.push('','**Revisão de lançamento: bloqueada.**',
+    'Áreas claras em CSS amostrado não equivalem a pixels; sites conhecidos não são holdout P14.',
+    'Possíveis grandes pioras: '+(risk.possibleMajorBrightRegressions.join(', ')||'nenhuma sinalizada')+'.',
+    'Cobertura majoritariamente clara: '+(risk.unresolvedMajorBrightCoverage.join(', ')||'nenhuma sinalizada')+'.','');
+  return lines.join('\n');
+}
+module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary});

@@ -12,7 +12,7 @@ const {launch,sleep,ROOT,browserPath}=require('./browser-e2e.js');
 const {chooseSites,isAllowedLanding,assessPair,promotionGate}=require('./real-site-audit.js');
 const {EXPRESSION,summarize}=require('./real-site-snapshot.js');
 const {sampleBackgroundGrid}=require('./p14-benchmark-browser.js');
-const {diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks}=require('./p14-known-public-grid.js');
+const {diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary}=require('./p14-known-public-grid.js');
 const {captureBrightSources,validateBrightSources}=
   require('./p14-bright-source-diagnostic.js');
 const BRIGHT_SOURCE_EXPR='('+captureBrightSources.toString()+')()';
@@ -163,7 +163,8 @@ async function main(){
         '**Promoção do modelo: bloqueada.** Revisão visual ainda obrigatória.',
         ''
       ];
-      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n'+
+        formatKnownPublicVisualSummary(report.results,report.p14VisualRisk)+'\n');
     }
     console.log('P3 evidência registrada:',REPORT,JSON.stringify(report.promotion));
     if(report.promotion.observed===0 && report.promotion.needsReview===0)
