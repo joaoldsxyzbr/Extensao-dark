@@ -21,8 +21,16 @@ function captureBrightSources(){
     return .2126*channel[0]+.7152*channel[1]+.0722*channel[2];
   };
   for(let y=0;y<8;y++)for(let x=0;x<12;x++){
-    const el=document.elementFromPoint((x+.5)*innerWidth/12,
-      (y+.5)*innerHeight/8);
+    const px=(x+.5)*innerWidth/12,py=(y+.5)*innerHeight/8;
+    let el=document.elementFromPoint(px,py);
+    // elementFromPoint at document level returns the Shadow DOM host.
+    // Follow only *open* shadow roots to characterize the visible surface;
+    // no attributes, text, IDs or element references leave this function.
+    for(let depth=0;el?.shadowRoot&&depth<8;depth++){
+      const inner=el.shadowRoot.elementFromPoint(px,py);
+      if(!inner||inner===el)break;
+      el=inner;
+    }
     if(!el||el.closest('button,input,textarea,select,svg,img,video,canvas'))
       continue;
     let source=null,style=null,background=null;
