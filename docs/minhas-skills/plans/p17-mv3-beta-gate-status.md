@@ -13,3 +13,7 @@ Nenhuma alteração à `main`, release, pesos publicados ou permissões. PR empi
 ## CI: indisponibilidade de sites públicos (30/10/2026)
 
 O diagnóstico P12 depende de páginas externas que podem falhar no runner sem regressão no motor. O relatório agora marca `coverageStatus: inconclusive-insufficient-public-coverage`, `evidenceSufficient:false` e `promotionEligible:false` quando menos de dois sites podem ser observados. A falha de coleta **não é convertida em aprovação**, e o CI pode continuar verificando os testes determinísticos, inclusive o MV3. Esquemas inválidos ainda geram erro. A cobertura pública pendente continua bloqueando os gates independentes de P14–P19.
+
+## Ensaio real do gate beta no Chromium descartável
+
+O teste P17 usa a extensão MV3 atual numa cópia efêmera com um probe **somente da cópia de CI**. A preferência `aiFirstBeta` é ativada nesse perfil de laboratório e depois revertida. Verificam-se o fallback clássico, o desligamento que restaura o CSS original e a reativação do motor clássico. O manifesto do projeto **não inclui** o probe, a cópia é destruída e não são adicionadas permissões. Esse teste não habilita um modelo regional aprovado.
