@@ -9,3 +9,10 @@
 - Usa apenas CDP e Node nativos existentes. Sem Playwright, pacotes, rede de inferência, alterações de manifesto, pesos ou permissões.
 
 **Não substitui** rótulos humanos P14–P16, beta MV3 real com opção local desligada por padrão ou benchmarks independentes P18/P19. Este laboratório não autoriza release.
+
+## Integração P15 → P16 → P17 no laboratório
+
+- `scripts/p17-integrated-pipeline.js` liga a vetorização P15, as duas cabeças da P16 via Neural Core real e as transações CSS da P17 em uma **fixture explicitamente autoral** no Chromium descartável.
+- Modelo artificial constante de 20 entradas, sem qualquer treinamento ou peso publicado. O P16 propõe duas regiões claras seguras, abstém em região protegida. P17 aplica a paleta em duas regiões, compara CSS no navegador, simula alteração de CSS pelo site e faz rollback seletivo, registrando apenas contagens.
+- Mapeamento de índice regional para elemento DOM é **fixo só na fixture sintética**. Não resolve a identidade de regiões reais; não há integração com a extensão instalada nem ativação de AI-first. Sem URLs, texto de usuários, holdout ou serviços externos.
+- Novo teste unitário e workflow Chromium; aprovação só confirma interoperabilidade do protótipo. Dados humanos, P17 MV3 opt-in, comparação independente P18 e auditoria P19 permanecem obrigatórios.
