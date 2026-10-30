@@ -41,7 +41,7 @@ test('P14 white canvas: no forced conversion of overlays, small cards or transpa
     bright,colors.parseColor('rgb(245,245,245)'),context(),geometry()),false);
 });
 
-test('P14 white canvas: permit inherited bright text only over a verified dark parent',()=>{
+test('P14 white canvas: permit bright foreground on huge white canvas while protecting complex surfaces',()=>{
   const lightText=colors.parseColor('rgb(240, 240, 240)');
   assert.equal(colors.shouldRecoverBrightCanvas(bright,lightText,context(),
     {...geometry(),ancestorLuminance:.07}),true);
