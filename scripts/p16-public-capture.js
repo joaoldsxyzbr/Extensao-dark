@@ -79,8 +79,18 @@ async function collect(choice,{launch,extract=captureRegionGraph}){
  const browser=await launch(null);
  try{
   await browser.page.navigate('https://'+choice.host+'/',{fixtureReady:false});
-  if(await browser.page.eval('location.hostname')!==choice.host)
-   throw Error('P16 public: redirect outside frozen host');
+  // Evaluate policy inside Chromium: never return path/query/cookie strings.
+  // Reject redirect off https/origin, URL params, account/login/checkout
+  // routes or any sensitive form even when on a public allowlisted host.
+  const safe='(()=>location.protocol==="https:"&&'+
+   'location.hostname==='+JSON.stringify(choice.host)+'&&'+
+   'location.search===""&&location.hash===""&&'+
+   '!/(?:^|\\/)(?:login|log-in|signin|sign-in|account|auth|'+
+   'profile|checkout|billing|payment|private)(?:\\/|$)/i.test(location.pathname)&&'+
+   '!document.querySelector("input[type=password],'+
+   'input[autocomplete=cc-number],input[autocomplete=one-time-code]"))()';
+  if(await browser.page.eval(safe)!==true)
+   throw Error('P16 public: redirected or sensitive page; no data saved');
   return draft(await browser.page.eval('('+extract.toString()+')()'),choice);
  }finally{await browser.stop();}
 }
