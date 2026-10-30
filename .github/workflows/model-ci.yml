@@ -30,6 +30,7 @@ jobs:
           node scripts/p14-public-domains.js
           node scripts/p16-public-capture.js --plan
           node scripts/p16-review-audit.js --template
+          node scripts/p16-supervised-quarantine.js --template
       - name: Confirmar motor versionado e vetores de treino
         run: |
           node scripts/build-neural.js --check
