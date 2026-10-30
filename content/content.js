@@ -333,25 +333,29 @@
   function enqueueSubtree(root, force = false) {
     if (!root || (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== 11) ||
         !(root.isConnected || root.host?.isConnected)) return;
-    // Reaproveitar tarefas do mesmo nó, evitando trabalho redundante.
+    // Never rewind an in-progress TreeWalker. Repeated attribute changes on
+    // dynamic pages used to restart the root scan before reaching later nodes.
+    // Schedule one coalesced rescan after the current pass instead.
     const existing = work.find(task => task.generation === generation && task.root === root);
     if (existing) {
-      if (force && !existing.force) {
-        existing.force = true;
-        existing.walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-        existing.current = root.nodeType === Node.ELEMENT_NODE ? root : existing.walker.nextNode();
-      }
+      if (force) existing.rescan = true;
       return;
     }
     if (work.length >= MAX_PENDING_ROOTS) {
-      // Em vez de descartar novos elementos, consolidar a fila numa varredura
-      // completa. O TreeWalker do documento inclui todos os novos nós.
+      // A burst of mutations must not discard progress in an existing full
+      // document scan. Coalesce overflow into one follow-up root rescan.
+      const rootTask = work.find(task => task.generation === generation &&
+        task.root === document.documentElement);
+      if (rootTask) {
+        rootTask.rescan = true;
+        return;
+      }
       work.length = 0;
       root = document.documentElement;
       force = true;
     }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    work.push({root, walker, current: root.nodeType === Node.ELEMENT_NODE ? root : walker.nextNode(), generation, force});
+    work.push({root, walker, current: root.nodeType === Node.ELEMENT_NODE ? root : walker.nextNode(), generation, force, rescan:false});
     scheduleWork();
   }
 
@@ -383,7 +387,17 @@
     let count = 0;
     while (work.length && count < 160) {
       const task = work[0];
-      if (task.generation !== generation || !task.current || !task.root.isConnected) {work.shift(); continue;}
+      if (task.generation !== generation || !task.root.isConnected) {
+        work.shift();
+        continue;
+      }
+      if (!task.current) {
+        work.shift();
+        // Only now restart the root: no already-scanned nodes are starved by
+        // a continual stream of mutations or repeated stylesheet changes.
+        if (task.rescan) enqueueSubtree(task.root, true);
+        continue;
+      }
       const current = task.current;
       styleElement(current);
       if (current.shadowRoot) {
