@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {validGrid,diagnoseKnownSiteGrid}=
+const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks}=
   require('../scripts/p14-known-public-grid.js');
 const grid=(bright,valid=96,dark=valid-bright)=>({
   gridPoints:96,valid,dark,bright,unknown:96-valid
@@ -68,4 +68,19 @@ test('P14 known public: missing matched coverage never gets a severe label',()=>
     {kind:'observed',grid:grid(80,96)},assessment);
   assert.equal(result.reason,'bright-css-increase');
   assert.equal(result.promotionEligible,false);
+});
+
+test('P14 known public: risk summary exposes major visual regression without release approval',()=>{
+  const youtube=diagnoseKnownSiteGrid('youtube',observed(13),observed(96),assessment);
+  const github=diagnoseKnownSiteGrid('github',observed(24),observed(25),assessment);
+  const summary=summarizeKnownPublicGridRisks([
+    {site:'youtube',p14KnownPublicGrid:youtube},
+    {site:'github',p14KnownPublicGrid:github}
+  ]);
+  assert.deepEqual(summary.possibleMajorBrightRegressions,['youtube']);
+  assert.deepEqual(summary.sitesNeedingVisualReview,['youtube','github']);
+  assert.equal(summary.promotionEligible,false);
+  assert.equal(summary.holdoutEvaluated,false);
+  assert.throws(()=>summarizeKnownPublicGridRisks([
+    {site:'julialang.org',p14KnownPublicGrid:youtube}]),/invalid known-public/);
 });
