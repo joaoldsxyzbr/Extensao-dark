@@ -113,8 +113,8 @@ function formatKnownPublicVisualSummary(rows, risk){
   const lines=[
     '### P14 — CSS visível em sites públicos conhecidos (diagnóstico)',
     '',
-    '| Site | P3 | Pontos CSS claros no candidato | Cobertura CSS | P14 |',
-    '|---|---|---:|---:|---|'
+    '| Site | P3 | Extensão 7D / 18D | Pontos CSS claros no candidato | Cobertura CSS | P14 |',
+    '|---|---|---|---:|---:|---|'
   ];
   for(const row of rows){
     if(!row||typeof row.site!=='string'||!KNOWN.has(row.site)||
@@ -131,7 +131,10 @@ function formatKnownPublicVisualSummary(rows, risk){
     const p3=row.assessment?.status;
     const p3Status=['observed-no-regression','needs-review',
       'expected-native-dark-skip','inconclusive'].includes(p3)?p3:'inconclusive';
-    lines.push('| '+row.site+' | '+p3Status+' | '+fraction+
+    const activation=value=>value===true?'ativa':value===false?'inativa':'desconhecida';
+    const active=activation(row.baseline?.extensionActive)+' / '+
+      activation(row.candidate?.extensionActive);
+    lines.push('| '+row.site+' | '+p3Status+' | '+active+' | '+fraction+
       ' | '+coverage+' | '+g.status+' |');
   }
   lines.push('','**Revisão de lançamento: bloqueada.**',

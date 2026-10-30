@@ -246,3 +246,9 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - Os dois workflows do SHA `2ec27ebf` concluíram com sucesso. Artefato automático: YouTube 7D 13/96 pontos CSS claros e candidato 18D 96/96; artefato com detecção nativa ignorada: YouTube 7D 13/96 e 18D 8/96. A mesma comparação no GitHub ainda mostrou superfícies extensas claras em ambos os modos. Isso sugere investigar primeiro a detecção de tema nativo, mas não prova a causa.
 - `real-site-lab.js` passou a registrar, para cada perfil, somente o booleano `extensionActive` lido da marca própria `html[data-extensao-dark="on"]`. Ele permite distinguir extensão desativada voluntariamente pela detecção nativa de extensão ativa com CSS claro. O relatório não publica texto, identidade de elementos, URLs da navegação, formulário, cookies ou seletores externos.
 - Essa instrumentação NÃO força a ativação, altera detecção do usuário nem muda modelo ou pesos. O CI seguinte deve confirmar essa medida antes de alteração na produção; persistem os gates de revisão visual independente.
+
+## Resumo de ativação por motor
+
+- A tabela P14 do GitHub Actions inclui agora o estado agregado **ativa/inativa/desconhecida** da extensão em cada perfil 7D/18D, usando exclusivamente os booleanos `extensionActive` já coletados no laboratório P3.
+- Isso separa potencial detecção de tema nativo do caso em que a extensão está ativa e não consegue escurecer toda a página. Estado ausente não é interpretado como `false`. Teste específico garante esses três estados.
+- A instrumentação não muda a inferência nem ativa a extensão à força. Continuidade: esperar execução do CI novo, comparar modos automático/forçado e resolver a causa verificada. Nenhum holdout novo, merge ou promoção.

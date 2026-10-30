@@ -131,3 +131,16 @@ test('P14 summary: expose bright CSS and unknown coverage alongside old P3 statu
   assert.throws(()=>formatKnownPublicVisualSummary([
     {...site,site:'private.example'}],risk),/invalid summary row/);
 });
+
+test('P14 summary: distinguish active, inactive and unknown extension profiles',()=>{
+  const result=diagnoseKnownSiteGrid('youtube',observed(13),observed(96),assessment);
+  const row={site:'youtube',assessment,p14KnownPublicGrid:result,
+    baseline:{extensionActive:true},candidate:{extensionActive:false}};
+  const summary=formatKnownPublicVisualSummary([row],summarizeKnownPublicGridRisks([row]));
+  assert.match(summary,/Extensão 7D \/ 18D/);
+  assert.match(summary,/youtube \| observed-no-regression \| ativa \/ inativa \|/);
+  const unknown=formatKnownPublicVisualSummary([
+    {...row,candidate:{extensionActive:null}}
+  ],summarizeKnownPublicGridRisks([row]));
+  assert.match(unknown,/ativa \/ desconhecida/);
+});
