@@ -137,9 +137,13 @@ async function main(){
     report.promotion=promotionGate(report.results);
     report.completed=true;
     update(report);
-    const warnings=report.results.filter(item=>!['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status));
+    const warnings=report.results.filter(item=>
+      !['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status)||
+      item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression');
     for(const item of warnings) console.warn(
-      '::warning title=P3 '+item.site+'::'+item.assessment.status);
+      '::warning title=P3 '+item.site+'::'+item.assessment.status+
+      (item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'
+        ? '; P14 possible-major-bright-css-regression' : ''));
     if(process.env.GITHUB_STEP_SUMMARY){
       const lines=[
         '### Laboratório P3 — '+report.mode,
