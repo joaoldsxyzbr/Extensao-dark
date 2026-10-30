@@ -4,7 +4,9 @@
 function captureBrightSources(){
   const result={gridPoints:96,bright:0,sourceDocument:0,sourceCustom:0,
     sourceStandard:0,largeSurface:0,fixedOrSticky:0,
-    textDark:0,textLight:0,textOtherOrUnknown:0,inlineImportant:0};
+    textDark:0,textLight:0,textOtherOrUnknown:0,inlineImportant:0,
+    blockedByGeometry:0,blockedByGraphicContext:0,eligibleByCanvasGate:0,
+    blockedByContext:0};
   const rgb=s=>{
     const m=/^rgb\(\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\s*\)$/.exec(s);
     if(!m)return null;
@@ -51,12 +53,21 @@ function captureBrightSources(){
     else result.textOtherOrUnknown++;
     if(source.style.getPropertyPriority('background-color')==='important')
       result.inlineImportant++;
+    const big=r.width>=innerWidth*.65&&r.height>=innerHeight*.45;
+    if(!big||style.position==='fixed'||style.position==='sticky'||
+      style.opacity!=='1')result.blockedByGeometry++;
+    else if(style.backgroundImage!=='none'||style.maskImage!=='none'||
+      style.webkitMaskImage!=='none')result.blockedByGraphicContext++;
+    else if(fg&&luminance(fg)<=.22)
+      result.eligibleByCanvasGate++;
+    else result.blockedByContext++;
   }
   return result;
 }
 const COUNT_KEYS=['bright','sourceDocument','sourceCustom','sourceStandard',
   'largeSurface','fixedOrSticky','textDark','textLight',
-  'textOtherOrUnknown','inlineImportant'];
+  'textOtherOrUnknown','inlineImportant','blockedByGeometry',
+  'blockedByGraphicContext','eligibleByCanvasGate','blockedByContext'];
 function validateBrightSources(raw){
   if(!raw||typeof raw!=='object'||Array.isArray(raw)||
     raw.gridPoints!==96||Object.keys(raw).length!==COUNT_KEYS.length+1||
@@ -65,7 +76,9 @@ function validateBrightSources(raw){
       raw[key]<0||raw[key]>96)||
     raw.sourceDocument+raw.sourceCustom+raw.sourceStandard!==raw.bright||
     raw.textDark+raw.textLight+raw.textOtherOrUnknown!==raw.bright||
-    ['largeSurface','fixedOrSticky','inlineImportant'].some(key=>raw[key]>raw.bright))
+    ['largeSurface','fixedOrSticky','inlineImportant'].some(key=>raw[key]>raw.bright)||
+    raw.blockedByGeometry+raw.blockedByGraphicContext+
+    raw.eligibleByCanvasGate+raw.blockedByContext!==raw.bright)
     throw Error('P14 known CSS source: malformed aggregate');
   return Object.freeze({
     kind:'p14-known-public-bright-css-sources',
