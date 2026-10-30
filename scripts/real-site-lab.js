@@ -142,11 +142,16 @@ async function main(){
     update(report);
     const warnings=report.results.filter(item=>
       !['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status)||
-      item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression');
+      item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'||
+      (item.p14KnownPublicGrid?.candidateValidPoints>=48&&
+       item.p14KnownPublicGrid?.candidateBrightPoints>=24&&
+       item.p14KnownPublicGrid?.candidateBrightFraction>=.5));
     for(const item of warnings) console.warn(
       '::warning title=P3 '+item.site+'::'+item.assessment.status+
       (item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'
-        ? '; P14 possible-major-bright-css-regression' : ''));
+        ? '; P14 possible-major-bright-css-regression' : '')+
+      (report.p14VisualRisk.unresolvedMajorBrightCoverage.includes(item.site)
+        ? '; P14 unresolved-majority-bright-css-viewport' : ''));
     if(process.env.GITHUB_STEP_SUMMARY){
       const lines=[
         '### Laboratório P3 — '+report.mode,
