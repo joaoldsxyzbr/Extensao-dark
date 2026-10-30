@@ -27,6 +27,7 @@
         "content/colors.js",
         "vendor/neural_core/neural-core.js",
         "content/neural.js",
+        "content/ai-first-beta.js",
         "content/content.js"
       ],
       "run_at": "document_start",
