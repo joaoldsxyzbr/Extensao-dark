@@ -6,7 +6,7 @@ function captureBrightSources(){
     sourceStandard:0,largeSurface:0,fixedOrSticky:0,
     textDark:0,textLight:0,textOtherOrUnknown:0,inlineImportant:0,
     blockedByGeometry:0,blockedByGraphicContext:0,eligibleByCanvasGate:0,
-    blockedByContext:0};
+    blockedByContext:0,shadowRootSource:0,shadowRootSample:0};
   const rgb=s=>{
     const m=/^rgb\(\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\s*\)$/.exec(s);
     if(!m)return null;
@@ -38,6 +38,8 @@ function captureBrightSources(){
     const spread=Math.max(...background)-Math.min(...background);
     if(Math.min(...background)<182||spread>=60)continue;
     result.bright++;
+    if(el.getRootNode?.()?.host)result.shadowRootSample++;
+    if(source.getRootNode?.()?.host)result.shadowRootSource++;
     const tag=source.tagName;
     if(tag==='BODY'||tag==='HTML')result.sourceDocument++;
     else if(tag.includes('-'))result.sourceCustom++;
@@ -67,7 +69,8 @@ function captureBrightSources(){
 const COUNT_KEYS=['bright','sourceDocument','sourceCustom','sourceStandard',
   'largeSurface','fixedOrSticky','textDark','textLight',
   'textOtherOrUnknown','inlineImportant','blockedByGeometry',
-  'blockedByGraphicContext','eligibleByCanvasGate','blockedByContext'];
+  'blockedByGraphicContext','eligibleByCanvasGate','blockedByContext',
+  'shadowRootSource','shadowRootSample'];
 function validateBrightSources(raw){
   if(!raw||typeof raw!=='object'||Array.isArray(raw)||
     raw.gridPoints!==96||Object.keys(raw).length!==COUNT_KEYS.length+1||
@@ -76,7 +79,8 @@ function validateBrightSources(raw){
       raw[key]<0||raw[key]>96)||
     raw.sourceDocument+raw.sourceCustom+raw.sourceStandard!==raw.bright||
     raw.textDark+raw.textLight+raw.textOtherOrUnknown!==raw.bright||
-    ['largeSurface','fixedOrSticky','inlineImportant'].some(key=>raw[key]>raw.bright)||
+    ['largeSurface','fixedOrSticky','inlineImportant','shadowRootSource',
+      'shadowRootSample'].some(key=>raw[key]>raw.bright)||
     raw.blockedByGeometry+raw.blockedByGraphicContext+
     raw.eligibleByCanvasGate+raw.blockedByContext!==raw.bright)
     throw Error('P14 known CSS source: malformed aggregate');
