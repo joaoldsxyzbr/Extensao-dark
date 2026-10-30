@@ -70,6 +70,9 @@ async function observe(site,model,extension) {
     if(result.totalElements<site.minSamples||result.sampledText<site.minSamples)
       return {kind:'inconclusive',reason:'página não forneceu amostras suficientes',durationMs:ms};
     // P14: viewport-grid numbers only; no page contents leave this lab.
+    // Only extension activation state; do not inspect page text or attributes.
+    const extensionActive=await page.eval(
+      "document.documentElement.getAttribute('data-extensao-dark')==='on'");
     const grid=await page.eval(GRID_EXPR);
     const brightSources=validateBrightSources(await page.eval(BRIGHT_SOURCE_EXPR));
     // Somente capturas de páginas públicas abertas num perfil novo sem login.
@@ -78,7 +81,7 @@ async function observe(site,model,extension) {
     try{await page.screenshot(path.join(OUTPUT,filename));captured=true;}
     catch{ /* captura indisponível não vira aprovação visual */ }
     return {kind:'observed',durationMs:ms,capture:captured?filename:null,
-      summary:result,grid,brightSources};
+      summary:result,grid,brightSources,extensionActive};
   }catch(error){
     // Erros de páginas remotas NÃO são interpretados como defeitos da extensão.
     return {kind:'inconclusive',reason:'navegação, rede, CDP ou leitura indisponíveis',
@@ -123,9 +126,11 @@ async function main(){
         p14BrightCssSources:{baseline:baseline.brightSources||null,
           candidate:candidate.brightSources||null},
         baseline:{kind:baseline.kind,durationMs:baseline.durationMs,
-          capture:baseline.capture||null,...(baseline.reason?{reason:baseline.reason}:{})},
+          capture:baseline.capture||null,extensionActive:baseline.extensionActive??null,
+          ...(baseline.reason?{reason:baseline.reason}:{})},
         candidate:{kind:candidate.kind,durationMs:candidate.durationMs,
-          capture:candidate.capture||null,...(candidate.reason?{reason:candidate.reason}:{})}
+          capture:candidate.capture||null,extensionActive:candidate.extensionActive??null,
+          ...(candidate.reason?{reason:candidate.reason}:{})}
       });
       update(report);
       console.log('P14 known public CSS grid',site.id,p14Grid.status,
