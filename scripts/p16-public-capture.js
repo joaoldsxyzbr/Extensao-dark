@@ -55,25 +55,41 @@ function merge(existing,choice,entries){
   throw Error('P16 public: false validation state');
  return {ledger:next,report:after};
 }
-function readLocal(){
- if(!fs.existsSync(LOCAL))return EMPTY();
- if(fs.lstatSync(LOCAL).isSymbolicLink()||fs.statSync(LOCAL).size>262144)
-  throw Error('P16 public: unsafe private review file');
- return JSON.parse(fs.readFileSync(LOCAL,'utf8'));
+// Shared lock and compare-and-swap prevent stale captures overwriting
+// reviews entered while a disposable browser session was open.
+function readLocal(filename=LOCAL){
+ if(!fs.existsSync(filename))return EMPTY();
+ if(fs.lstatSync(filename).isSymbolicLink()||
+    fs.statSync(filename).size>262144)
+  throw Error('P16 public: unsafe private ledger file');
+ return JSON.parse(fs.readFileSync(filename,'utf8'));
 }
-function saveLocal(ledger){
- const dir=path.dirname(LOCAL);
+function saveLocal(ledger,previous,filename=LOCAL){
+ validateLedger(previous);
+ validateLedger(ledger);
+ const dir=path.dirname(filename);
  fs.mkdirSync(dir,{recursive:true,mode:0o700});
  if(fs.realpathSync(dir)!==path.resolve(dir)||
-   fs.existsSync(LOCAL)&&fs.lstatSync(LOCAL).isSymbolicLink())
-  throw Error('P16 public: unsafe private review directory');
- const data=JSON.stringify(ledger,null,2)+'\n';
- if(Buffer.byteLength(data)>262144)throw Error('P16 public: private file too large');
- const temp=path.join(dir,'.p16-'+crypto.randomUUID()+'.tmp');
+    fs.existsSync(filename)&&fs.lstatSync(filename).isSymbolicLink())
+  throw Error('P16 public: linked private review path');
+ const lock=path.join(dir,'.p16-review-write.lock');
+ let handle=null,temp=null;
  try{
+  handle=fs.openSync(lock,'wx',0o600);
+  const current=readLocal(filename);
+  validateLedger(current);
+  if(JSON.stringify(current)!==JSON.stringify(previous))
+   throw Error('P16 public: ledger changed concurrently; recapture/reload');
+  const data=JSON.stringify(ledger,null,2)+'\n';
+  if(Buffer.byteLength(data)>262144)
+   throw Error('P16 public: private ledger too large');
+  temp=path.join(dir,'.p16-'+crypto.randomUUID()+'.tmp');
   fs.writeFileSync(temp,data,{flag:'wx',mode:0o600});
-  fs.renameSync(temp,LOCAL);
- }finally{if(fs.existsSync(temp))fs.rmSync(temp);}
+  fs.renameSync(temp,filename);
+ }finally{
+  if(temp&&fs.existsSync(temp))fs.rmSync(temp);
+  if(handle!==null){fs.closeSync(handle);fs.rmSync(lock);}
+ }
 }
 async function collect(choice,{launch,extract=captureRegionGraph,review=false,onInspect=null}){
  if(typeof launch!=='function')throw Error('P16 public: Chromium unavailable');
@@ -139,7 +155,7 @@ async function main(args=process.argv.slice(2)){
  }:null;
  const captured=await collect(choice,{launch,review,onInspect:inspect});
  const {ledger,report}=merge(existing,choice,captured);
- saveLocal(ledger);
+ saveLocal(ledger,existing);
  console.log(JSON.stringify({kind:'p16-public-review-capture-v1',
    newRegions:captured.length,totalRegions:report.recordedRegions,
    humanReviewsVerified:0,trainingAuthorized:false,holdoutVisited:false,
@@ -148,4 +164,4 @@ async function main(args=process.argv.slice(2)){
 if(require.main===module)main().catch(error=>{
  console.error('P16 public:',error.message);process.exitCode=1;
 });
-module.exports=Object.freeze({target,draft,merge,collect,EMPTY,main});
+module.exports=Object.freeze({target,draft,merge,collect,EMPTY,readLocal,saveLocal,main});
