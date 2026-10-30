@@ -56,6 +56,8 @@ jobs:
         run: node scripts/p17-preview-browser.js
       - name: Integrar P15 P16 P17 em fixture sintética reversível no Chromium
         run: node scripts/p17-integrated-pipeline.js
+      - name: Verificar pixels reais no preview e rollback sinteticos P18
+        run: node scripts/p18-pixel-rollback-browser.js
       - name: Medir baseline P13 nas fixtures P14 sem executar holdout
         run: node scripts/p14-benchmark-browser.js --p11-candidate=data/p11-descendant-ci-candidate.json
       - name: Consolidar diagnosticos existentes em contrato P14 (nao comparaveis)
