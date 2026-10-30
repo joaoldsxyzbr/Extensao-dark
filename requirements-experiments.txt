@@ -1,0 +1,2 @@
+# Optional local-only tool. Not installed by the normal CI.
+optuna==5.0.0

@@ -92,10 +92,8 @@ def evaluate(model, rows):
     }
 
 
-def run_training(*, epochs=65, seed=SEED, path=DATA):
-    groups = load_cases(path)
-    # Treino somente: balanceamento moderado de positivos, sem criar dados
-    # de validação/holdout por aumento ou reutilização.
+def training_pairs(path, groups):
+    # Shared train-only recipe for the existing P2 model and local experiments.
     selected = [row for row in groups["train"] if row.get("size") != "large"]
     examples = [(row["x"], row["y"]) for row in selected]
     examples += [(row["x"], row["y"]) for row in selected if row["y"][0]]
@@ -110,13 +108,19 @@ def run_training(*, epochs=65, seed=SEED, path=DATA):
     # Balanceamento de domínio apenas com exemplos LEGADOS do treino.
     # Os 18+32 casos antigos de avaliação não entram nas atualizações.
     examples += [(row["x"], row["y"]) for row in legacy] * 3
+    return examples, len(selected), len(legacy)
+
+
+def run_training(*, epochs=65, seed=SEED, path=DATA):
+    groups = load_cases(path)
+    examples, selected_count, legacy_count = training_pairs(path, groups)
     network = create_network([18, 14, 1], ["tanh", "sigmoid"], seed=seed)
     loss = train(network, examples, epochs=epochs, learning_rate=.24, seed=seed)
     results = {
         "kind": "synthetic-candidate-not-deployed",
         "seed": seed, "dimensions": [18, 14, 1],
-        "trainingFamilies": 18, "trainingUniqueSamples": len(selected),
-        "legacyTrainingAnchors": len(legacy),
+        "trainingFamilies": 18, "trainingUniqueSamples": selected_count,
+        "legacyTrainingAnchors": legacy_count,
         "trainingUpdatesPerEpoch": len(examples),
         "epochs": epochs, "loss": loss,
         "validation": evaluate(network, groups["validation"]),

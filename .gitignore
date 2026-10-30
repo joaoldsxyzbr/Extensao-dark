@@ -4,3 +4,6 @@ training/neural-color-features.json
 data/neural-color-ci-*.json
 data/neural-color-p8-ci-*.json
 training/neural-color-p8-hard-negatives.json
+
+# Experiment reports and SQLite never go to GitHub
+training/experiments/
