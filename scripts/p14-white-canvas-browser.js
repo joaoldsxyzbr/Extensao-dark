@@ -24,6 +24,8 @@ const light='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
   '</main></media-app><script>window.__fixtureReady=true</script></body></html>';
 const inherited=light.replace('background:var(--app-canvas);color:rgb(18,20,23)',
   'background:var(--app-canvas);color:inherit');
+const brightForeground=light.replace('background:var(--app-canvas);color:rgb(18,20,23)',
+  'background:var(--app-canvas);color:rgb(241,241,241)');
 const dark='<!doctype html><html lang="en" dark><head><meta charset="utf-8">'+
   '<style>html,body{margin:0;min-height:100vh;background:rgb(20,24,29);'+
   'color:rgb(240,241,243);font:16px system-ui}'+
@@ -45,7 +47,7 @@ async function inspect(url,extension,caseId){
   const browser=await launch(extension?ROOT:null);
   try{
     await browser.page.navigate(url,{fixtureReady:true});
-    if(extension&&['light','inherited'].includes(caseId))await waitFor(async()=>{
+    if(extension&&['light','inherited','bright-foreground'].includes(caseId))await waitFor(async()=>{
       const s=await browser.page.eval('('+snapshot.toString()+')()');
       const parsed=colors.parseColor(s.background);
       return s.active&&parsed&&colors.luminance(parsed)<.2;
@@ -60,12 +62,13 @@ async function main(){
   if(process.argv.length!==2)throw Error('P14 white-canvas: options not allowed');
   fs.mkdirSync(OUTPUT,{recursive:true});
   const server=http.createServer((req,res)=>{
-    if(!['/light','/inherited','/native'].includes(req.url)){
+    if(!['/light','/inherited','/bright-foreground','/native'].includes(req.url)){
       res.writeHead(404);res.end();return;
     }
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8',
       'Cache-Control':'no-store'});
-    res.end(req.url==='/light'?light:req.url==='/inherited'?inherited:dark);
+    res.end(req.url==='/light'?light:req.url==='/inherited'?inherited:
+      req.url==='/bright-foreground'?brightForeground:dark);
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   let result;
@@ -93,6 +96,15 @@ async function main(){
     assert.ok(colors.contrastRatio(colors.parseColor(inheritedActive.foreground),
       colors.parseColor(inheritedActive.background))>=8,
       'inherited foreground must remain readable');
+    const brightOriginal=await inspect(root+'/bright-foreground',false,'bright-foreground');
+    const brightFixed=await inspect(root+'/bright-foreground',true,'bright-foreground');
+    assert.ok(colors.luminance(colors.parseColor(brightOriginal.background))>.85,
+      'bright text canvas baseline should remain white');
+    assert.ok(colors.luminance(colors.parseColor(brightFixed.background))<.2,
+      'bright text on giant white canvas must be recovered');
+    assert.ok(colors.contrastRatio(colors.parseColor(brightFixed.foreground),
+      colors.parseColor(brightFixed.background))>=8,
+      'bright foreground must stay legible after recovery');
     const nativeOriginal=await inspect(root+'/native',false,'native');
     const nativeActive=await inspect(root+'/native',true,'native');
     assert.equal(nativeActive.active,false,'native dark must not activate');
@@ -100,6 +112,7 @@ async function main(){
       'native dark must keep its own surface');
     result={kind:'p14-white-canvas-local-regression',
       canvasRecovered:true,inheritedCanvasRecovered:true,
+      brightForegroundCanvasRecovered:true,
       foregroundContrastProtected:true,
       explicitIgnorePreserved:true,nativeDarkPreserved:true,
       publicSiteValidation:false,holdoutInspected:false,
