@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "id": "p14-fixture-catalog-v1",
+  "origin": "synthetic-authored-no-user-data",
+  "frozenAt": "2026-10-26",
+  "releaseEligible": false,
+  "splitPolicy": "unique-family-disjoint;holdout-never-run-in-ci",
+  "targets": {
+    "publicPages": 120,
+    "publicDomains": 30,
+    "unseenHoldoutPages": 30,
+    "unseenHoldoutDomains": 10
+  },
+  "fixtures": [
+    {
+      "id": "canvas-shell",
+      "split": "train",
+      "family": "canvas",
+      "kind": "canvas",
+      "theme": "light",
+      "background": "#f3f5f7",
+      "foreground": "#21262b",
+      "surface": "#ffffff",
+      "directText": false
+    },
+    {
+      "id": "sidebar-navigation",
+      "split": "train",
+      "family": "navigation",
+      "kind": "nav",
+      "theme": "light",
+      "background": "#f7f8f9",
+      "foreground": "#263238",
+      "surface": "#e5e8ed",
+      "directText": false
+    },
+    {
+      "id": "card-grid",
+      "split": "train",
+      "family": "cards",
+      "kind": "cards",
+      "theme": "light",
+      "background": "#f4f5f8",
+      "foreground": "#222b36",
+      "surface": "#ffffff",
+      "directText": false
+    },
+    {
+      "id": "direct-alert",
+      "split": "train",
+      "family": "direct-text",
+      "kind": "notice",
+      "theme": "light",
+      "background": "#f9f7f4",
+      "foreground": "#243042",
+      "surface": "#eee7d9",
+      "directText": true
+    },
+    {
+      "id": "native-dark",
+      "split": "train",
+      "family": "native-theme",
+      "kind": "cards",
+      "theme": "native-dark",
+      "background": "#161b22",
+      "foreground": "#edf0f2",
+      "surface": "#232936",
+      "directText": false
+    },
+    {
+      "id": "form-toolbar",
+      "split": "train",
+      "family": "form",
+      "kind": "form",
+      "theme": "light",
+      "background": "#f8f9fb",
+      "foreground": "#303840",
+      "surface": "#eceff3",
+      "directText": false
+    },
+    {
+      "id": "table-dashboard",
+      "split": "train",
+      "family": "table",
+      "kind": "table",
+      "theme": "light",
+      "background": "#f9f9fa",
+      "foreground": "#353941",
+      "surface": "#eeeeef",
+      "directText": false
+    },
+    {
+      "id": "graphic-protection",
+      "split": "train",
+      "family": "graphics",
+      "kind": "graphics",
+      "theme": "light",
+      "background": "#fafafa",
+      "foreground": "#202532",
+      "surface": "#f7f7f7",
+      "directText": false
+    },
+    {
+      "id": "layered-panel",
+      "split": "train",
+      "family": "layered",
+      "kind": "cards",
+      "theme": "light",
+      "background": "#fffaf6",
+      "foreground": "#322a28",
+      "surface": "#efe2d6",
+      "directText": false
+    },
+    {
+      "id": "gradient-opaque",
+      "split": "validation",
+      "family": "gradient",
+      "kind": "gradient",
+      "theme": "light",
+      "background": "#f9fbfd",
+      "foreground": "#29333f",
+      "surface": "#f1f4f6",
+      "directText": false
+    },
+    {
+      "id": "selected-state",
+      "split": "validation",
+      "family": "interactive-state",
+      "kind": "nav",
+      "theme": "light",
+      "background": "#f9f9fb",
+      "foreground": "#282d37",
+      "surface": "#dfe5f0",
+      "directText": false
+    },
+    {
+      "id": "small-screen-cards",
+      "split": "validation",
+      "family": "responsive",
+      "kind": "cards",
+      "theme": "light",
+      "background": "#f9f8fb",
+      "foreground": "#28303c",
+      "surface": "#eeedf6",
+      "directText": false
+    },
+    {
+      "id": "shadow-open-example",
+      "split": "holdout",
+      "family": "shadow-open",
+      "kind": "shadow",
+      "theme": "light",
+      "background": "#f4f5f7",
+      "foreground": "#222b32",
+      "surface": "#eaeefa",
+      "directText": false
+    },
+    {
+      "id": "mixed-translucency",
+      "split": "holdout",
+      "family": "alpha-layers",
+      "kind": "gradient",
+      "theme": "light",
+      "background": "#faf8f6",
+      "foreground": "#2e313a",
+      "surface": "#f2eae4",
+      "directText": false
+    },
+    {
+      "id": "long-document-links",
+      "split": "holdout",
+      "family": "document",
+      "kind": "table",
+      "theme": "light",
+      "background": "#fefdfb",
+      "foreground": "#252d36",
+      "surface": "#f2f0e8",
+      "directText": false
+    }
+  ]
+}

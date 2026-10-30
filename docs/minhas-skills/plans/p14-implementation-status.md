@@ -1,0 +1,303 @@
+# P14 — Corpus e benchmark para a First AI
+
+**Situação:** fundação experimental no GitHub, não um dataset supervisionado nem um modelo aprovado.
+
+## O que já existe
+
+- Catálogo autoral e sintético: 15 famílias distintas; 9 fixtures de treino, 3 de validação e **3 de holdout selado**, que não podem ser renderizados pelo CI exploratório.
+- Inventário de 12 domínios já utilizados em experimentos anteriores. São diagnósticos conhecidos, nunca um conjunto cego.
+- Renderizador de fixtures locais HTML/CSS sem dependências de rede, textos pessoais ou formulários preenchidos.
+- Schema P14 que rejeita URLs, conteúdo pessoal, duplicações, contaminação entre splits e mudança silenciosa de famílias.
+- Benchmark inicial em Chromium que executa somente treino e validação, medindo: número de superfícies planejadas, textos auditados, novas violações de contraste, correções de texto, rollback e índice de escurecimento por 96 pontos amostrados na viewport. Este índice não equivale à cobertura real de pixels nem substitui revisão visual.
+- Comparações 7D x P11 x P13 ainda NÃO disponíveis nos mesmos cenários. O contrato marca os modelos ausentes como não medidos. O P13 roda isoladamente como linha de base exploratória.
+
+## Limites e metas não cumpridas
+
+| Métrica | Fundação atual | Meta de longo prazo |
+|---|---:|---:|
+| Famílias sintéticas autorais | 15 | Expandir cobertura |
+| Fixtures de treino/validação | 12 | Aumentar diversidade |
+| Holdout sintético selado | 3 | Preservar e expandir antes de treinamento |
+| Páginas públicas verificadas para novo P14 | **0** | ≥120 |
+| Domínios públicos novos verificados para novo P14 | **0** | ≥30 |
+| Páginas públicas realmente cegas reservadas | **0** | ≥30 |
+| Domínios públicos de holdout cego | **0** | ≥10 |
+| Rótulos humanos de qualidade visual | **0** | Coletar em etapa posterior |
+
+Não usar os dados sintéticos isoladamente como evidência de generalização ou aprovação do P16. Não coletar navegação de usuário nem inserir exemplos pessoais.
+
+## Comandos de desenvolvimento
+
+1. node scripts/p14-dataset-contract.js
+2. node scripts/p14-benchmark-contract.js
+3. node --test tests/p14-dataset-benchmark.test.js
+4. node scripts/p14-benchmark-browser.js (somente com Chromium instalado)
+
+O workflow model-ci valida contratos e testes. O browser-e2e executa a bancada em Chromium efêmero e guarda os dados em browser-results/. O workflow nunca executa o holdout selado.
+
+## Próximos incrementos, nesta ordem
+
+1. Ampliar famílias e variantes independentes com revisão de privacidade e da qualidade da rotulagem.
+2. Definir lista de páginas públicas permitidas/estáveis e obter amostras válidas sem conteúdo textual; separar primeiro os domínios a reservar como holdout e não executar auditoria sobre eles durante o desenvolvimento.
+3. Rodar 7D, P11 e P13 sobre a mesma página/mesma configuração, capturando separadamente indicadores de erro e custo. Não inferir comparabilidade entre runs heterogêneos.
+4. Revisar screenshots e anotações de qualidade visual manualmente. Contraste automático é mínimo, não aprovação estética.
+5. Somente depois iniciar a extração contextual P15 e treinar a nova rede P16.
+
+**Privacidade e integridade:** nenhum dataset inclui URL de usuário, cookie, conteúdo de formulário, HTML da página ou elementos identificáveis da navegação. Publicar apenas métricas agregadas e fixtures criadas para teste. Os candidatos continuam fora do MV3 de produção, e a main não deve receber alterações até autorização posterior.
+
+## Incremento seguinte — candidatos públicos reservados (27/10/2026)
+
+- Registro **somente de planejamento** em `training/datasets/p14-public-domain-candidates.json`: 30 domínios-raiz distintos, dos quais 15 atribuídos ao treino, 5 à validação e **10 reservados ao holdout**. São propostas não verificadas; a existência de um domínio no arquivo não comprova acessibilidade, estabilidade, licença, permissão de coleta ou cobertura visual.
+- `scripts/p14-public-domains.js` valida hosts e domínios-raiz, impede mistura de subdomínios entre grupos, exclui sites diagnósticos conhecidos, rejeita URLs pessoais/caminhos/textos e congela a atribuição dos três splits. Os 10 domínios de avaliação não são expostos pela função de exploração.
+- Não existe crawler nem coletor ativado: **0 requisições de rede, 0 permissões revisadas, 0 páginas públicas verificadas, 0 rótulos humanos e 0 testes cegos**. O registro não autoriza acessar o holdout, treinar, promover pesos ou publicar.
+- Os testes JavaScript e Python verificam o contrato; o CI executa somente a validação offline. Antes de qualquer futura coleta, revisar acesso/termos/robots, diversidade além de páginas de documentação e privacidade, e definir páginas públicas específicas permitidas. A reserva de 30 domínios não satisfaz a meta de 120 páginas válidas.
+
+## Diagnóstico de proposta 7D × P13 e correção de rollback (27/10/2026)
+
+- O Chromium P14 usa as **mesmas amostras de CSS computado** das 12 fixtures exploratórias para registrar contagens de proposta P13 e votos do classificador distribuído 7D com limiar real 0,80. O vetor 7D usa ancestral **desconhecido, assumido claro**: é uma comparação de *decisões de componentes*, não dos dois motores completos.
+- O 7D **não modifica o DOM** neste ensaio, e o P11 **não é avaliado** nos mesmos cenários. Por isso `matchedModelComparisonAvailable` permanece falso; tempos/p95 continuam referentes apenas ao planejamento P13. O relatório possui `proposalGateDiagnostic` separado de `records` e não atribui métricas de contraste, pintura ou desempenho ao 7D.
+- A reversão P13 agora exige confirmação de CSS inline **e igualdade do CSS computado nos textos auditados e das 96 posições da grade da viewport** com a linha de base. Qualquer divergência interrompe o ensaio; isso não equivale a uma prova de restauração de todos os elementos da página.
+- Testes nativos abrangem entrada inválida, ausência de P13, rejeição de previsão 7D não finita, payload privado, amostras alteradas e diferenças de CSS/restauração. Nada muda no MV3 ou nos pesos distribuídos.
+- Próximo gate: comparar **pintura e reparo de texto de cada alternativa** com condições idênticas, e validar páginas públicas realmente permitidas antes de coletá-las; avaliação cega e revisão humana seguem ausentes.
+
+## Ensaio pareado de pintura P13 × P13 filtrado pelo 7D (27/10/2026)
+
+- As **mesmas 12 fixtures de treino/validação** agora são processadas em dois perfis Chromium independentes, com dimensões/configurações de bancada idênticas: (a) P13 determinístico; (b) P13 usando somente as superfícies que o modelo distribuído 7D aceitaria no vetor parcial (ancestral desconhecido assumido claro). **Ambos aplicam as cores e reparos de texto do P13**, portanto esta NÃO é a execução integral do motor 7D do MV3.
+- Em ambos os perfis há auditoria de contraste dos textos amostrados, índice aproximado da grade de 96 pontos e rollback auditado. Os estilos originais, as amostras CSS e a grade anterior ao ensaio são usados para gerar uma impressão SHA-256 que deve coincidir entre os perfis.
+- A consolidação `scripts/p14-pairing.js` rejeita duplicatas, splits divergentes e impressões CSS diferentes. Só calcula delta de cobertura quando **ambos** os testes retornam `safe-in-sample`, rollback confirmado e frações válidas; bloqueios/inconclusivos ficam como `null` sem contarem como sucesso.
+- **Gate de controles protegidos (novo):** cada pintura sintética no Chromium mede CSS computado dos controles visíveis (botões, inputs, seleções e papéis acessíveis) sem ler valores, textos ou links. Alteração identificada marca o cenário `blocked`; amostragem ausente, truncada ou com quantidade instável impede `safe-in-sample`. O rollback também exige equivalência do CSS dos controles amostrados. `controlsChanged: 0` é obrigatório para aprovação dos cenários P14, mas não representa revisão visual integral, cobertura de controles invisíveis nem avaliação em sites públicos.
+- O relatório `browser-results/p14-first-ai/p14-benchmark.json` contém `gatedLabAggregate` e `pairedSyntheticPaint` separados. Continua `matchedModelComparisonAvailable=false`, pois nem o runtime 7D completo nem o P11 foram executados em condições iguais, e a grade não mede área real de pixels.
+- Testes em `tests/p14-matched-paint.test.js` verificam filtragem, ausência de mutação, rejeição de previsões inválidas, isolamento dos pares e a proibição de falsa equivalência. O conjunto cego de holdout sintético e os domínios públicos reservados não são acessados.
+- Próximo gate: ampliar casos públicos com permissão e revisão de privacidade, validar a mesma instrumentação com o MV3 clássico e preparar uma avaliação P11 compatível. Não publicar nem promover pesos com base neste laboratório.
+
+## Diagnóstico experimental P11 sobre CSS pareado do P13 (27/10/2026)
+
+- O workflow de Chromium treina primeiro o candidato **P11 isolado do CI** e fornece explicitamente `--p11-candidate=data/p11-descendant-ci-candidate.json` à bancada P14. Sem essa opção, a bancada continua executável e marca P11 como não solicitado; não carrega pesos de produção nem promove modelos.
+- Nas 12 fixtures exploratórias de treino/validação, depois da pintura P13 e **antes do reparo determinístico**, o laboratório passa os pares de CSS já medidos (`before` / `after`) ao P11 **somente para gerar sugestões**, sem aplicar sua saída ao DOM. Compara apenas propostas para textos cuja correção já foi exigida pelo P13; bloqueios/inconclusões e ausência de oportunidades são contabilizados separadamente.
+- O P11 mantém sua barreira de contraste; sugestões inválidas não são contabilizadas como sucesso. O relatório `p11TextShadowDiagnostic` contém **somente contagens agregadas e códigos**, sem RGB de páginas, texto, URLs ou valores de formulários. Os cálculos originais de escurecimento, contraste, controles protegidos e rollback permanecem exclusivos do P13.
+- **Contexto P11 observado (incremento seguinte):** `scripts/p14-p11-context.js` examina **somente os nós de texto já selecionados pelo P13**, antes da pintura. Captura `isLink` pela presença de ancestral `a[href]` ou `role="link"` (sem ler o endereço) e marca `explicitColor=true` somente se houver declaração `color` inline ou cor computada diferente da cor do ancestral imediato. Quando a cor é igual ao ancestral sem declaração inline, a origem CSS pode ser herança ou regra equivalente, portanto `explicitColor=null` e a comparação correspondente fica **inconclusiva**, nunca presumidamente correta. O tamanho de texto continua derivado de CSS computado. A captura não produz textos, URLs, atributos, seletores ou valores de formulários no relatório. O ensaio não constitui renderização P11, latência equiparável, comparação completa 7D/P11/P13 nem aprovação visual de sites reais.
+- Ficam pendentes: coleta pública autorizada, avaliação cega humana e benchmark em condições completas 7D/P11/P13 no Chromium. **`matchedModelComparisonAvailable=false` e `promotionEligible=false` permanecem obrigatórios**; holdout selado não é aberto.
+
+## Incremento — protocolo de revisão visual independente com gate offline (29/10/2026)
+
+- `training/datasets/p14-public-manual-review.json` começa **sem observações**. Nenhum rótulo visual, página ou screenshot foi inventado.
+- `scripts/p14-independent-reviews.js` valida declarações estruturadas de revisão humana apenas para os 20 domínios de **treino/validação** já congelados; o holdout de 10 domínios não pode ingressar nem ser contado na exploração. Não acessa a rede, captura, treina, avalia modelos ou lê conteúdo do navegador.
+- Cada registro contém somente um ID de caso genérico, domínio público previamente listado, split, classe de cenário, viewport, estado de revisão, riscos de ilha branca/contraste/interação e declaração de anotação cega. URLs, texto de página, cookies, screenshots, campos extras, registros duplicados e resultados falsamente completos são rejeitados.
+- `tests/p14-independent-reviews.test.js` cobre divisão de domínios, entradas inválidas, revisões inconclusivas, duplicações e dados privados. `model-ci.yml` executa o novo contrato, e `node --test` inclui as regressões.
+- **A validação de esquema não verifica a veracidade humana de uma anotação.** Contagens do ledger são declarações, não provas de qualidade ou de acesso permitido. O relatório mantém `screenshotsIndependentlyVerified=false`, `matchedModelComparisonAvailable=false` e `promotionEligible=false`.
+- Para avançar de fato, revisar acesso e permissão para páginas públicas específicas, registrar avaliação humana reproduzível e revisar capturas privadas apenas em artefatos efêmeros. Nenhum holdout pode ser explorado ou usado para calibrar. O pipeline precisa ser verificado no SHA final antes de considerar este incremento validado.
+
+## Incremento — observar motor 7D real em Chromium isolado (29/10/2026)
+
+- `scripts/p14-mv3-synthetic.js` carrega **a extensão MV3 7D distribuída de verdade** em perfil efêmero do Chrome, junto a um perfil sem extensão. Executa apenas seis fixtures autorais de treino, incluindo formulário, texto direto, cartões e tema escuro nativo; não abre websites externos e não acessa o holdout.
+- O relatório `browser-results/p14-mv3-synthetic/report.json` registra apenas status agregados, contagens de amostragem de 96 posições do CSS computado e diferenças de CSS de controles protegidos; valores CSS brutos ficam na memória descartável. A coleta não lê texto, formulários, URLs de navegação nem conteúdo pessoal.
+- `scripts/p14-mv3-assessment.js` impede contabilizar tema nativo preservado como conversão. Amostras ausentes/truncadas, motor inativo ou controles incomparáveis são inconclusivos; controles modificados exigem revisão e não são aprovados automaticamente. Testes Node em `tests/p14-mv3-assessment.test.js`.
+- O workflow de Chromium passa a executar a observação separadamente do benchmark existente. **Não é comparação completa em condição igual de 7D × P11 × P13**, não mede latência de inferência, área real em pixels, acessibilidade completa nem qualidade estética. Nenhuma rede ou CSS experimental é promovido.
+- Antes de concluir: conferir CI no SHA final, analisar as observações de risco e depois validar pages públicas e revisão humana independente com permissão. Os 10 domínios de holdout continuam selados; `promotionEligible=false` sempre.
+
+### Evidência visual do diagnóstico MV3
+
+O laboratório adicional agora grava **somente screenshots das seis páginas sintéticas autorais** em `browser-results/p14-mv3-synthetic/`: um `*-original.png` e um `*-legacy-mv3.png` por fixture. O artefato efêmero do workflow permite análise humana posterior sem expor páginas ou dados de usuários; não contém nenhum domínio de holdout.
+
+A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é registrada como `native-dark-inactive-observed`, e **não** como prova de fidelidade visual. Mesmo com screenshots disponíveis, revisão humana, métricas de contraste completo e comparação justa com P13/P11 permanecem pendentes. Confirmar o CI do commit mais novo.
+
+## Diagnóstico direcionado — formulário MV3 (29/10/2026)
+
+- Nos logs do workflow bem-sucedido [#40885863008](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40885863008), o ensaio MV3 marcou **form-toolbar = needs-review / protected-controls-css-difference**. Isso comprova diferenças CSS amostradas em controles, **não comprova perda de contraste ou defeito visual**. Os outros quatro cenários claros ficaram como `observed-only`, e o nativo escuro apenas apresentou motor inativo.
+- Adicionado `scripts/p14-form-control-audit.js`: captura exclusivamente cores computadas de fundo, texto e borda dos dois controles **autorais** do formulário. Compara legibilidade de texto pelo contraste 4,5:1 entre original e MV3; valores brutos de CSS ficam somente em memória, sem conteúdo/valor de formulário, identificadores de usuário ou URLs. Registra apenas contagem de mudanças, menor contraste e status no relatório.
+- Uma nova queda abaixo de 4,5:1 vira `contrast-regression` e `needs-review`. Opacidade desconhecida, dados ausentes ou contraste já ruim no original são `inconclusive`. Alterações intencionais de CSS com contraste legível permanecem **apenas observadas**, e não uma liberação da extensão.
+- Incluídas regressões em `tests/p14-form-control-audit.test.js` e execução no Chromium existente. Foco/hover, estado selecionado, controles não visíveis, contraste de bordas e integridade funcional **ainda não foram medidos**. Esta inspeção não altera `content/content.js`, a `main`, o manifesto ou pesos.
+- Validar ambos os workflows no **SHA final** para confirmar este incremento. Revisão humana das capturas, sites públicos permitidos e holdout externo continuam pendentes. Não usar esse teste de formulário como prova de segurança universal.
+
+## Evidências do artefato e gate de preservação nativa (29/10/2026)
+
+- Na execução real [#40886985155](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40886985155), os dois workflows do SHA `7020067c` foram aprovados. O artefato `browser-e2e-comparacao` contém os seis pares de screenshots e o relatório JSON P14.
+- **Formulário**: `protectedControlsChanged=2`, refletindo mudanças de CSS dos controles. A auditoria automática encontrou contraste mínimo de texto **11,97:1 antes** e **12,81:1 depois** nos dois controles autorais, com `legible-in-sample`. Nenhuma perda de contraste de texto foi demonstrada nessa amostra; foco, hover, bordas e uso funcional ainda requerem revisão.
+- **Página já escura**: as duas capturas PNG extraídas desse workflow apresentaram pixels idênticos no ensaio local. Isso sustenta apenas a preservação da viewport dessa fixture, não a preservação de qualquer site nativo em produção.
+- Para não depender de inspeção casual, `p14-mv3-synthetic.js` agora calcula SHA-256 dos PNG originais e MV3 **somente na memória do navegador de laboratório**. `p14-mv3-assessment.js` aceita `native-dark-screenshot-identical-in-sample` apenas com hashes válidos e iguais, marca mudanças como `needs-review` e capturas ausentes como `inconclusive`. O relatório persiste só o resultado booleano, sem hashes, CSS, texto ou URL. A comparação de bytes é mais estrita que igualdade de pixels; diferenças por codificação devem ser revisadas e nunca aprovadas automaticamente.
+- A alteração de hash está no SHA posterior ao workflow acima; seus testes e CI precisam ser comprovados separadamente. Não existe ainda avaliação independente de sites públicos, julgamento humano cego ou autorização de promoção de pesos. `promotionEligible=false` continua obrigatório.
+
+## Pacote de revisão visual offline — 29/10/2026
+
+- `scripts/p14-review-gallery.js` gera `browser-results/p14-mv3-synthetic/review.html` com as 12 capturas originais/7D de seis fixtures autorais, lado a lado, sem dependências, scripts, rede, conteúdo pessoal ou páginas de holdout. A página usa CSP restritiva e não equivale a julgamento independente.
+- O laboratório só escreve a galeria após gerar **todos** os pares; capturas faltantes interrompem a geração, sem mascarar evidência ausente. `tests/p14-review-gallery.test.js` protege a lista fixa e a ausência de acesso remoto.
+- O workflow de Chromium já arquiva `browser-results/`; o arquivo HTML poderá ser aberto localmente a partir do ZIP de artefatos GitHub Actions para facilitar inspeção humana.
+- A auditoria do formulário anterior comprovou contraste mínimo de **11,97:1 original** e **12,81:1 com 7D** nesse ensaio. Isso não substitui testes de foco, hover, uso real, revisões humanas independentes ou avaliação de sites públicos.
+- Próximo gate: comprovar CI do SHA mais recente, auditar as observações e iniciar corpus público com permissão, mantendo os domínios de holdout selados. Modelos, manifestos e `main` permanecem inalterados.
+
+## Robustez do Chromium e indicador de foco do formulário (29/10/2026)
+
+- Em um commit intermediário da P14, o navegador falhou com `ENOTEMPTY: directory not empty, rmdir .../Default` no [workflow #40934452699](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40934452699): o encerramento do Chrome ainda gravava o perfil temporário quando `fs.rmSync` foi chamado. Não era evidência de erro de pintura da extensão. O workflow do último SHA anterior `3d808f07` permanecia em andamento na verificação inicial deste incremento, e seu teste de qualidade passou.
+- Corrigido `scripts/browser-e2e.js`: aguarda término do processo após `SIGTERM`, escala a `SIGKILL` após espera limitada, e remove o perfil com tentativas apenas para erros transitórios do sistema de arquivos. `tests/browser-profile-cleanup.test.js` cobre gravação tardia, encerramento forçado e processo já finalizado. O limite de espera não garante que todos os subprocessos de um navegador defeituoso terminem; falhas persistentes de limpeza continuam explícitas.
+- `scripts/p14-form-focus-audit.js` examina `input` e `button` da fixture autoral em foco, sem ler valores de formulário ou texto. O resumo registra somente quantidade de controles, menor contraste da borda do foco contra a superfície adjacente e `visible-in-sample`, `needs-review` ou `inconclusive`. Considera 3:1 mínimo para o indicador e bloqueia piora visível do contraste. O ensaio faz `element.focus()`, portanto **não confirma navegação de teclado/Tab, foco-visível por modalidade ou interação real**.
+- `scripts/p14-mv3-synthetic.js` produz esse diagnóstico separado de contraste de texto e CSS dos controles; `tests/p14-form-focus-audit.test.js` verifica riscos de contorno invisível, cor sem contraste, dados incompletos e impossibilidade de promover a extensão.
+- **P14 ainda não tem páginas públicas inéditas revisadas nem avaliação cega**. O conjunto de holdout não foi executado e `promotionEligible=false`. A alteração não tocou manifesto, pesos, permissões ou `main`. Validar qualidade e Chromium no SHA final antes de declarar este incremento aprovado.
+
+## Diagnóstico de ilhas claras em páginas públicas já conhecidas (29/10/2026)
+
+- Confirmada a conclusão dos dois workflows para `660cac1f`: [qualidade #40935622188](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40935622188) e [Chromium #40935622079](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40935622079), ambos `success`.
+- Inspecionado diretamente o relatório `p14-mv3-synthetic/report.json` da execução. No formulário autoral: contraste do texto **11,97:1 → 12,81:1**, foco por `element.focus()` com contorno de **1,89:1 → 8,08:1** (limite de referência do ensaio: 3:1). Na página nativa escura, as capturas PNG do original e do 7D foram idênticas no teste. Não valida tabulação, hover, acessibilidade geral ou sites independentes.
+- Para procurar ilhas claras residuais **sem novos acessos externos**, `scripts/real-site-lab.js` passou a reutilizar as sessões descartáveis já existentes de seis páginas públicas conhecidas do P3 e capturar apenas uma malha de **96 pontos de CSS de fundo computado** por perfil, sem texto, campos, cookies ou conteúdo de páginas. Sem novas URLs, sem novos domínios nem holdout.
+- `scripts/p14-known-public-grid.js` valida a malha e exige cobertura suficiente. Pontos muito claros persistentes ou que aumentam no candidato 18D recebem `needs-visual-review`; falta de cobertura/observação fica `inconclusive`. `observed-no-large-bright-grid-signal` **não é declaração de ausência de ilhas claras**, pois gradientes, imagens, camadas, iframes, página longa e regiões fora da viewport podem escapar à amostragem.
+- Essa comparação é **7D publicado × 18D efêmero em páginas já conhecidas**, e **não** o benchmark independente 7D/P11/P13 pretendido na P14. O relatório explicita `previouslyKnownDiagnosticSite=true`, `independentPublicValidation=false` e `promotionEligible=false`; os dez domínios reservados para holdout permanecem totalmente fora da lista. Novos testes em `tests/p14-known-public-grid.test.js` cobrem limites, domínios bloqueados, páginas nativas e amostras inválidas.
+- Conferir o CI do commit final do diagnóstico antes de considerar o novo ensaio validado. A correção de ilhas claras no motor distribuído, a aprovação humana cega e a integração de P16/P17 ainda não foram entregues.
+
+## Correção experimental de superfície branca extensa — 29/10/2026
+
+- **Evidência concreta** do [CI do SHA `4a04b8cd`](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40937711931): ambos os workflows passaram. No `real-sites-report.json` do artefato, o YouTube teve **96 de 96 pontos CSS amostrados muito claros** tanto com o 7D publicado quanto com o candidato 18D; as capturas `youtube-baseline.png` e `youtube-candidate.png` apresentam uma grande área branca. O teste de texto sozinho dizia `observed-no-regression`, o que não comprova sucesso do modo escuro. A página do GitHub ficou `inconclusive` por baixa cobertura da malha. A Wikipédia e o MDN tiveram, respectivamente, 0/83 e 1/82 pontos claros observáveis; isso tampouco prova ausência geral de ilhas claras.
+- **Hipótese de causa**: decisões neurais conservadoras podem deixar de converter fundos opacos grandes, mesmo quando representam o canvas branco principal. Isso ainda **não prova** qual elemento concreto do DOM do YouTube foi recusado; não foi coletada telemetria do DOM privado.
+- Adicionada à branch P14 uma recuperação genérica **sob condições estritas**, sem exceções por domínio: `colors.shouldRecoverBrightCanvas` só autoriza superfícies grandes (largura de pelo menos 65% e altura de pelo menos 45% da viewport), opacas, muito claras, com texto escuro, não gráficas, não interativas, sem gradiente, máscara, transparência ou posição `fixed/sticky`. O `content/content.js` aplica a paleta existente e a proteção de contraste quando a rede não escolheu converter a superfície. Não há nova dependência, permissão ou peso.
+- `tests/p14-white-canvas-recovery.test.js` cobre elegibilidade e exclusões. `scripts/p14-white-canvas-browser.js` executa um **app-shell branco autoral** no Chromium MV3, exigindo fundo escuro legível e preservação de regiões explicitamente protegidas e tema escuro nativo; imagens e relatório ficam no artefato já existente. É um teste **sintético**: não garante resolução do YouTube real.
+- A correção está na branch experimental, não na `main`. Antes de integrá-la, verificar CI, comparar novamente `youtube-baseline.png` e a malha do P3, e inspecionar contraste, controles, desempenho e demais sites. A promoção da First AI continua bloqueada sem revisão independente.
+
+### Revisão e proteção do fallback experimental
+
+- O primeiro CI de qualidade do experimento falhou em `tests/engine-smart.test.js` porque os mocks do DOM não ofereciam `getBoundingClientRect`; o motor novo tentava ler a geometria mesmo sem navegador real. Corrigido na branch com verificação explícita do método e das dimensões da viewport, sem enfraquecer os testes de comportamento neural existentes. A qualidade no SHA `9bc7258c` foi observada em `success`; o Chromium desse SHA ainda estava em execução na última consulta.
+- Um artefato Chromium de SHA intermediário (`79c72e06`) mostrou que a superfície branca do YouTube ainda não foi resolvida integralmente pelo 7D: no modo global, **96/96 pontos continuavam claros no 7D**, enquanto o candidato 18D experimental apresentou 8/96 pontos claros, mas com barra superior clara e alguns ícones insuficientemente legíveis. O GitHub apresentou áreas claras, inclusive no estado anterior; não se pode atribuir esse comportamento exclusivamente ao fallback.
+- Segunda restrição experimental: a recuperação de um canvas grande com **texto claro herdado** exige que seu **fundo ancestral realmente observado seja escuro** (luminância menor que 0,22). Sem esse contexto, permanece bloqueada. Essa mudança usa CSS computado local, não recolhe texto nem URL, e protege controles, grafismos, gradientes, transparências e posicionamento fixo/aderente.
+- Acrescentada cobertura unitária para ancestral escuro/claro/desconhecido e uma segunda fixture Chromium com `color:inherit` no app-shell branco. O ensaio exige contraste confortável, respeita regiões explicitamente ignoradas e verifica tema nativo escuro. Nenhuma dessas mudanças prova correção do YouTube real; será necessário conferir as novas capturas e o relatório com CI final.
+- Não há publicação nem promoção de pesos. O produto da `main` não foi modificado.
+
+## Diagnóstico adicional de superfícies claras e robustez da conexão Chrome (29/10/2026)
+
+- **CI validado** no SHA anterior `673b550e`: treinamento/qualidade [#40939763233](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40939763233) e Chromium [#40939763094](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40939763094), ambos `success`. O novo teste de `p14-white-canvas-browser.js` confirmou *somente nas duas fixtures locais* fundo recuperado, legibilidade, preservação de `data-extensao-dark-ignore`, e tema nativo.
+- **Falha de infraestrutura independente** em um commit anterior [#40939711533](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40939711533): `p14-mv3-synthetic.js` falhou no WebSocket porque `DevToolsActivePort` tinha sido detectado antes de conter as duas linhas do endpoint. A função `parseDevToolsActivePort` em `scripts/browser-e2e.js` só aceita número de porta 1–65535 e rota local `/devtools/browser/<id>` bem formada. O laço de inicialização aguarda o arquivo **completo**, não somente sua existência. `tests/browser-devtools-port.test.js` cobre leitura parcial, conteúdo extra e URL malformada. Isso não atenua os testes do navegador.
+- **Evidência visual pública do SHA aprovado**: `real-sites-report.json` registrou, para o YouTube em modo automático, **96/96 pontos CSS claros** nos dois motores (7D de distribuição e candidato 18D efêmero) e `changedBackgrounds=0` nos dois perfis; as capturas ainda mostram a tela branca. O GitHub teve **59/60** pontos claros no 7D e **54/60** no candidato, com indicação `needs-review` por 11 textos de contraste possivelmente insuficiente no candidato, dentro de 38 amostras. Estes são **sites diagnósticos já conhecidos**, não a avaliação independente da P14. Sem aprovação para promover.
+- **Nova observação limitada**: `scripts/p14-bright-source-diagnostic.js` amostra os mesmos 96 pontos da viewport em perfis já abertos pelo P3 e salva somente contagens agregadas de classes de superfície responsável pelo fundo claro: `HTML/BODY`, componente customizado ou nó padrão; área grande, posição `fixed/sticky`, brilho aproximado do texto e declaração inline aplicada. Não grava HTML, identificadores, seletores, CSS bruto, texto, URLs ou cookies. As contagens são **pontos repetidos**, não quantidade única de elementos. Há testes de contrato e proteção contra campos extras. Esses dados permitem decidir o próximo ajuste do motor a partir de causa mais específica em vez de adicionar heurísticas às cegas.
+- A P14 permanece **não aprovada para release**: o problema visual real ainda existe em YouTube e GitHub, a correção de canvas só passou em fixtures autorais, o holdout selado continua intocado. O CI do SHA mais recente deve ser conferido separadamente.
+
+## Diagnóstico de causas em superfícies claras (30/10/2026)
+
+- Ambos os workflows do SHA `2003c011` concluíram com `success`: [qualidade #40940984988](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40940984988) e [Chromium #40940984803](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/40940984803).
+- Examinado diretamente o arquivo `real-sites-report.json` do artefato deste commit. **YouTube**: tanto no 7D quanto no candidato 18D, 96/96 pontos observáveis permanecem claros; 83/96 pontos são de componentes HTML personalizados (`tagName` com hífen) e 13/96 de elementos padrão. Dos 96, 83 estão em superfícies extensas e **91 apresentam cor de texto clara**. Nenhuma mudança `background-color!important` foi detectada nessas amostras. **GitHub**: 55 pontos claros no 7D e 54 no 18D, todos de elementos HTML padrão com texto escuro; 52 e 51 desses pontos pertencem a superfícies extensas. Isso são **amostras de pontos**, não número de elementos únicos.
+- A hipótese de incompatibilidade de origem/layout deve ser investigada, pois há indícios de causas diferentes no YouTube e no GitHub. **Ainda não se identificou a regra exata que rejeita os elementos**, nem existe autorização para corrigir de maneira indiscriminada controles, símbolos ou overlays.
+- Ampliado `scripts/p14-bright-source-diagnostic.js` para quantificar, exclusivamente em memória e sem seletores/IDs/textos, pontos descartados por geometria, contexto visual gráfico, cor de texto e candidatos grosseiros à recuperação. Esses números são **indicadores prévios à decisão**, não a decisão real `visualContext`/rede. A validação contratual exige que todas as contagens sejam íntegrias. `tests/p14-bright-source-diagnostic.test.js` atualizado.
+- Próximo gate: confirmar o CI mais recente, comparar as categorias com os screenshots e com a implementação efetiva de `visualContext`, e então produzir correção pequena acompanhada por verificação do YouTube/GitHub e não regressões. Sem mudança na `main`, sem aprovação de P14/First AI ou inspeção de holdout.
+
+## P14 — recuperação de texto claro sobre canvas branco (30/10/2026)
+
+- O último CI já disponível antes da mudança (`7c4c097d`) estava verde em ambos os workflows. O artefato de navegador examinou os seis sites públicos diagnósticos já conhecidos do P3: **YouTube**, 96/96 pontos brancos, 83 originados em componentes customizados grandes e 91 com texto CSS claro; **GitHub**, 59 pontos claros no 7D, dos quais 51 estavam em superfícies extensas com texto escuro. No modo forçado o YouTube continuava com 96/96 pontos claros. Esses dados são pontos de viewport, não elementos únicos, nem avaliação independente.
+- **Ajuste experimental na branch**: `shouldRecoverBrightCanvas` permite agora uma superfície grande, opaca e quase branca **com texto claro** após os mesmos filtros de geometria, gráfico, controle, seleção, transparência, overlay e contexto visual existentes. Texto claro sobre branco já era pouco legível; o mapeamento usual da paleta escura e a rotina posterior de proteção de contraste continuam em vigor. Retirada a travessia de ancestrais que deixou de ser necessária nesse caso. Não há nova permissão, dependência, regra específica por site ou peso.
+- `tests/p14-white-canvas-recovery.test.js` atualizado e `scripts/p14-white-canvas-browser.js` ampliado com uma **terceira** fixture de texto explicitamente claro sobre fundo branco; o navegador deve observar fundo escurecido, contraste legível, preservação de ignorados e não alteração de tema nativo escuro.
+- **Pendência importante**: essa correção não foi aprovada apenas por passar um teste unitário. Precisa passar CI completo no SHA final e melhorar de fato as capturas e métricas de YouTube/GitHub sem regressão em contraste, controles e páginas já escuras. O holdout e a revisão cega da P14 continuam intactos; sem promoção da First AI, merge nem deploy.
+
+- Na primeira rodada intermediária do novo gate, a suíte de qualidade falhou em `tests/p14-white-canvas-recovery.test.js`: duas asserções duplicadas ainda exigiam `false` para texto branco sobre canvas branco, contradizendo a nova regra. Corrigido preservando o bloqueio explícito para texto cinza ambíguo e mantendo a avaliação positiva com texto claro na fixture própria. A falha foi no contrato de teste desatualizado, não prova de aprovação visual da implementação. O CI do commit final continua sendo o critério de validação.
+
+## P14 — alerta explícito de piora visual em páginas públicas (30/10/2026)
+
+- Os dois workflows do SHA `f04492ce` passaram ([navegador #41054999713](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/41054999713) e [qualidade #41054999732](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/41054999732)).
+- O artefato do Chromium revelou **uma divergência importante em sites públicos já conhecidos**: no YouTube automático, 7D distribuído tinha **13 de 96 pontos claros**, mas o candidato efêmero 18D apresentou **96 de 96**. O relatório P3 marcava `observed-no-regression` porque avaliava principalmente contraste de texto/ícones, não cobertura de fundo. Não confundir resultado positivo local de fundo branco com correção visual pública. Em GitHub automático, ambos os motores ainda apresentaram 55 de 61 pontos observáveis claros. São pontos CSS de viewport em perfis isolados, não imagens pareadas/quantidade de elementos únicos.
+- `scripts/p14-known-public-grid.js` agora prioriza `possible-major-bright-css-regression` quando há aumento de pelo menos 12 pontos, 20 pontos percentuais de fração clara, oito pontos claros no candidato e cobertura similar (diferença máxima de 12 pontos válidos). É um **alerta conservador para revisão**, não diagnóstico definitivo, porque sites dinâmicos podem mudar entre perfis.
+- `scripts/real-site-lab.js` emite um alerta CI específico mesmo se a classificação antiga P3 for `observed-no-regression`. Testes unitários exercitam 13→96 e o caso de cobertura divergente. A elegibilidade de promoção segue `false`, sem alterar pesos, gatilhos de publicação nem critérios externos.
+- Continua pendente investigar a diferença de processamento do candidato 18D e a presença residual de superfícies claras no 7D/GitHub. Não promover o 18D; primeiro inspeção visual independente e comparação representativa. Nenhuma página do holdout P14 foi acessada nesta etapa.
+
+## P14 — consolidação do risco visual em sites conhecidos (30/10/2026)
+
+- Ambos os workflows de `c96f454b` concluíram com sucesso: qualidade #41057050924 e Chromium #41057050941.
+- O sinal de **possível piora visual grande** do 18D não deve ficar apenas nos avisos de console. `summarizeKnownPublicGridRisks`, em `scripts/p14-known-public-grid.js`, consolida no relatório JSON os IDs de sites diagnósticos já conhecidos com risco visual e os que apresentam possível grande aumento de pontos claros; o contrato impede domínios não autorizados e mantém `promotionEligible:false`.
+- `scripts/real-site-lab.js` agora publica `p14VisualRisk` no relatório P3. O teste cobre 13→96 pontos claros no YouTube, outra página conhecida com áreas residuais e rejeição de domínios de fora da lista. Não são resultados novos de usuários, nem sites independentes, nem autorização para treinar/promover o candidato.
+- Próximo passo: conferir CI do SHA final e usar o alerta consolidado como bloqueio de revisão manual antes de decidir qualquer integração de 18D. A comparação de CSS amostrado não é avaliação de fidelidade visual em toda a página. Sem acesso ao holdout ou mudanças na `main`.
+
+## P14 — áreas claras majoritárias ainda não resolvidas (30/10/2026)
+
+- Os dois workflows do commit `50a4aa9e` foram verificados como `success`: qualidade #41057715936 e Chromium #41057715830.
+- O artefato de navegador examinado revelou, em modo automático, YouTube com **96/96** pontos CSS claros nos dois motores (7D e 18D) e GitHub com **54/96** pontos claros nos dois motores. O YouTube apresentou **83/96** pontos de origem em componentes customizados, a maioria com texto claro. GitHub apresentou **51/54** pontos claros sobre grandes superfícies HTML comuns com texto escuro. A análise se refere apenas a 96 amostras de viewport e não substitui revisão visual.
+- Como igualdade entre 7D e 18D não significa conversão bem-sucedida, `summarizeKnownPublicGridRisks` passou a registrar `unresolvedMajorBrightCoverage` para páginas conhecidas com pelo menos 48 pontos avaliáveis, 24 claros e fração clara >= 50%, desde que já estejam classificadas como `needs-visual-review`. Isso complementa `possibleMajorBrightRegressions`, não altera aprovação, pontuação de modelo ou sites.
+- O script P3 agora avisa explicitamente sobre a cobertura clara majoritária mesmo quando o diagnóstico antigo de contraste P3 mostra `observed-no-regression`. Teste específico cobre 54/96 pontos claros estáveis nos dois motores. O novo CI ainda precisa ser verificado.
+- A causa exata da falha de conversão em componentes reais permanece **não demonstrada**. O resultado do laboratório local de canvas branco não deve ser interpretado como correção real; próximas ações devem investigar o fluxo de CSS e Shadow DOM sem extrair dados de usuário ou tocar holdout, e então corrigir com ensaio reproduzível.
+
+## P14 — corrigir pontos de inspeção em Shadow DOM (30/10/2026)
+
+- O SHA `baa9929f` foi confirmado verde em ambos os workflows. Os resultados anteriores sobre YouTube/GitHub permanecem diagnósticos de CSS, não prova de aparência final.
+- Causa confirmada **na instrumentação**, não necessariamente no motor da extensão: `document.elementFromPoint` devolve o host de um Shadow DOM, mesmo quando o elemento visível no ponto está dentro de uma shadow tree aberta. Isso podia fazer o diagnóstico atribuir vários pontos claros a um componente externo, deixando a superfície interna sem análise. `captureBrightSources` agora atravessa até oito shadow roots **abertos** pela API `shadowRoot.elementFromPoint`; closed shadow roots continuam inacessíveis e não são inferidos. Limite de profundidade para desempenho.
+- `shadowRootSource` e `shadowRootSample` informam somente contagens agregadas e verificadas de pontos (máximo 96), nunca identidades, URLs, CSS bruto, texto, seletores, campos ou atributos de usuário. Testes verificam formato e limites. A inspeção de fundo CSS ainda segue apenas ancestrais `parentElement` da superfície alcançada: resultados desconhecidos continuam sendo inconclusivos.
+- Não há alterações no motor de produção, pesos ou permissões nesta etapa. O novo CI e um artefato atualizado do P3 devem demonstrar se a leitura melhora as informações em YouTube antes de qualquer ajuste funcional. Holdout intocado.
+
+## P14 — revisão do diagnóstico de superfícies após Shadow DOM (30/10/2026)
+
+- O CI de qualidade de `576161e1` concluiu com sucesso. O artefato do navegador do commit intermediário `5871f5d5` foi inspecionado: os pontos claros reportados em YouTube e GitHub têm `shadowRootSample: 0` e `shadowRootSource: 0`. Portanto, para as amostras visíveis, **não há evidência** de que um Shadow DOM aberto explique o problema; não presumir essa causa.
+- No YouTube forçado, o diagnóstico anterior ainda marcou 83 pontos como `blockedByContext`, pois classificava texto claro (`luminance >= .55`) como inelegível. Isso contradiz o gate de recuperação já alterado na branch. Ajustada a instrumentação para computar ambos os intervalos de texto permitidos (escuro <= .22 ou claro >= .55). A contagem `eligibleByCanvasGate` continua **pré-contexto**, sem afirmar que a transformação foi realmente aplicada.
+- Adicionada regressão de contrato para o limiar de texto claro. O teste do commit final e novo artefato ainda precisam ser confirmados antes de concluir a investigação. Essa alteração não muda o motor, o candidato 18D, pesos ou permissões.
+- Próxima análise necessária: por que superfícies com elegibilidade geométrica e cor adequada continuam claras no navegador. Investigar `visualContext`, aplicação real da extensão, estilo final e comportamento de páginas externas; sem correções por domínio e sem acessar holdout.
+
+## Gate explícito de revisão visual P14 — 30/10/2026
+
+- Confirmados `success` para qualidade [#41059515321](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/41059515321) e navegador [#41059515386](https://github.com/joaoldsxyzbr/Extensao-dark/actions/runs/41059515386), ambos no SHA `68dc9db1`.
+- Do artefato Chromium do mesmo SHA, no modo automático: **YouTube** 7D 96/96 pontos claros, candidato 18D 13/96; **GitHub** 7D 59/96, candidato 18D 54/96. O GitHub continua majoritariamente claro. O teste autoral P14 de grandes superfícies brancas passou, mas não valida todos os sites.
+- Adicionado ao resumo `p14VisualRisk` um campo `releaseReview` com `status:'blocked'`, distinguindo problemas visuais conhecidos ainda não resolvidos da ausência de revisão independente/holdout, mesmo caso os sites diagnósticos conhecidos pareçam bons. Isso é evidência de qualidade, **não** um sinal automático de autorização para ler holdout ou publicar.
+- Testes verificam as duas causas de bloqueio, inclusive uma página com CSS aparentemente resolvido mas sem avaliação independente. Sem alteração de pesos, permissões, branch main ou produção.
+- Permanecem pendentes as correções visuais reais do GitHub, a comparação independente com revisão humana da P14/P15, a evolução P16/P17, a preparação P18/P19 e eventual integração autorizada por decisão de produto. Não é correto marcar o projeto como pronto sem essas verificações.
+
+## P14 — diferença entre cobertura da amostragem e área clara (30/10/2026)
+
+- O CI de qualidade do commit anterior `e61a4d82` foi observado como aprovado; o workflow de navegador ainda estava em execução na consulta inicial desta etapa.
+- A regra do diagnóstico exige pelo menos 24 pontos CSS conhecidos em cada perfil, mas a proporção clara calculada sobre os pontos válidos **não** representa automaticamente a proporção de toda a viewport quando há áreas desconhecidas. Agora o relatório de sites públicos conhecidos expõe `baselineKnownGridFraction` e `candidateKnownGridFraction`, além de `baselineBrightFraction` e `candidateBrightFraction`.
+- Teste cobre o caso em que a cobertura do candidato cai de 80 para 30 pontos em 96, mesmo quando uma fração alta dos pontos conhecidos está clara. Não foi alterado o classificador da extensão, nenhum peso neural nem o gate humano de release. A interpretação continua conservadora: CSS incompleto e ausência de regressão **não** constituem aprovação visual.
+- Próximo passo: conferir CI do SHA final e, com evidência suficiente, isolar o motivo da falta de conversão nos sites públicos conhecidos. P14 independente, holdout e P15–P19 não estão concluídos.
+
+## CI consolidado de diagnóstico visual (30/10/2026)
+
+- Após revisão das pendências na P14, o resumo de Actions passou a apresentar **na mesma execução** a classificação P3 de contraste, contagem de pontos CSS claros do candidato, cobertura de CSS conhecida e estado P14 de revisão visual. A observação anterior podia parecer aprovada mesmo quando uma grande área branca persistia.
+- A formatação é pura, restrita à allowlist de seis sites públicos P3 e coberta por regressão; não registra texto ou atributos de páginas, nem inspeciona domínios P14 de holdout. A mensagem de revisão **continua bloqueada** e nenhum gate de promoção foi afrouxado.
+- Implementação e testes foram agrupados num único commit Git para validar com um par de workflows, sem disparar CI para cada arquivo. A execução completa deve ser confirmada antes de considerar esta mudança validada; problemas visuais reais e P15–P19 permanecem pendentes.
+
+## P14 — separar ativação da extensão de falha na conversão (30/10/2026)
+
+- Os dois workflows do SHA `2ec27ebf` concluíram com sucesso. Artefato automático: YouTube 7D 13/96 pontos CSS claros e candidato 18D 96/96; artefato com detecção nativa ignorada: YouTube 7D 13/96 e 18D 8/96. A mesma comparação no GitHub ainda mostrou superfícies extensas claras em ambos os modos. Isso sugere investigar primeiro a detecção de tema nativo, mas não prova a causa.
+- `real-site-lab.js` passou a registrar, para cada perfil, somente o booleano `extensionActive` lido da marca própria `html[data-extensao-dark="on"]`. Ele permite distinguir extensão desativada voluntariamente pela detecção nativa de extensão ativa com CSS claro. O relatório não publica texto, identidade de elementos, URLs da navegação, formulário, cookies ou seletores externos.
+- Essa instrumentação NÃO força a ativação, altera detecção do usuário nem muda modelo ou pesos. O CI seguinte deve confirmar essa medida antes de alteração na produção; persistem os gates de revisão visual independente.
+
+## Resumo de ativação por motor
+
+- A tabela P14 do GitHub Actions inclui agora o estado agregado **ativa/inativa/desconhecida** da extensão em cada perfil 7D/18D, usando exclusivamente os booleanos `extensionActive` já coletados no laboratório P3.
+- Isso separa potencial detecção de tema nativo do caso em que a extensão está ativa e não consegue escurecer toda a página. Estado ausente não é interpretado como `false`. Teste específico garante esses três estados.
+- A instrumentação não muda a inferência nem ativa a extensão à força. Continuidade: esperar execução do CI novo, comparar modos automático/forçado e resolver a causa verificada. Nenhum holdout novo, merge ou promoção.
+
+## P14 — evidência de ativação e amostra CSS tardia (30/10/2026)
+
+- O workflow de qualidade do SHA `c1b81989` falhou no teste antigo da tabela de Actions, que não considerava a nova coluna de ativação; corrigido para exigir `desconhecida / desconhecida` na ausência de sinal.
+- Artefato do navegador `a36c6bf7`: YouTube 18D ativo e 96 pontos CSS claros (automático); GitHub ambos ativos e 55 pontos claros no 18D. Com a detecção de tema nativo ignorada, YouTube 7D e 18D também ficaram 96/96 claros. A hipótese de simples desativação nativa não explica isoladamente esses casos.
+- O laboratório P3 mantém as amostras e screenshots atuais e coleta somente após a captura uma segunda amostra de fundos CSS após **1,2 segundo** em YouTube e GitHub já conhecidos. `p14KnownPublicTiming` compara contagens iniciais/tardias e cobertura por motor; mudanças podem ser de carregamento do site, processamento da extensão ou CSS do próprio site. Nenhuma causa é presumida. Não lê dados pessoais, texto ou URLs das páginas e não inclui holdout.
+- Testes de contrato cobrem redução temporal, persistência, falta de dados e bloqueio de domínios independentes. Release segue bloqueado, sem alteração de motor neural ou código de produção. Confirmação no CI final ainda necessária.
+
+## P14 — priorizar processamento inicial sem travar a página (30/10/2026)
+
+- Diagnóstico conclusivo **sobre o sintoma temporal**, não sobre sua única causa: no relatório do navegador do commit `39fbc074`, em modo automático, YouTube teve 96/96 pontos CSS claros na primeira amostra e 0/96 após 1,2 s, **em ambos os motores**. GitHub passou de 52 para 1 ponto claro em ambos, com cobertura próxima (58→65). Em modo forçado, o GitHub passou 52→1 (7D) e 55→1 (18D); alguns perfis do YouTube foram inconclusivos. Sites conhecidos, amostras CSS, perfis isolados, sem comprovação independente de imagem.
+- Causa técnica plausível: `requestIdleCallback({timeout:250})` por cada lote de 160 elementos pode multiplicar a demora em páginas complexas. Para reduzir a tela inicialmente clara, os **primeiros oito lotes** usam `setTimeout(...,0)` (máximo de 1.280 elementos + início do percurso). O restante mantém `requestIdleCallback` e fatias máximas de 160 elementos, limitando o trabalho contínuo. O orçamento inicial reinicia apenas em ativação/recriação da extensão; reversão normal de CSS permanece.
+- Adicionado teste de scheduler com 1.300 elementos protegidos: verifica a execução inicial rápida e a volta à fila ociosa após oito fatias. Não foram alterados modelo neural, pesos, regras de conversão, permissões, corpus, holdout ou `main`.
+- **Validação pendente:** CI completo da branch, especialmente o Chromium de sites conhecidos, para determinar se as primeiras amostras melhoram sem regressões de performance ou tema nativo. Não promover candidato nem declarar as telas definitivamente corrigidas com base apenas nesse ensaio.
+
+- Ajuste de CI: corrigida a importação de `diagnoseKnownPublicGridTiming` no teste Node que já fazia referência ao helper. Esse problema era a causa exata da falha de qualidade no SHA `39fbc074`. Os testes anteriores do Chromium passaram; necessário verificar novamente a suíte após a correção.
+
+## P14 — reduzir espera entre lotes após o primeiro desenho (30/10/2026)
+
+- Os workflows de qualidade e Chromium do commit `4fab7f0d` passaram. No artefato do Chromium, YouTube tinha 8/96 pontos CSS claros na primeira amostra (7D e 18D, em ambos os modos), caindo para 0 após 1,2 s. No GitHub, modo forçado havia 55/96 pontos claros no candidato, caindo para 1; o modo automático apresentou resultados variáveis entre perfis (15 no candidato, 55 no baseline) e não permite inferir melhoria universal. Há superfície clara visível na captura inicial do GitHub.
+- Hipótese de desempenho, **ainda não comprovada por comparação pareada**: depois das oito primeiras fatias rápidas, o agendador tolerava `requestIdleCallback(...,{timeout:250})` repetidamente. O timeout foi reduzido a 75 ms enquanto há trabalho na fila; o limite de 160 elementos por fatia, o teto de oito fatias iniciais e o retorno da execução ao período ocioso foram preservados. O timeout é máximo de espera, **não** bloqueio fixo de 250 ms; a melhora deve ser medida no Chromium.
+- Teste do agendador ampliado para exigir `timeout=75` após o orçamento rápido e verificar que a fila termina. Sem regras específicas para GitHub/YouTube, sem alteração de pesos, detecção nativa, permissões, sites de holdout ou branch `main`.
+- A evidência de CSS não substitui revisão humana de capturas e testes independentes. Candidato 18D permanece sem promoção, e P14/P15–P19 têm pendências de validação.
+
+## P14 — distinguir flash inicial de superfície clara persistente (30/10/2026)
+
+- Ambos workflows do commit `08553f8a` concluíram com sucesso. No Chromium automático, GitHub: 7D com 1/60 ponto CSS claro, candidato 18D com 54/60 no primeiro snapshot; ambos 1/65 após 1,2 s. YouTube: 8/96 inicial em ambos e 0/96 após atraso. No modo forçado GitHub começou escuro em ambos. A diferença não confirma causalidade, pois perfis remotos carregam de maneira independente.
+- O sumário P14 agora registra grande flash temporário do candidato, flash apenas no 18D (ausente no baseline 7D) e superfícies majoritariamente claras que continuam claras após atraso. Não oculta o risco só porque o fim do carregamento ficou escuro; não altera o gate de aprovação.
+- Novos testes cobrem flash apenas no 18D, flash nos dois motores, persistência e ausência de amostra tardia. O laboratório gera avisos de CI. Não foram alterados estilo, inferência, pesos, permissões, holdout ou `main`.
+- Próximas pendências: reproduzir o flash inicial em cenários pareados determinísticos, avaliar desempenho/estabilidade e conduzir a validação independente P14/P15 antes de promover candidato.
+
+## P14 — fila não reinicia repetidamente em páginas dinâmicas (30/10/2026)
+
+- Os dois workflows de `aba0d529` foram aprovados. No artefato de Chromium, GitHub automático: baseline 7D 1/61 ponto CSS claro inicial, candidato 18D 55/61, ambos 1/65 após 1,2 s; no modo forçado o flash inicial ocorreu no baseline e não no candidato. Isso confirma variabilidade temporal entre perfis, não uma regressão neural isolada.
+- Corrigido ponto estrutural em `enqueueSubtree`: mutações forçadas durante uma varredura ativa reiniciavam seu `TreeWalker` do começo e, após 40 raízes pendentes, a consolidação descartava o avanço da varredura inteira. Em páginas com alterações contínuas, os nós posteriores poderiam ficar sem processamento até a página estabilizar. Agora o percurso ativo termina, e mutações e estouro de fila são agrupados em uma segunda varredura. Mantidos o limite de 160 nós por fatia, o tempo máximo de 75 ms para fila ociosa, o orçamento de oito fatias rápidas e os mecanismos de rollback.
+- Teste novo em VM simula varredura de 900 nós, mutação forçada da raiz e 45 nós adicionados durante o processamento. Exige que a primeira travessia não seja reiniciada, uma única segunda varredura ocorra e a fila termine. Somente elementos `SCRIPT` protegidos; nenhum conteúdo de página, holdout ou identidade de elementos foi capturado.
+- Atenção: isso remove uma fonte verificável de possível starvation, mas **não comprova** que a causa principal das oscilações em GitHub/YouTube era essa. CI e comparação de Chromium do novo SHA devem ser avaliados; candidato 18D e release P14 continuam bloqueados.
+
+## P14 — teste sintético de tempo de escurecimento sob mutações SPA (30/10/2026)
+
+- Novo teste independente `scripts/p14-churn-browser.js`, já incluído no workflow de Chromium existente, sem Playwright ou pacotes novos. Serve apenas um fixture autoral em `127.0.0.1` com 1.600 nós `SCRIPT type=application/json` inertes e um canvas branco ao final, enquanto 45 mudanças de classe simulam atualizações dinâmicas.
+- O Chromium testa original versus extensão MV3 real, verifica escurecimento da superfície tardia em até 8 s, contraste >=8:1 e preservação da área protegida. Produz 2 capturas e relatório agregado de tempo. O período inclui navegação/CDP, **não é First Contentful Paint** nem análise real por pixels.
+- Três testes Node exercitam o fixture offline, o gate de segurança e a falha quando há atraso, contraste insuficiente ou área protegida alterada. A avaliação é sintética; `promotionEligible=false`, e revisão humana/holdout continuam não executados. Usa apenas a infraestrutura já instalada.
+
+## P14 — verificar recuperação após toda a rajada sintética (30/10/2026)
+
+- Na execução do commit `1cdf6ca`, os workflows de qualidade e navegador passaram. A bancada local de Chromium mediu **263,8 ms** até escurecer o canvas autoral com 1.600 nós e mutações de classe; o resultado inclui a navegação/CDP, não representa FCP nem revisão visual. Nos sites públicos conhecidos GitHub e YouTube, a execução mostrou apenas 1/61 e 0/96 ponto CSS claro na primeira amostra do candidato, respectivamente; a Wikipedia ainda exigiu revisão. Há variação entre execuções, então isso não prova que todos os flashes desapareceram.
+- Limite de detecção de recuperação da bancada reduzido de **8 s para 2,5 s** para capturar atrasos de vários segundos. Antes, o teste podia passar logo depois de escurecer o canvas sem verificar se a sequência de 45 mutações prometida havia terminado. Agora verifica que **todas as 45 mutações ocorreram** em ambos os perfis, confirma que o canvas continua escuro, o contraste permanece ≥8:1 e a região protegida não mudou após a rajada. O relatório distingue explicitamente recuperação antes do fim da rajada de recuperação tardia.
+- Testes unitários cobrem contagem incompleta, momento inválido, recuperação tardia e apresentação honesta de recuperação após a rajada. A medição sintética não mede pixels nem valida sites novos/holdout. P14 permanece bloqueado para promoção, sem alteração de pesos, estilos, permissões ou `main`. O próximo CI deste commit precisa ser validado.

@@ -53,6 +53,50 @@ class CDP {
   }
   close(){this.socket.close();}
 }
+// Wait for Chromium to exit before deleting its profile: Chrome writes files
+// briefly after SIGTERM. Bounded waits and rmSync retries prevent ENOTEMPTY
+// teardown failures without hiding failures from the browser scenarios.
+function waitForBrowserClose(child,timeoutMs){
+  if(child.exitCode!==null||child.signalCode!==null)return Promise.resolve(true);
+  return new Promise(resolve=>{
+    let settled=false;
+    const finish=closed=>{
+      if(settled)return;
+      settled=true;clearTimeout(timer);
+      child.removeListener('close',onClose);
+      child.removeListener('error',onClose);
+      resolve(closed);
+    };
+    const onClose=()=>finish(true);
+    child.once('close',onClose);
+    child.once('error',onClose);
+    const timer=setTimeout(()=>finish(false),timeoutMs);
+  });
+}
+async function cleanupBrowser(child,profile,{timeoutMs=800}={}){
+  if(child.exitCode===null&&child.signalCode===null){
+    const closed=waitForBrowserClose(child,timeoutMs);
+    child.kill('SIGTERM');
+    if(!await closed){
+      const forced=waitForBrowserClose(child,timeoutMs);
+      child.kill('SIGKILL');
+      await forced;
+    }
+  }
+  // Node retries only transient filesystem errors (ENOTEMPTY/EBUSY/EPERM).
+  fs.rmSync(profile,{recursive:true,force:true,maxRetries:8,retryDelay:100});
+}
+// DevToolsActivePort can exist before Chromium finishes writing both lines.
+// Never construct a WebSocket URL from a partial or unexpected endpoint.
+function parseDevToolsActivePort(contents){
+  if(typeof contents!=='string'||contents.length>256)return null;
+  const lines=contents.trim().split(/\r?\n/);
+  if(lines.length!==2||!/^\d{1,5}$/.test(lines[0])||
+     !/^\/devtools\/browser\/[A-Za-z0-9-]{8,80}$/.test(lines[1]))return null;
+  const port=Number(lines[0]);
+  if(!Number.isSafeInteger(port)||port<1||port>65535)return null;
+  return {port,socketPath:lines[1]};
+}
 async function launch(extension) {
   const profile=fs.mkdtempSync(path.join(os.tmpdir(),'ext-dark-cdp-'));
   const args=['--headless=new','--no-first-run','--no-default-browser-check','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--remote-allow-origins=*','--remote-debugging-port=0','--window-size=1100,900','--force-device-scale-factor=1',`--user-data-dir=${profile}`,'--no-sandbox','about:blank'];
@@ -64,18 +108,19 @@ async function launch(extension) {
   for(const stream of [child.stdout,child.stderr]) stream.on('data',chunk=>{
     diagnostic=(diagnostic+String(chunk)).slice(-2500);
   });
-  let connected=false;
+  let endpoint=null;
   try {
     const activePort=path.join(profile,'DevToolsActivePort');
     for(let i=0;i<120;i++){
-      if(fs.existsSync(activePort)){connected=true;break;}
       if(spawnError)throw Error('Não foi possível iniciar Chrome: '+spawnError.message);
       if(child.exitCode!=null)throw Error('Chrome encerrou com código '+child.exitCode+'; stderr: '+diagnostic);
+      try{endpoint=parseDevToolsActivePort(fs.readFileSync(activePort,'utf8'));}
+      catch(error){if(error.code!=='ENOENT')throw error;}
+      if(endpoint)break;
       await sleep(100);
     }
-    if(!connected)throw Error('Chrome não abriu porta de depuração; stderr: '+diagnostic);
-    const [port,socketPath]=fs.readFileSync(activePort,'utf8').trim().split('\n');
-    const socket = new WebSocket(`ws://127.0.0.1:${port}${socketPath}`);
+    if(!endpoint)throw Error('Chrome não disponibilizou porta CDP completa; stderr: '+diagnostic);
+    const socket = new WebSocket('ws://127.0.0.1:'+endpoint.port+endpoint.socketPath);
     await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
     const cdp=new CDP(socket);
     const {targetId}=await cdp.command('Target.createTarget',{url:'about:blank'});
@@ -88,8 +133,8 @@ async function launch(extension) {
       async screenshot(output){const r=await cdp.command('Page.captureScreenshot',{format:'png',captureBeyondViewport:false},sessionId,22000);fs.writeFileSync(output,Buffer.from(r.data,'base64'));},
       async close(){await cdp.command('Target.closeTarget',{targetId});}
     };
-    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();child.kill('SIGTERM');await sleep(200);if(child.exitCode==null)child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});}};
-  }catch(err){child.kill('SIGKILL');fs.rmSync(profile,{recursive:true,force:true});throw err;}
+    return {page,stop:async()=>{try{await page.close();}catch{}cdp.close();await cleanupBrowser(child,profile);}};
+  }catch(err){await cleanupBrowser(child,profile);throw err;}
 }
 async function waitFor(fn,timeout=5000){const start=performance.now();while(performance.now()-start<timeout){if(await fn())return;await sleep(60);}throw Error('Condição não atingida em '+timeout+'ms');}
 const metrics = `(()=>{
@@ -259,4 +304,4 @@ async function main(){
   }finally{await new Promise(resolve=>server.close(resolve));}
 }
 if(require.main===module)main().catch(err=>{console.error('P3 browser E2E falhou:',err.stack||err);process.exitCode=1;});
-module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT});
+module.exports=Object.freeze({launch,waitFor,browserPath,sleep,ROOT,cleanupBrowser,parseDevToolsActivePort});

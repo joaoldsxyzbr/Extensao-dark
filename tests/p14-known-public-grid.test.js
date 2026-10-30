@@ -1,0 +1,200 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary,diagnoseKnownPublicGridTiming}=
+  require('../scripts/p14-known-public-grid.js');
+const grid=(bright,valid=96,dark=valid-bright)=>({
+  gridPoints:96,valid,dark,bright,unknown:96-valid
+});
+const observed=bright=>({kind:'observed',grid:grid(bright)});
+const assessment={status:'observed-no-regression'};
+test('P14 known public: no large bright grid signal is not independent validation',()=>{
+  const r=diagnoseKnownSiteGrid('mdn',observed(2),observed(2),assessment);
+  assert.equal(r.status,'observed-no-large-bright-grid-signal');
+  assert.equal(r.candidateBrightPoints,2);
+  assert.equal(r.independentPublicValidation,false);
+  assert.equal(r.promotionEligible,false);
+  assert.equal(r.holdoutEvaluated,false);
+});
+test('P14 known public: persistent or new bright CSS points require review',()=>{
+  const residual=diagnoseKnownSiteGrid('wikipedia',observed(12),observed(12),assessment);
+  assert.equal(residual.status,'needs-visual-review');
+  assert.equal(residual.reason,'residual-bright-css-points');
+  const introduced=diagnoseKnownSiteGrid('github',observed(0),observed(5),assessment);
+  assert.equal(introduced.status,'needs-visual-review');
+  assert.equal(introduced.changeInBrightFraction,.0521);
+});
+test('P14 known public: unknown, malformed and low-coverage CSS cannot pass',()=>{
+  const invalid=[
+    null,{},grid(1,8,7),{...grid(1),valid:95},
+    {...grid(1),bright:100},{...grid(1),dark:96},
+    {...grid(1),url:'https://private.example'},
+  ];
+  for(const bad of invalid){
+    assert.equal(diagnoseKnownSiteGrid('mdn',observed(0),
+      {kind:'observed',grid:bad},assessment).status,'inconclusive');
+  }
+  assert.equal(validGrid(grid(4)),true);
+  assert.equal(diagnoseKnownSiteGrid('mdn',observed(0),observed(0),
+    {status:'inconclusive'}).status,'inconclusive');
+});
+test('P14 known public: native-dark skip is not a darkening result',()=>{
+  const r=diagnoseKnownSiteGrid('roblox',observed(0),observed(0),
+    {status:'expected-native-dark-skip'});
+  assert.equal(r.status,'not-applicable-native-theme');
+  assert.equal(r.candidateBrightFraction,null);
+  assert.equal(r.promotionEligible,false);
+});
+test('P14 known public: reject non-P3 sites including P14 final holdout',()=>{
+  for(const host of ['julialang.org','gitlab.com','go.dev','vite.dev','not-a-site']){
+    assert.throws(()=>diagnoseKnownSiteGrid(host,observed(0),observed(0),assessment),
+      /outside existing P3 diagnostic allowlist/);
+  }
+});
+
+test('P14 known public: severe white viewport regression must outrank residual warning',()=>{
+  const before={kind:'observed',grid:grid(13)};
+  const after={kind:'observed',grid:grid(96)};
+  const result=diagnoseKnownSiteGrid('youtube',before,after,assessment);
+  assert.equal(result.status,'needs-visual-review');
+  assert.equal(result.reason,'possible-major-bright-css-regression');
+  assert.equal(result.baselineBrightPoints,13);
+  assert.equal(result.candidateBrightPoints,96);
+  assert.equal(result.promotionEligible,false);
+});
+test('P14 known public: missing matched coverage never gets a severe label',()=>{
+  const result=diagnoseKnownSiteGrid('youtube',
+    {kind:'observed',grid:grid(2,30)},
+    {kind:'observed',grid:grid(80,96)},assessment);
+  assert.equal(result.reason,'bright-css-increase');
+  assert.equal(result.promotionEligible,false);
+});
+
+test('P14 known public: risk summary exposes major visual regression without release approval',()=>{
+  const youtube=diagnoseKnownSiteGrid('youtube',observed(13),observed(96),assessment);
+  const github=diagnoseKnownSiteGrid('github',observed(24),observed(25),assessment);
+  const summary=summarizeKnownPublicGridRisks([
+    {site:'youtube',p14KnownPublicGrid:youtube},
+    {site:'github',p14KnownPublicGrid:github}
+  ]);
+  assert.deepEqual(summary.possibleMajorBrightRegressions,['youtube']);
+  assert.deepEqual(summary.sitesNeedingVisualReview,['youtube','github']);
+  assert.deepEqual(summary.unresolvedMajorBrightCoverage,['youtube']);
+  assert.equal(summary.promotionEligible,false);
+  assert.equal(summary.holdoutEvaluated,false);
+  assert.throws(()=>summarizeKnownPublicGridRisks([
+    {site:'julialang.org',p14KnownPublicGrid:youtube}]),/invalid known-public/);
+});
+
+test('P14 known public: persistent majority-white page is unresolved despite no regression',()=>{
+  const original=observed(54);
+  const candidate=observed(54);
+  const g=diagnoseKnownSiteGrid('github',original,candidate,assessment);
+  assert.equal(g.reason,'residual-bright-css-points');
+  const summary=summarizeKnownPublicGridRisks([{site:'github',p14KnownPublicGrid:g}]);
+  assert.deepEqual(summary.possibleMajorBrightRegressions,[]);
+  assert.deepEqual(summary.unresolvedMajorBrightCoverage,['github']);
+  assert.equal(summary.promotionEligible,false);
+});
+
+test('P14 release review never passes with persistent white sites or missing independent validation',()=>{
+  const unresolved=diagnoseKnownSiteGrid('github',observed(54),observed(54),assessment);
+  const blocked=summarizeKnownPublicGridRisks([{site:'github',p14KnownPublicGrid:unresolved}]);
+  assert.equal(blocked.releaseReview.status,'blocked');
+  assert.equal(blocked.releaseReview.reason,'known-public-visual-problems-unresolved');
+  assert.equal(blocked.releaseReview.requiresHoldoutReview,true);
+  const clean=diagnoseKnownSiteGrid('mdn',observed(0),observed(0),assessment);
+  const stillBlocked=summarizeKnownPublicGridRisks([{site:'mdn',p14KnownPublicGrid:clean}]);
+  assert.equal(stillBlocked.releaseReview.status,'blocked');
+  assert.equal(stillBlocked.releaseReview.reason,'independent-visual-validation-not-done');
+});
+
+test('P14 known public: report CSS coverage separately from bright fraction',()=>{
+  const original={kind:'observed',grid:{gridPoints:96,valid:80,dark:50,bright:20,unknown:16}};
+  const candidate={kind:'observed',grid:{gridPoints:96,valid:30,dark:8,bright:22,unknown:66}};
+  const result=diagnoseKnownSiteGrid('github',original,candidate,assessment);
+  assert.equal(result.baselineKnownGridFraction,.8333);
+  assert.equal(result.candidateKnownGridFraction,.3125);
+  assert.equal(result.status,'needs-visual-review');
+  assert.equal(result.promotionEligible,false);
+});
+
+test('P14 summary: expose bright CSS and unknown coverage alongside old P3 status',()=>{
+  const site={site:'github',
+    assessment:{status:'observed-no-regression'},
+    p14KnownPublicGrid:diagnoseKnownSiteGrid('github',observed(54),observed(54),assessment)};
+  const risk=summarizeKnownPublicGridRisks([site]);
+  const output=formatKnownPublicVisualSummary([site],risk);
+  assert.match(output,/github \| observed-no-regression \| desconhecida \/ desconhecida \| 54\/96 \| 96\/96 \| needs-visual-review/);
+  assert.match(output,/Revisão de lançamento: bloqueada/);
+  assert.match(output,/Cobertura majoritariamente clara: github/);
+  assert.throws(()=>formatKnownPublicVisualSummary([
+    {...site,site:'private.example'}],risk),/invalid summary row/);
+});
+
+test('P14 summary: distinguish active, inactive and unknown extension profiles',()=>{
+  const result=diagnoseKnownSiteGrid('youtube',observed(13),observed(96),assessment);
+  const row={site:'youtube',assessment,p14KnownPublicGrid:result,
+    baseline:{extensionActive:true},candidate:{extensionActive:false}};
+  const summary=formatKnownPublicVisualSummary([row],summarizeKnownPublicGridRisks([row]));
+  assert.match(summary,/Extensão 7D \/ 18D/);
+  assert.match(summary,/youtube \| observed-no-regression \| ativa \/ inativa \|/);
+  const unknown=formatKnownPublicVisualSummary([
+    {...row,candidate:{extensionActive:null}}
+  ],summarizeKnownPublicGridRisks([row]));
+  assert.match(unknown,/ativa \/ desconhecida/);
+});
+
+test('P14 known public timing: delayed white CSS change remains review-only',()=>{
+  const improved=diagnoseKnownPublicGridTiming('youtube',grid(80),grid(13));
+  assert.equal(improved.status,'large-change-after-delay');
+  assert.equal(improved.changeInBrightPoints,-67);
+  assert.equal(improved.followUpMs,1200);
+  assert.equal(improved.promotionEligible,false);
+  const stable=diagnoseKnownPublicGridTiming('github',grid(54),grid(54));
+  assert.equal(stable.status,'no-large-comparable-change');
+  assert.equal(stable.changeInBrightPoints,0);
+  assert.equal(diagnoseKnownPublicGridTiming('youtube',null,grid(0)).status,'inconclusive');
+  assert.throws(()=>diagnoseKnownPublicGridTiming('go.dev',grid(0),grid(0)),
+    /outside existing P3 diagnostic allowlist/);
+});
+
+test('P14 timing: candidate-only bright flash still blocks promotion after page darkens',()=>{
+  const row={site:'github',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'github',observed(1),observed(54),assessment),
+    p14KnownPublicTiming:{
+      baseline:diagnoseKnownPublicGridTiming('github',grid(1,60),grid(1,65)),
+      candidate:diagnoseKnownPublicGridTiming('github',grid(54,60),grid(1,65))
+    }};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,['github']);
+  assert.deepEqual(risk.initialCandidateOnlyFlash,['github']);
+  assert.deepEqual(risk.stillBrightAfterDelay,[]);
+  assert.equal(risk.releaseReview.status,'blocked');
+  assert.match(formatKnownPublicVisualSummary([row],risk),/Flash inicial só no 18D: github/);
+});
+test('P14 timing: shared initial flash is not a candidate-only regression',()=>{
+  const row={site:'youtube',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'youtube',observed(54),observed(54),assessment),
+    p14KnownPublicTiming:{
+      baseline:diagnoseKnownPublicGridTiming('youtube',grid(54),grid(0)),
+      candidate:diagnoseKnownPublicGridTiming('youtube',grid(54),grid(0))
+    }};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,['youtube']);
+  assert.deepEqual(risk.initialCandidateOnlyFlash,[]);
+});
+test('P14 timing: persistent bright page or unavailable delay is not clearance',()=>{
+  const row={site:'github',p14KnownPublicGrid:diagnoseKnownSiteGrid(
+    'github',observed(54),observed(54),assessment),
+    p14KnownPublicTiming:{candidate:diagnoseKnownPublicGridTiming(
+      'github',grid(54),grid(50))}};
+  const risk=summarizeKnownPublicGridRisks([row]);
+  assert.deepEqual(risk.initialCandidateFlash,[]);
+  assert.deepEqual(risk.stillBrightAfterDelay,['github']);
+  const missing=summarizeKnownPublicGridRisks([
+    {site:'github',p14KnownPublicGrid:row.p14KnownPublicGrid}
+  ]);
+  assert.deepEqual(missing.stillBrightAfterDelay,[]);
+  assert.equal(missing.promotionEligible,false);
+});

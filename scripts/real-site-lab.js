@@ -11,6 +11,12 @@ const core=require('../vendor/neural_core/neural-core.js');
 const {launch,sleep,ROOT,browserPath}=require('./browser-e2e.js');
 const {chooseSites,isAllowedLanding,assessPair,promotionGate}=require('./real-site-audit.js');
 const {EXPRESSION,summarize}=require('./real-site-snapshot.js');
+const {sampleBackgroundGrid}=require('./p14-benchmark-browser.js');
+const {diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary,diagnoseKnownPublicGridTiming,validGrid}=require('./p14-known-public-grid.js');
+const {captureBrightSources,validateBrightSources}=
+  require('./p14-bright-source-diagnostic.js');
+const BRIGHT_SOURCE_EXPR='('+captureBrightSources.toString()+')()';
+const GRID_EXPR='('+sampleBackgroundGrid.toString()+')()';
 const opt=name=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3);
 const OUTPUT=path.resolve(opt('output')||path.join(os.tmpdir(),'extensao-dark-real-sites'));
 const CANDIDATE=path.resolve(opt('candidate')||path.join(ROOT,'data/contextual-ci-candidate.json'));
@@ -63,12 +69,28 @@ async function observe(site,model,extension) {
       return {kind:'inconclusive',reason:'redirecionamento externo ou bloqueio de acesso',durationMs:ms};
     if(result.totalElements<site.minSamples||result.sampledText<site.minSamples)
       return {kind:'inconclusive',reason:'página não forneceu amostras suficientes',durationMs:ms};
+    // P14: viewport-grid numbers only; no page contents leave this lab.
+    // Only extension activation state; do not inspect page text or attributes.
+    const extensionActive=await page.eval(
+      "document.documentElement.getAttribute('data-extensao-dark')==='on'");
+    const grid=await page.eval(GRID_EXPR);
+    const brightSources=validateBrightSources(await page.eval(BRIGHT_SOURCE_EXPR));
     // Somente capturas de páginas públicas abertas num perfil novo sem login.
     const filename=site.id+'-'+model+'.png';
     let captured=false;
     try{await page.screenshot(path.join(OUTPUT,filename));captured=true;}
     catch{ /* captura indisponível não vira aprovação visual */ }
-    return {kind:'observed',durationMs:ms,capture:captured?filename:null,summary:result};
+    // Later CSS-only sample on two already-known public P3 sites, after screenshot.
+    let delayedGrid=null;
+    if(site.id==='youtube'||site.id==='github'){
+      try{
+        await sleep(1200);
+        const later=await page.eval(GRID_EXPR);
+        if(validGrid(later))delayedGrid=later;
+      }catch{ /* Dynamic external site: lack of data is inconclusive. */ }
+    }
+    return {kind:'observed',durationMs:ms,capture:captured?filename:null,
+      summary:result,grid,delayedGrid,brightSources,extensionActive};
   }catch(error){
     // Erros de páginas remotas NÃO são interpretados como defeitos da extensão.
     return {kind:'inconclusive',reason:'navegação, rede, CDP ou leitura indisponíveis',
@@ -107,24 +129,52 @@ async function main(){
       const assessment=baseline.kind==='observed'&&candidate.kind==='observed'
         ?assessPair(site,baseline.summary,candidate.summary)
         :{status:'inconclusive',reason:'página não carregou nos dois perfis'};
+      const p14Grid=diagnoseKnownSiteGrid(site.id,baseline,candidate,assessment);
       report.results.push({
-        site:site.id,group:site.group,assessment,
+        site:site.id,group:site.group,assessment,p14KnownPublicGrid:p14Grid,
+        p14KnownPublicTiming:{
+          baseline:diagnoseKnownPublicGridTiming(site.id,baseline.grid,baseline.delayedGrid),
+          candidate:diagnoseKnownPublicGridTiming(site.id,candidate.grid,candidate.delayedGrid)
+        },
+        p14BrightCssSources:{baseline:baseline.brightSources||null,
+          candidate:candidate.brightSources||null},
         baseline:{kind:baseline.kind,durationMs:baseline.durationMs,
-          capture:baseline.capture||null,...(baseline.reason?{reason:baseline.reason}:{})},
+          capture:baseline.capture||null,extensionActive:baseline.extensionActive??null,
+          ...(baseline.reason?{reason:baseline.reason}:{})},
         candidate:{kind:candidate.kind,durationMs:candidate.durationMs,
-          capture:candidate.capture||null,...(candidate.reason?{reason:candidate.reason}:{})}
+          capture:candidate.capture||null,extensionActive:candidate.extensionActive??null,
+          ...(candidate.reason?{reason:candidate.reason}:{})}
       });
       update(report);
+      console.log('P14 known public CSS grid',site.id,p14Grid.status,
+        p14Grid.candidateBrightFraction??'n/a');
       console.log('P3',site.id,assessment.status,
         assessment.status==='inconclusive'
           ? (baseline.reason||candidate.reason||assessment.reason) : '');
     }
     report.promotion=promotionGate(report.results);
+    // A nominal P3 contrast status must not conceal a major P14 CSS signal.
+    // This is diagnostic-only: never override the human release gate.
+    report.p14VisualRisk=summarizeKnownPublicGridRisks(report.results);
     report.completed=true;
     update(report);
-    const warnings=report.results.filter(item=>!['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status));
+    const warnings=report.results.filter(item=>
+      !['observed-no-regression','expected-native-dark-skip'].includes(item.assessment.status)||
+      item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'||
+      (item.p14KnownPublicGrid?.candidateValidPoints>=48&&
+       item.p14KnownPublicGrid?.candidateBrightPoints>=24&&
+       item.p14KnownPublicGrid?.candidateBrightFraction>=.5)||
+      report.p14VisualRisk.initialCandidateFlash.includes(item.site));
     for(const item of warnings) console.warn(
-      '::warning title=P3 '+item.site+'::'+item.assessment.status);
+      '::warning title=P3 '+item.site+'::'+item.assessment.status+
+      (item.p14KnownPublicGrid?.reason==='possible-major-bright-css-regression'
+        ? '; P14 possible-major-bright-css-regression' : '')+
+      (report.p14VisualRisk.unresolvedMajorBrightCoverage.includes(item.site)
+        ? '; P14 unresolved-majority-bright-css-viewport' : '')+
+      (report.p14VisualRisk.initialCandidateFlash.includes(item.site)
+        ? '; P14 transient-initial-bright-css-viewport' : '')+
+      (report.p14VisualRisk.initialCandidateOnlyFlash.includes(item.site)
+        ? '; P14 candidate-only-initial-bright-css-viewport' : ''));
     if(process.env.GITHUB_STEP_SUMMARY){
       const lines=[
         '### Laboratório P3 — '+report.mode,
@@ -136,7 +186,8 @@ async function main(){
         '**Promoção do modelo: bloqueada.** Revisão visual ainda obrigatória.',
         ''
       ];
-      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n'+
+        formatKnownPublicVisualSummary(report.results,report.p14VisualRisk)+'\n');
     }
     console.log('P3 evidência registrada:',REPORT,JSON.stringify(report.promotion));
     if(report.promotion.observed===0 && report.promotion.needsReview===0)

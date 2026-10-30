@@ -23,6 +23,12 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - name: Validar contrato P14, privacidade e isolamento de holdout
+        run: |
+          node scripts/p14-dataset-contract.js
+          node scripts/p14-benchmark-contract.js
+          node scripts/p14-public-domains.js
+          node scripts/p14-independent-reviews.js
       - name: Confirmar motor versionado e vetores de treino
         run: |
           node scripts/build-neural.js --check
