@@ -29,3 +29,12 @@ test('P14 bright sources: reject partial, malformed or sensitive records',()=>{
     {...base(),textLight:8.5}
   ])assert.throws(()=>validateBrightSources(value),/malformed aggregate/);
 });
+
+test('P14 bright sources: open shadow roots are inspected without extracting content',()=>{
+  const source=captureBrightSources.toString();
+  assert.match(source,/shadowRoot\.elementFromPoint\(px,py\)/);
+  assert.match(source,/depth<8/);
+  assert.doesNotMatch(source,/\.textContent|\.innerHTML|\.value\b|\.outerHTML|localStorage|document\.cookie/);
+  assert.equal(validateBrightSources({...base(),shadowRootSample:7,shadowRootSource:4}).shadowRootSample,7);
+  assert.throws(()=>validateBrightSources({...base(),shadowRootSample:31}),/malformed aggregate/);
+});
