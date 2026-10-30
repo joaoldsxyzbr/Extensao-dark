@@ -52,6 +52,8 @@ jobs:
         run: node scripts/p12-public-render-p11.js
       - name: Avaliar ilhas claras em superficies independentes (P13, somente laboratorio)
         run: node scripts/p13-islands-preview.js
+      - name: Validar rollback seguro do preview AI-first P17 em Chromium
+        run: node scripts/p17-preview-browser.js
       - name: Medir baseline P13 nas fixtures P14 sem executar holdout
         run: node scripts/p14-benchmark-browser.js --p11-candidate=data/p11-descendant-ci-candidate.json
       - name: Consolidar diagnosticos existentes em contrato P14 (nao comparaveis)
