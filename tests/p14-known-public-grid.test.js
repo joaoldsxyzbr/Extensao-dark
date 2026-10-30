@@ -108,3 +108,13 @@ test('P14 release review never passes with persistent white sites or missing ind
   assert.equal(stillBlocked.releaseReview.status,'blocked');
   assert.equal(stillBlocked.releaseReview.reason,'independent-visual-validation-not-done');
 });
+
+test('P14 known public: report CSS coverage separately from bright fraction',()=>{
+  const original={kind:'observed',grid:{gridPoints:96,valid:80,dark:50,bright:20,unknown:16}};
+  const candidate={kind:'observed',grid:{gridPoints:96,valid:30,dark:8,bright:22,unknown:66}};
+  const result=diagnoseKnownSiteGrid('github',original,candidate,assessment);
+  assert.equal(result.baselineKnownGridFraction,.8333);
+  assert.equal(result.candidateKnownGridFraction,.3125);
+  assert.equal(result.status,'needs-visual-review');
+  assert.equal(result.promotionEligible,false);
+});
