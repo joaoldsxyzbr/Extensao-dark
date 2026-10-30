@@ -56,6 +56,8 @@ jobs:
         run: node scripts/p14-mv3-synthetic.js
       - name: Validar recuperacao conservadora de grandes fundos brancos no Chromium
         run: node scripts/p14-white-canvas-browser.js
+      - name: Medir escurecimento tardio sob rajadas de mutacoes no DOM
+        run: node scripts/p14-churn-browser.js
       - name: Consolidar diagnosticos existentes em contrato P14 (nao comparaveis)
         run: node scripts/p14-benchmark-contract.js --input=browser-results/p13-white-islands/p13-report.json --output=browser-results/p14-baseline-diagnostics.json
       - name: Preparar corpus contextual e treinar candidato P2 apenas para teste
