@@ -66,4 +66,22 @@ function diagnoseKnownSiteGrid(siteId,baseline,candidate,assessment){
     residual?'residual-bright-css-points':'bounded-grid-only';
   return result;
 }
-module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid});
+function summarizeKnownPublicGridRisks(rows){
+  if(!Array.isArray(rows)||rows.length>12||rows.some(row=>
+    !row||typeof row.site!=='string'||!KNOWN.has(row.site)||
+    !row.p14KnownPublicGrid||
+    row.p14KnownPublicGrid.site!==row.site||
+    !['needs-visual-review','inconclusive','not-applicable-native-theme',
+      'observed-no-large-bright-grid-signal'].includes(row.p14KnownPublicGrid.status)))
+    throw Error('P14 known-grid: invalid known-public risk summary');
+  return {
+    kind:'p14-known-public-grid-risk-summary',
+    possibleMajorBrightRegressions:rows.filter(row=>
+      row.p14KnownPublicGrid.reason==='possible-major-bright-css-regression')
+      .map(row=>row.site),
+    sitesNeedingVisualReview:rows.filter(row=>
+      row.p14KnownPublicGrid.status==='needs-visual-review').map(row=>row.site),
+    independentValidation:false,holdoutEvaluated:false,promotionEligible:false
+  };
+}
+module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks});
