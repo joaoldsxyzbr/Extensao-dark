@@ -16,3 +16,10 @@
 3. Integrar apenas um beta reversível desligado por padrão (P17) após as evidências P14/P15 e comparar com o 7D e P13 sem tocar em pesos publicados.
 
 Nenhuma mudança em permissões, motor principal, pesos distribuídos, sites de holdout, `main`, merge ou release.
+
+## P16 — experimento sintético de duas cabeças e paridade (30/10/2026)
+
+- Gerador isolado de **32 exemplos sintéticos**, usando a vetorização P15/P16: 24 de treino (6 famílias) e 8 de validação (2 famílias), sem holdout. Corrigido o risco de vetores duplicados variando geometria explicitamente; rótulos são autorais, não independentes.
+- Treinamento Python local (BCE e MSE) com redes pequenas e 8 épocas, somente no treino. O CI salva modelo e métricas exclusivamente em `data/p16-demo-ci-*.json`, ignorados pelo Git; nenhum peso de produção é alterado.
+- Um verificador usa o Neural Core JS real para comparar decisões e RGB entre Python/JS na validação com tolerância de 1e-4. Testes de regressão cobrem splits, vetores duplicados, campos privados e ausência de promoção.
+- **Este é somente um smoke test da infraestrutura**, não um modelo aprovado: falta anotação humana, generalização em sites independentes, avaliação P14/P15 e P17–P19. Nenhum holdout foi aberto nem existe alteração do MV3 publicado.
