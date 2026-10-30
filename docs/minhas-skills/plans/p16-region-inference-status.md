@@ -30,3 +30,15 @@ Nenhuma mudança em permissões, motor principal, pesos distribuídos, sites de 
 - O registro aceita apenas IDs opacos, domínio raiz público **já reservado** para treino/validação P14 (nunca holdout), índice regional (0–79), os 20 atributos P16 normalizados, duas respostas sem identidades pessoais e paleta RGB apenas se os dois pareceres concordarem com transformação **e** os gates de segurança aceitarem.
 - Campos extras (URL, conteúdo, cookies, nomes de avaliadores, texto), duplicatas de vetor, abuso de split e conversão insegura são rejeitados. Relatório imprime só contagens agregadas, sem vetores, domínios ou amostras.
 - Nenhum parecer foi coletado nesta etapa. Mesmo quando duas respostas concordam, o programa **não consegue autenticar avaliadores ou comprovar independência**, então retorna sempre `verifiedIndependentReviews:0`, `trainingAuthorized:false`, `promotionEligible:false`. Nenhuma amostra do holdout foi aberta, nenhum treinamento humano foi feito e nenhuma extensão foi modificada.
+
+## Lote — captura local de regiões públicas para revisão humana (30/10/2026)
+
+Este incremento permite sair dos exemplos exclusivamente sintéticos sem inventar labels. O comando offline `node scripts/p16-public-capture.js --plan` verifica a reserva P14: 15 domínios de treino e 5 de validação; 10 domínios de holdout ficam selados.
+
+Para capturar um site já reservado em um PC com Chromium/Chrome (Node 22; opcional `CHROME_BIN`), executar manualmente `node scripts/p16-public-capture.js --domain=go.dev --case=case-go-home-01`. O programa abre apenas a raiz pública congelada em perfil Chromium descartável, recusa redirecionamentos para outro host e descarta a sessão ao final. Nunca recebe URL arbitrária. Não é executado pelo CI ou por agendamento.
+
+O extrator P15 entrega unicamente vetores de 20 características CSS/geométricas por região e o identificador opaco informado; não guarda texto, URL da página, DOM bruto, conteúdo de formulário, cookies ou screenshots. A captura só cria rótulos `pending` em `training/reviews/p16-local-labels.json`, que é privado e ignorado pelo Git, com limite de 256 entradas, arquivo protegido, gravação atômica e rejeição de casos repetidos.
+
+As pessoas devem revisar as regiões de modo independente, fora desta coleta, e preencher as duas avaliações e a paleta segura apenas quando houver evidência suficiente. `node scripts/p16-review-intake.js --local` valida o arquivo, mas não autentica revisores nem comprova sua independência. Nenhum rótulo humano foi coletado ou verificado nesta etapa. `trainingAuthorized:false` e `promotionEligible:false` permanecem obrigatórios.
+
+O CI executa apenas `--plan` e testes Node sem rede. Antes de treinar o P16 supervisionado real, ainda faltam diversidade de páginas/layouts, revisão por pessoas, auditoria de privacidade e seleção/calibração somente em validação. O holdout não foi aberto.
