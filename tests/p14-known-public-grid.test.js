@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary}=
+const {validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary,diagnoseKnownPublicGridTiming}=
   require('../scripts/p14-known-public-grid.js');
 const grid=(bright,valid=96,dark=valid-bright)=>({
   gridPoints:96,valid,dark,bright,unknown:96-valid
