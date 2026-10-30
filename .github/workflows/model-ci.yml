@@ -147,3 +147,5 @@ jobs:
           done
       - name: Validar manifesto e referência aos ícones
         run: node --test tests/manifest.test.js
+      - name: P19 validar pacote MV3 local sem gravar ou publicar ZIP
+        run: python3 scripts/p19_package_preview.py --check
