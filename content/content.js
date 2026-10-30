@@ -233,10 +233,7 @@
       if(colors.shouldRecoverBrightCanvas(originalBackground,originalText,visual,{
         width:rect.width,height:rect.height,
         viewportWidth:innerWidth,viewportHeight:innerHeight,
-        position:style.position,opacity:Number(style.opacity),
-        ancestorLuminance:colors.luminance(originalText)>.22 ?
-          (()=>{const parent=inheritedBackground(element);
-            return parent&&parent.a>=.99?colors.luminance(parent):null;})():null
+        position:style.position,opacity:Number(style.opacity)
       })) background=colors.mapBackground(originalBackground,settings.theme);
     }
     const surface = effectiveBackground(element, background, style);
