@@ -143,4 +143,21 @@ function formatKnownPublicVisualSummary(rows, risk){
     'Cobertura majoritariamente clara: '+(risk.unresolvedMajorBrightCoverage.join(', ')||'nenhuma sinalizada')+'.','');
   return lines.join('\n');
 }
-module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary});
+
+// Delayed computed-CSS sampling; not proof of extension backlog or release quality.
+function diagnoseKnownPublicGridTiming(siteId,early,late){
+  if(typeof siteId!=='string'||!KNOWN.has(siteId))
+    throw Error('P14 timing: site outside existing P3 diagnostic allowlist');
+  const r={kind:'p14-known-public-css-timing',site:siteId,
+    status:'inconclusive',firstBrightPoints:null,laterBrightPoints:null,
+    firstValidPoints:null,laterValidPoints:null,changeInBrightPoints:null,
+    followUpMs:1200,holdoutEvaluated:false,promotionEligible:false};
+  if(!validGrid(early)||!validGrid(late)||early.valid<24||late.valid<24)return r;
+  r.firstBrightPoints=early.bright;r.laterBrightPoints=late.bright;
+  r.firstValidPoints=early.valid;r.laterValidPoints=late.valid;
+  r.changeInBrightPoints=late.bright-early.bright;
+  r.status=Math.abs(late.bright-early.bright)>=12&&Math.abs(late.valid-early.valid)<=12
+    ?'large-change-after-delay':'no-large-comparable-change';
+  return r;
+}
+module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary,diagnoseKnownPublicGridTiming});

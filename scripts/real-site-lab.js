@@ -12,7 +12,7 @@ const {launch,sleep,ROOT,browserPath}=require('./browser-e2e.js');
 const {chooseSites,isAllowedLanding,assessPair,promotionGate}=require('./real-site-audit.js');
 const {EXPRESSION,summarize}=require('./real-site-snapshot.js');
 const {sampleBackgroundGrid}=require('./p14-benchmark-browser.js');
-const {diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary}=require('./p14-known-public-grid.js');
+const {diagnoseKnownSiteGrid,summarizeKnownPublicGridRisks,formatKnownPublicVisualSummary,diagnoseKnownPublicGridTiming,validGrid}=require('./p14-known-public-grid.js');
 const {captureBrightSources,validateBrightSources}=
   require('./p14-bright-source-diagnostic.js');
 const BRIGHT_SOURCE_EXPR='('+captureBrightSources.toString()+')()';
@@ -80,8 +80,17 @@ async function observe(site,model,extension) {
     let captured=false;
     try{await page.screenshot(path.join(OUTPUT,filename));captured=true;}
     catch{ /* captura indisponível não vira aprovação visual */ }
+    // Later CSS-only sample on two already-known public P3 sites, after screenshot.
+    let delayedGrid=null;
+    if(site.id==='youtube'||site.id==='github'){
+      try{
+        await sleep(1200);
+        const later=await page.eval(GRID_EXPR);
+        if(validGrid(later))delayedGrid=later;
+      }catch{ /* Dynamic external site: lack of data is inconclusive. */ }
+    }
     return {kind:'observed',durationMs:ms,capture:captured?filename:null,
-      summary:result,grid,brightSources,extensionActive};
+      summary:result,grid,delayedGrid,brightSources,extensionActive};
   }catch(error){
     // Erros de páginas remotas NÃO são interpretados como defeitos da extensão.
     return {kind:'inconclusive',reason:'navegação, rede, CDP ou leitura indisponíveis',
@@ -123,6 +132,10 @@ async function main(){
       const p14Grid=diagnoseKnownSiteGrid(site.id,baseline,candidate,assessment);
       report.results.push({
         site:site.id,group:site.group,assessment,p14KnownPublicGrid:p14Grid,
+        p14KnownPublicTiming:{
+          baseline:diagnoseKnownPublicGridTiming(site.id,baseline.grid,baseline.delayedGrid),
+          candidate:diagnoseKnownPublicGridTiming(site.id,candidate.grid,candidate.delayedGrid)
+        },
         p14BrightCssSources:{baseline:baseline.brightSources||null,
           candidate:candidate.brightSources||null},
         baseline:{kind:baseline.kind,durationMs:baseline.durationMs,

@@ -125,7 +125,7 @@ test('P14 summary: expose bright CSS and unknown coverage alongside old P3 statu
     p14KnownPublicGrid:diagnoseKnownSiteGrid('github',observed(54),observed(54),assessment)};
   const risk=summarizeKnownPublicGridRisks([site]);
   const output=formatKnownPublicVisualSummary([site],risk);
-  assert.match(output,/github \| observed-no-regression \| 54\/96 \| 96\/96 \| needs-visual-review/);
+  assert.match(output,/github \| observed-no-regression \| desconhecida \/ desconhecida \| 54\/96 \| 96\/96 \| needs-visual-review/);
   assert.match(output,/Revisão de lançamento: bloqueada/);
   assert.match(output,/Cobertura majoritariamente clara: github/);
   assert.throws(()=>formatKnownPublicVisualSummary([
@@ -143,4 +143,18 @@ test('P14 summary: distinguish active, inactive and unknown extension profiles',
     {...row,candidate:{extensionActive:null}}
   ],summarizeKnownPublicGridRisks([row]));
   assert.match(unknown,/ativa \/ desconhecida/);
+});
+
+test('P14 known public timing: delayed white CSS change remains review-only',()=>{
+  const improved=diagnoseKnownPublicGridTiming('youtube',grid(80),grid(13));
+  assert.equal(improved.status,'large-change-after-delay');
+  assert.equal(improved.changeInBrightPoints,-67);
+  assert.equal(improved.followUpMs,1200);
+  assert.equal(improved.promotionEligible,false);
+  const stable=diagnoseKnownPublicGridTiming('github',grid(54),grid(54));
+  assert.equal(stable.status,'no-large-comparable-change');
+  assert.equal(stable.changeInBrightPoints,0);
+  assert.equal(diagnoseKnownPublicGridTiming('youtube',null,grid(0)).status,'inconclusive');
+  assert.throws(()=>diagnoseKnownPublicGridTiming('go.dev',grid(0),grid(0)),
+    /outside existing P3 diagnostic allowlist/);
 });

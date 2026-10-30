@@ -252,3 +252,10 @@ A ausência do marcador `data-extensao-dark="on"` em página de tema nativo é r
 - A tabela P14 do GitHub Actions inclui agora o estado agregado **ativa/inativa/desconhecida** da extensão em cada perfil 7D/18D, usando exclusivamente os booleanos `extensionActive` já coletados no laboratório P3.
 - Isso separa potencial detecção de tema nativo do caso em que a extensão está ativa e não consegue escurecer toda a página. Estado ausente não é interpretado como `false`. Teste específico garante esses três estados.
 - A instrumentação não muda a inferência nem ativa a extensão à força. Continuidade: esperar execução do CI novo, comparar modos automático/forçado e resolver a causa verificada. Nenhum holdout novo, merge ou promoção.
+
+## P14 — evidência de ativação e amostra CSS tardia (30/10/2026)
+
+- O workflow de qualidade do SHA `c1b81989` falhou no teste antigo da tabela de Actions, que não considerava a nova coluna de ativação; corrigido para exigir `desconhecida / desconhecida` na ausência de sinal.
+- Artefato do navegador `a36c6bf7`: YouTube 18D ativo e 96 pontos CSS claros (automático); GitHub ambos ativos e 55 pontos claros no 18D. Com a detecção de tema nativo ignorada, YouTube 7D e 18D também ficaram 96/96 claros. A hipótese de simples desativação nativa não explica isoladamente esses casos.
+- O laboratório P3 mantém as amostras e screenshots atuais e coleta somente após a captura uma segunda amostra de fundos CSS após **1,2 segundo** em YouTube e GitHub já conhecidos. `p14KnownPublicTiming` compara contagens iniciais/tardias e cobertura por motor; mudanças podem ser de carregamento do site, processamento da extensão ou CSS do próprio site. Nenhuma causa é presumida. Não lê dados pessoais, texto ou URLs das páginas e não inclui holdout.
+- Testes de contrato cobrem redução temporal, persistência, falta de dados e bloqueio de domínios independentes. Release segue bloqueado, sem alteração de motor neural ou código de produção. Confirmação no CI final ainda necessária.
