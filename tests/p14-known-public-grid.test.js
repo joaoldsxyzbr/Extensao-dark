@@ -96,3 +96,15 @@ test('P14 known public: persistent majority-white page is unresolved despite no 
   assert.deepEqual(summary.unresolvedMajorBrightCoverage,['github']);
   assert.equal(summary.promotionEligible,false);
 });
+
+test('P14 release review never passes with persistent white sites or missing independent validation',()=>{
+  const unresolved=diagnoseKnownSiteGrid('github',observed(54),observed(54),assessment);
+  const blocked=summarizeKnownPublicGridRisks([{site:'github',p14KnownPublicGrid:unresolved}]);
+  assert.equal(blocked.releaseReview.status,'blocked');
+  assert.equal(blocked.releaseReview.reason,'known-public-visual-problems-unresolved');
+  assert.equal(blocked.releaseReview.requiresHoldoutReview,true);
+  const clean=diagnoseKnownSiteGrid('mdn',observed(0),observed(0),assessment);
+  const stillBlocked=summarizeKnownPublicGridRisks([{site:'mdn',p14KnownPublicGrid:clean}]);
+  assert.equal(stillBlocked.releaseReview.status,'blocked');
+  assert.equal(stillBlocked.releaseReview.reason,'independent-visual-validation-not-done');
+});
