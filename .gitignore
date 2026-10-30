@@ -4,3 +4,9 @@ training/neural-color-features.json
 data/neural-color-ci-*.json
 data/neural-color-p8-ci-*.json
 training/neural-color-p8-hard-negatives.json
+
+# P16 generated synthetic data, candidate and metrics: never publish
+data/p16-demo-ci-*.json
+
+# Dados de revisão humana da P16 permanecem exclusivamente locais
+training/reviews/

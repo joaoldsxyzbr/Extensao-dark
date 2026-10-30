@@ -101,8 +101,16 @@ jobs:
         run: python3 -m training.train_dark --output data/neural-ci-candidate.json
       - name: Verificar pesos distribuídos reproduzíveis em Python e JS
         run: node scripts/verify-neural-model.js
+      - name: Gerar pequeno corpus P16 sintético isolado
+        run: node scripts/p16-build-demo.js
+      - name: Validar template offline de revisão P16 sem dados humanos
+        run: node scripts/p16-review-intake.js
       - name: Testar treinamento Python da extensão
         run: python3 -m unittest discover -s training_tests -v
+      - name: Treinar duas cabeças regionais demonstrativas (somente sintético)
+        run: python3 -m training.train_region_demo --epochs 8
+      - name: Conferir paridade Python/JS do modelo demonstrativo
+        run: node scripts/p16-verify-parity.js
       - name: Avaliar modelo em exemplos separados
         run: node scripts/evaluate-neural.js
       - name: Validar catálogo visual P0 reproduzível
