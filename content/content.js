@@ -3,9 +3,10 @@
   'use strict';
   const colors = globalThis.DarkExtensionColors;
   const neural = globalThis.DarkExtensionNeural;
+  const betaGate = globalThis.DarkExtensionAIFirstBeta;
   if (!colors || !/^https?:$/.test(location.protocol)) return;
 
-  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true, ignoreNativeDark: false};
+  const DEFAULTS = {enabled: true, theme: 'deep', disabledHosts: [], smartEnabled: true, ignoreNativeDark: false, aiFirstBeta: false};
   const SKIP_TAGS = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'CANVAS', 'SVG', 'PATH', 'SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'SOURCE', 'TRACK']);
   const originals = new Map();
   const styleSnapshots = new WeakMap();
@@ -404,6 +405,10 @@
   }
 
   function startStyling() {
+    // The regional model is NOT released. An experimental preference alone
+    // must never bypass the classic renderer or load synthetic candidate weights.
+    const route = betaGate?.selectEngine(settings);
+    if (route && route.engine !== 'classic') return;
     if (baseStyle || (!settings.ignoreNativeDark && hasNativeDarkTheme())) return;
     generation++;
     installBaseStyle();
@@ -497,9 +502,9 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (!['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark'].some(key => Object.hasOwn(changes, key))) return;
+    if (!['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark', 'aiFirstBeta'].some(key => Object.hasOwn(changes, key))) return;
     const next = {...settings};
-    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark']) {
+    for (const key of ['enabled', 'theme', 'disabledHosts', 'smartEnabled', 'ignoreNativeDark', 'aiFirstBeta']) {
       if (changes[key]) next[key] = changes[key].newValue ?? DEFAULTS[key];
     }
     update(next);
