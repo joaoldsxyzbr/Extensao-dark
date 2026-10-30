@@ -81,6 +81,13 @@ function summarizeKnownPublicGridRisks(rows){
       .map(row=>row.site),
     sitesNeedingVisualReview:rows.filter(row=>
       row.p14KnownPublicGrid.status==='needs-visual-review').map(row=>row.site),
+    unresolvedMajorBrightCoverage:rows.filter(row=>{
+      const g=row.p14KnownPublicGrid;
+      return g.status==='needs-visual-review' &&
+        Number.isInteger(g.candidateValidPoints)&&g.candidateValidPoints>=48&&
+        Number.isInteger(g.candidateBrightPoints)&&g.candidateBrightPoints>=24&&
+        g.candidateBrightFraction>=.5;
+    }).map(row=>row.site),
     independentValidation:false,holdoutEvaluated:false,promotionEligible:false
   };
 }
