@@ -55,9 +55,15 @@ function diagnoseKnownSiteGrid(siteId,baseline,candidate,assessment){
     (result.candidateBrightFraction-result.baselineBrightFraction).toFixed(4));
   const residual=c.bright>=3&&result.candidateBrightFraction>=.08;
   const newBright=c.bright>=2&&result.changeInBrightFraction>=.05;
+  // A pronounced difference can indicate a regression, but known public
+  // pages may render differently across isolated profiles. Require review.
+  const severeIncrease=c.bright>=8&&c.bright-b.bright>=12&&
+    result.changeInBrightFraction>=.20&&
+    Math.abs(b.valid-c.valid)<=12;
   result.status=residual||newBright?'needs-visual-review':'observed-no-large-bright-grid-signal';
-  result.reason=residual?'residual-bright-css-points':
-    newBright?'bright-css-increase':'bounded-grid-only';
+  result.reason=severeIncrease?'possible-major-bright-css-regression':
+    newBright?'bright-css-increase':
+    residual?'residual-bright-css-points':'bounded-grid-only';
   return result;
 }
 module.exports=Object.freeze({validGrid,diagnoseKnownSiteGrid});
