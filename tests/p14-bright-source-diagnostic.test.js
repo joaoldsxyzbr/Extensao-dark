@@ -6,7 +6,9 @@ const {captureBrightSources,validateBrightSources}=
 function base(){return {
   gridPoints:96,bright:30,sourceDocument:22,sourceCustom:5,sourceStandard:3,
   largeSurface:24,fixedOrSticky:2,textDark:20,textLight:8,
-  textOtherOrUnknown:2,inlineImportant:0
+  textOtherOrUnknown:2,inlineImportant:0,
+  blockedByGeometry:6,blockedByGraphicContext:0,
+  eligibleByCanvasGate:20,blockedByContext:4
 };}
 test('P14 bright sources: only fixed numeric CSS aggregates persist',()=>{
   const result=validateBrightSources(base());
