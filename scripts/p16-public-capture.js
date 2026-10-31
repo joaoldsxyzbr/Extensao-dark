@@ -8,7 +8,8 @@ const crypto=require('node:crypto');
 const {getExplorationCandidates}=require('./p14-public-domains.js');
 const {regionDigest,validateLedger,LOCAL}=require('./p16-review-intake.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
-const {captureReviewFrame}=require('./p16-review-markers.js');
+const {captureReviewFrame,clearReviewMarkers,reviewSessionStable}=
+ require('./p16-review-markers.js');
 const {vectorize}=require('../content/region-ai.js');
 const ID=/^case-[a-z0-9-]{4,48}$/;
 const EMPTY=()=>({schemaVersion:2,kind:'p16-local-region-reviews-v2',
@@ -120,6 +121,15 @@ async function collect(choice,{launch,extract=captureRegionGraph,review=false,on
    throw Error('P16 visual: marker mismatch');
   const rows=draft(result.graph,choice);
   await onInspect({markers:result.markerCount,rows:rows.length});
+  // Operator finished. Before saving any evidence, confirm the page still
+  // matches what was marked: remove the markers, recapture the region graph
+  // and require identical region evidence. Churn during inspection (SPA
+  // update, lazy load, layout shift) invalidates the marker-to-region
+  // binding; the case must be recaptured with a new case ID.
+  await browser.page.eval('('+clearReviewMarkers.toString()+')()');
+  const recaptured=await browser.page.eval('('+extract.toString()+')()');
+  if(!reviewSessionStable(result.graph,recaptured))
+   throw Error('P16 visual: page changed during review; recapture with a new case ID');
   return rows;
  }finally{await browser.stop();}
 }

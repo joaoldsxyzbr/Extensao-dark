@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const {captureReviewFrame}=require('../scripts/p16-review-markers.js');
+const {clearReviewMarkers,reviewSessionStable}=require('../scripts/p16-review-markers.js');
 const {collect,target}=require('../scripts/p16-public-capture.js');
 function fixture(){
  const elements=[];
@@ -35,6 +36,71 @@ test('P16 visualization fails closed without consistent ready region graph',()=>
   const g=f.capture(hook);g.nodes[1].index=22;return g;
  }),/P16 visual:/);
  assert.equal(f.elements.length,0);
+});
+test('P16 session stability requires identical ready region evidence',()=>{
+ const node=luma=>({index:0,parent:-1,background:'opaque',ownLuma:luma,
+  effectiveLuma:luma,widthFraction:.4,heightFraction:.2,areaFraction:.08,
+  kind:'panel',hasDirectText:false,hasProtectedDescendants:false,
+  focusWithin:false,nativeDark:false,hasPseudoPaint:false,inFrame:false,
+  hasOcclusionRisk:false,hasComplexAncestorPaint:false,hasMotionRisk:false});
+ const graph=nodes=>({kind:'p15-region-graph-v1',status:'ready',
+  scanned:nodes.length,nodes});
+ const original=graph([node(.94),node(.96)]);
+ assert.equal(reviewSessionStable(original,graph([node(.94),node(.96)])),true);
+ for(const changed of [
+  graph([node(.94)]),                                // region vanished
+  graph([node(.94),node(.97)]),                      // CSS changed
+  graph([node(.94),node(.96),node(.05)]),            // region appeared
+  {...graph([node(.94),node(.96)]),status:'inconclusive',nodes:[]},
+  {kind:'p15-region-graph-v1',status:'ready',scanned:2},
+  null])
+  assert.equal(reviewSessionStable(original,changed),false);
+ assert.equal(typeof clearReviewMarkers,'function');
+});
+test('P16 revalidates evidence after inspection and rejects page churn',async()=>{
+ const choice=target('go.dev','case-review-churn');
+ const row=(index,parent,luma)=>({index,parent,background:'opaque',
+  ownLuma:luma,effectiveLuma:luma,widthFraction:.4,heightFraction:.2,
+  areaFraction:.08+index*.01,kind:'panel',hasDirectText:false,
+  hasProtectedDescendants:false,focusWithin:false,nativeDark:false,
+  hasPseudoPaint:false,inFrame:false,hasOcclusionRisk:false,
+  hasComplexAncestorPaint:false,hasMotionRisk:false});
+ const graph={kind:'p15-region-graph-v1',status:'ready',scanned:3,
+  nodes:[row(0,-1,.05),row(1,0,.94),row(2,0,.96)]};
+ const order=[];let closed=0;
+ const launch=async(_,options)=>{
+  return {page:{navigate:async()=>{},eval:async exp=>{
+   if(exp.includes('location.protocol'))return true;
+   if(exp.includes('captureReviewFrame')){order.push('markers');
+    return {graph,markerCount:3,status:'local-visual-unverified',
+     verifiedHumanLabels:false,trainingAuthorized:false,promotionEligible:false};}
+   if(exp.includes('data-p16-region-label')){order.push('cleanup');return 3;}
+   order.push('recapture');
+   // Lazy SPA content landed while the operator was inspecting.
+   return {kind:'p15-region-graph-v1',status:'ready',scanned:4,
+    nodes:[...graph.nodes,row(3,0,.9)]};
+  }},stop:async()=>{closed++}};
+ };
+ await assert.rejects(collect(choice,{launch,review:true,
+  onInspect:async()=>{}}),/page changed during review; recapture/);
+ assert.equal(closed,1);
+ assert.deepEqual(order,['markers','cleanup','recapture']);
+ // Same page, no churn: session closes and evidence is kept.
+ const stable={kind:'p15-region-graph-v1',status:'ready',scanned:3,
+  nodes:graph.nodes.map(n=>({...n}))};
+ const quiet=async()=>({page:{navigate:async()=>{},eval:async exp=>{
+  if(exp.includes('location.protocol'))return true;
+  if(exp.includes('captureReviewFrame'))
+   return {graph:stable,markerCount:3,status:'local-visual-unverified',
+    verifiedHumanLabels:false,trainingAuthorized:false,promotionEligible:false};
+  if(exp.includes('data-p16-region-label'))return 3;
+  return {kind:'p15-region-graph-v1',status:'ready',scanned:3,
+   nodes:stable.nodes.map(n=>({...n}))};
+ }},stop:async()=>{closed++}});
+ const data=await collect(choice,{launch:quiet,review:true,
+  onInspect:async()=>{}});
+ assert.equal(data.length,3);
+ assert.equal(closed,2);
 });
 test('P16 explicit manual review launches headed Chrome and closes it',async()=>{
  const choice=target('go.dev','case-review-001');
