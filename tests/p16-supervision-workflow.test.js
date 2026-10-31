@@ -6,13 +6,15 @@ const {makeDataset}=require('../scripts/p16-build-demo.js');
 const {parseArgs,applyVote}=require('../scripts/p16-review-vote.js');
 const {readLocal,saveLocal,EMPTY}=require('../scripts/p16-public-capture.js');
 const {quarantine}=require('../scripts/p16-supervised-quarantine.js');
+const {regionDigest}=require('../scripts/p16-review-intake.js');
 const palette=[.06,.07,.08,.95,.96,.97];
 const feature=index=>makeDataset().samples[index].x.slice();
-const record=(i,caseId,split='train',patch={})=>({
- caseId,rootDomain:split==='train'?'go.dev':'astro.build',
- split,regionIndex:i,features:feature(i),
- firstReview:'pending',secondReview:'pending',palette:null,...patch
-});
+const record=(i,caseId,split='train',patch={})=>{
+ const base={caseId,rootDomain:split==='train'?'go.dev':'astro.build',
+  split,regionIndex:i,features:feature(i),
+  firstReview:'pending',secondReview:'pending',palette:null,...patch};
+ return {...base,regionDigest:regionDigest(base)};
+};
 test('P16 vote CLI rejects unknown paths, forged slots and unsafe palettes',()=>{
  const input=['--case=case-vote-0001','--region=1','--slot=first','--vote=convert'];
  assert.equal(parseArgs(input).vote,'convert');

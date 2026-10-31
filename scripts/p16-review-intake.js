@@ -3,6 +3,7 @@
 // Review intake is local/offline and NEVER asserts human independence.
 // No webpage crawling, image collection, remote storage or holdout.
 const fs=require('node:fs'),path=require('node:path');
+const crypto=require('node:crypto');
 const {ROOT}=require('./p14-dataset-contract.js');
 const {getExplorationCandidates}=require('./p14-public-domains.js');
 const {safePalette}=require('../content/region-ai.js');
@@ -16,9 +17,23 @@ function exact(x,keys){
     Object.keys(x).some(k=>!keys.includes(k)))
   throw Error('P16 intake: private, missing or unexpected field');
 }
+// Capture-time evidence identity: binds case, frozen domain, split, region
+// index and the CSS/geometry vector to one digest. Post-capture edits to any
+// of those fields invalidate the digest and fail every downstream gate.
+function regionDigest(entry){
+ if(!entry||typeof entry!=='object'||typeof entry.caseId!=='string'||
+    typeof entry.rootDomain!=='string'||typeof entry.split!=='string'||
+    !Number.isSafeInteger(entry.regionIndex)||!Array.isArray(entry.features)||
+    entry.features.length!==20||
+    entry.features.some(x=>typeof x!=='number'||!Number.isFinite(x)))
+  throw Error('P16 digest: malformed region evidence');
+ const canonical=['p16-region-v2',entry.caseId,entry.rootDomain,entry.split,
+  String(entry.regionIndex),entry.features.join(',')].join('|');
+ return crypto.createHash('sha256').update(canonical).digest('hex');
+}
 function validateLedger(doc,candidates=getExplorationCandidates()){
  exact(doc,['schemaVersion','kind','origin','scope','independenceVerified','entries']);
- if(doc.schemaVersion!==1||doc.kind!=='p16-local-region-reviews-v1'||
+ if(doc.schemaVersion!==2||doc.kind!=='p16-local-region-reviews-v2'||
     doc.origin!=='manually-entered-unverified'||doc.scope!=='train-validation-only'||
     doc.independenceVerified!==false||!Array.isArray(doc.entries)||doc.entries.length>256)
   throw Error('P16 intake: invalid unsafe ledger');
@@ -31,7 +46,7 @@ function validateLedger(doc,candidates=getExplorationCandidates()){
  let disagreements=0,uncertain=0,unreviewed=0;
  for(const r of doc.entries){
   exact(r,['caseId','rootDomain','split','regionIndex','features',
-           'firstReview','secondReview','palette']);
+           'regionDigest','firstReview','secondReview','palette']);
   if(typeof r.caseId!=='string'||!/^case-[a-z0-9-]{4,48}$/.test(r.caseId)||
      typeof r.rootDomain!=='string'||!allowed.has(r.rootDomain)||
      r.split!==allowed.get(r.rootDomain)||
@@ -41,6 +56,9 @@ function validateLedger(doc,candidates=getExplorationCandidates()){
      r.features.some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>1)||
      BOOLS.some(i=>r.features[i]!==0&&r.features[i]!==1))
    throw Error('P16 intake: invalid domain, split, vote or CSS vector');
+  if(typeof r.regionDigest!=='string'||!/^[0-9a-f]{64}$/.test(r.regionDigest)||
+     regionDigest(r)!==r.regionDigest)
+   throw Error('P16 intake: region evidence digest mismatch or tampering');
   const scope=cases.get(r.caseId);
   if(scope&&(scope.rootDomain!==r.rootDomain||scope.split!==r.split))
    throw Error('P16 intake: case reused in another domain or split');
@@ -86,4 +104,4 @@ function main(){
  console.log(JSON.stringify(validateLedger(JSON.parse(fs.readFileSync(filename,'utf8')))));
 }
 if(require.main===module)main();
-module.exports=Object.freeze({validateLedger,TEMPLATE,LOCAL});
+module.exports=Object.freeze({regionDigest,validateLedger,TEMPLATE,LOCAL});

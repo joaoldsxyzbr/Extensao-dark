@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "kind": "p16-local-region-reviews-v1",
+  "schemaVersion": 2,
+  "kind": "p16-local-region-reviews-v2",
   "origin": "manually-entered-unverified",
   "scope": "train-validation-only",
   "independenceVerified": false,

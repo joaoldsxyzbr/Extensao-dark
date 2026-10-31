@@ -65,6 +65,8 @@ function auditTrainingReadiness(ledger){
   minimumPlanningTargets:MIN,
   nearDuplicatePairsAcrossSplits:nearPairs,
   blockers:Object.freeze(failures),
+  regionDigestVerified:source.regionDigestVerified===true,
+  evidenceDigest:source.evidenceDigest??null,
   verifiedIndependentReviewers:0,
   visuallyVerifiedRegions:0,
   trainingAuthorized:false,

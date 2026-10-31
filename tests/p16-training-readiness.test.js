@@ -5,6 +5,7 @@ const {EMPTY}=require('../scripts/p16-public-capture.js');
 const {makeDataset}=require('../scripts/p16-build-demo.js');
 const {MIN,near,auditTrainingReadiness,command}=
  require('../scripts/p16-training-readiness.js');
+const {regionDigest}=require('../scripts/p16-review-intake.js');
 const TRAIN=['go.dev','nodejs.org','rust-lang.org','kotlinlang.org',
  'swift.org','php.net'];
 const VALID=['astro.build','vite.dev'];
@@ -12,12 +13,13 @@ const P=[.06,.07,.08,.95,.96,.97];
 function corpus(){
  const rows=makeDataset().samples.map((sample,index)=>{
   const isTrain=sample.split==='train',family=Math.floor(index/4);
-  return {caseId:'case-synthetic-'+String(index).padStart(3,'0'),
+  const base={caseId:'case-synthetic-'+String(index).padStart(3,'0'),
    rootDomain:isTrain?TRAIN[family]:VALID[family-TRAIN.length],
    split:sample.split,regionIndex:0,features:[...sample.x],
    firstReview:sample.decision?'convert':'preserve',
    secondReview:sample.decision?'convert':'preserve',
    palette:sample.decision?[...P]:null};
+  return {...base,regionDigest:regionDigest(base)};
  });
  return {...EMPTY(),entries:rows};
 }
@@ -53,9 +55,12 @@ test('P16 identifies near-duplicate vectors across frozen train/validation split
  assert.equal(near(first,duplicate),true);
  duplicate[11]=Math.min(1,first[11]+.02);
  assert.equal(near(first,duplicate),false);
- const r=(split,caseId,rootDomain,x)=>({caseId,rootDomain,split,
-  regionIndex:0,features:x,firstReview:'preserve',
-  secondReview:'preserve',palette:null});
+ const r=(split,caseId,rootDomain,x)=>{
+  const row={caseId,rootDomain,split,
+   regionIndex:0,features:x,firstReview:'preserve',
+   secondReview:'preserve',palette:null};
+  return {...row,regionDigest:regionDigest(row)};
+ };
  const data={...EMPTY(),entries:[
   r('train','case-train-near1','go.dev',first),
   r('validation','case-val-near11','astro.build',

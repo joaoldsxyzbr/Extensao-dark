@@ -6,12 +6,12 @@ const fs=require('node:fs');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const {getExplorationCandidates}=require('./p14-public-domains.js');
-const {validateLedger,LOCAL}=require('./p16-review-intake.js');
+const {regionDigest,validateLedger,LOCAL}=require('./p16-review-intake.js');
 const {captureRegionGraph}=require('../content/region-graph.js');
 const {captureReviewFrame}=require('./p16-review-markers.js');
 const {vectorize}=require('../content/region-ai.js');
 const ID=/^case-[a-z0-9-]{4,48}$/;
-const EMPTY=()=>({schemaVersion:1,kind:'p16-local-region-reviews-v1',
+const EMPTY=()=>({schemaVersion:2,kind:'p16-local-region-reviews-v2',
  origin:'manually-entered-unverified',scope:'train-validation-only',
  independenceVerified:false,entries:[]});
 function target(domain,caseId,candidates=getExplorationCandidates()){
@@ -37,9 +37,10 @@ function draft(graph,choice){
   distinct.add(key);
   entries.push({caseId:choice.caseId,rootDomain:choice.rootDomain,
    split:choice.split,regionIndex:row.index,features:row.features,
-   firstReview:'pending',secondReview:'pending',palette:null});
+   regionDigest:null,firstReview:'pending',secondReview:'pending',palette:null});
  }
  if(entries.length<2)throw Error('P16 public: insufficient distinct CSS regions');
+ for(const entry of entries)entry.regionDigest=regionDigest(entry);
  return entries;
 }
 function merge(existing,choice,entries){
