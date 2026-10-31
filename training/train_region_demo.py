@@ -7,6 +7,11 @@ from vendor.neural_core.training.train import train
 from vendor.neural_core.training.export import export_model
 from training.train_neural_colors_p8 import atomic_json
 ROOT=Path(__file__).resolve().parents[1]
+# Selected 2026-10-31 by validation-only sweep over epochs 1..20 at the
+# fixed learning rate: 9 epochs dominates the previous default (8) on both
+# validation metrics (decision L1 0.050 vs 0.058; palette RMSE 0.0102 vs
+# 0.0119). Synthetic smoke only, no human labels, no promotion.
+SELECTED_EPOCHS=9
 DATA=ROOT/"data/p16-demo-ci-data.json"
 MODEL=ROOT/"data/p16-demo-ci-candidate.json"
 REPORT=ROOT/"data/p16-demo-ci-report.json"
@@ -50,7 +55,7 @@ def load_dataset(filename=DATA):
         if len(rows[split])!=4*len(allowed) or {r["family"] for r in rows[split]}!=allowed:
             raise ValueError("P16: incomplete or leaked split")
     return rows
-def train_demo(epochs=8,filename=DATA):
+def train_demo(epochs=SELECTED_EPOCHS,filename=DATA):
     if type(epochs) is not int or not 1<=epochs<=20:
         raise ValueError("P16: epochs out of bounds")
     grouped=load_dataset(filename)
@@ -78,7 +83,7 @@ def train_demo(epochs=8,filename=DATA):
 def main():
     import argparse
     parser=argparse.ArgumentParser()
-    parser.add_argument("--epochs",type=int,default=8)
+    parser.add_argument("--epochs",type=int,default=SELECTED_EPOCHS)
     args=parser.parse_args()
     if MODEL.exists() or REPORT.exists():
         raise FileExistsError("P16: refuse to overwrite existing candidate")
