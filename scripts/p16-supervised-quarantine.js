@@ -3,6 +3,7 @@
 // Non-deployable supervision preview. Consensus is declared, NEVER verified.
 // No training, file export, public crawling, holdout, personal identifiers or weights.
 const fs=require('node:fs');
+const crypto=require('node:crypto');
 const {LOCAL,TEMPLATE,validateLedger}=require('./p16-review-intake.js');
 function quarantine(ledger){
  const source=validateLedger(ledger);
@@ -23,6 +24,7 @@ function quarantine(ledger){
    // Private in-memory scope retained for future split provenance checks.
    caseId:r.caseId,rootDomain:r.rootDomain,regionIndex:r.regionIndex,
    features:Object.freeze([...r.features]),decision,
+   regionDigest:r.regionDigest,
    palette:decision?Object.freeze([...r.palette]):null
   }));
  }
@@ -38,11 +40,20 @@ function quarantine(ledger){
     source.independenceVerified===true||source.verifiedIndependentReviews!==0||
     source.trainingAuthorized||source.promotionEligible||source.holdoutAccessed)
   throw Error('P16 quarantine: unsafe source or incorrect consensus');
+ // Aggregate evidence fingerprint: lets a future training artifact cite the
+ // exact captured regions it was built from. Structural only, never a human
+ // attestation.
+ const evidence=splits.train.concat(splits.validation)
+  .map(r=>r.regionDigest).sort();
+ const evidenceDigest=evidence.length?crypto.createHash('sha256')
+  .update(['p16-evidence-v2',...evidence].join('|')).digest('hex'):null;
  const report=Object.freeze({
   kind:'p16-supervision-quarantine-v1',
   status:'declared-consensus-not-verified',
   train:Object.freeze(counts.train),validation:Object.freeze(counts.validation),
   excluded:Object.freeze(deferred),
+  regionDigestVerified:true,
+  evidenceDigest,
   reviewedByIndependentHumans:false,
   visualEvidenceVerified:false,verificationAuthorityConfigured:false,
   trustedHumanLabels:0,trainingAuthorized:false,

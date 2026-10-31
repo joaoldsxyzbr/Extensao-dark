@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {validateLedger}=require('../scripts/p16-review-intake.js');
+const {regionDigest,validateLedger}=require('../scripts/p16-review-intake.js');
 const {makeDataset}=require('../scripts/p16-build-demo.js');
 const domains=[
  {rootDomain:'go.dev',split:'train'},
@@ -8,14 +8,18 @@ const domains=[
  {rootDomain:'astro.build',split:'validation'},
  ...Array.from({length:4},(_,i)=>({rootDomain:'v'+i+'.example',split:'validation'}))
 ];
-const empty=()=>({schemaVersion:1,kind:'p16-local-region-reviews-v1',
+const empty=()=>({schemaVersion:2,kind:'p16-local-region-reviews-v2',
  origin:'manually-entered-unverified',scope:'train-validation-only',
  independenceVerified:false,entries:[]});
 const feat=i=>makeDataset().samples[i].x.slice();
-const record=(x=feat(1),patch={})=>({
- caseId:'case-sample-001',rootDomain:'go.dev',split:'train',
- regionIndex:1,features:x,firstReview:'pending',
- secondReview:'pending',palette:null,...patch});
+const record=(x=feat(1),patch={})=>{
+ const row={caseId:'case-sample-001',rootDomain:'go.dev',split:'train',
+  regionIndex:1,features:x,firstReview:'pending',
+  secondReview:'pending',palette:null,...patch};
+ // Malformed fixtures stay digest-free so validateLedger rejects them.
+ try{return {...row,regionDigest:regionDigest(row)};}
+ catch{return {...row};}
+};
 const inspect=d=>validateLedger(d,domains);
 test('P16 intake template never approves training, visual review or holdout',()=>{
  const x=inspect(empty());
