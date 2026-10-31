@@ -45,4 +45,25 @@ function captureReviewFrame(capture){
    status:'local-visual-unverified',verifiedHumanLabels:false,
    trainingAuthorized:false,promotionEligible:false};
 }
-module.exports=Object.freeze({captureReviewFrame});
+// Removes every drawn marker so a fresh capture sees only the original page.
+function clearReviewMarkers(){
+ const stale=document.querySelectorAll('[data-p16-region-label]');
+ stale.forEach(node=>node.remove());
+ return stale.length;
+}
+// A review session is stable only when the region evidence observed at
+// marker time is byte-identical to the evidence recaptured after the
+// operator finished inspecting. Any churn (SPA, lazy load, layout shift,
+// animation state) invalidates the marker-to-region binding.
+function reviewSessionStable(original,current){
+ if(!original||!current||typeof original!=='object'||typeof current!=='object'||
+    original.kind!=='p15-region-graph-v1'||current.kind!=='p15-region-graph-v1'||
+    original.status!=='ready'||current.status!=='ready')
+  return false;
+ if(!Array.isArray(original.nodes)||!Array.isArray(current.nodes)||
+    original.nodes.length!==current.nodes.length)
+  return false;
+ return JSON.stringify(original.nodes)===JSON.stringify(current.nodes);
+}
+module.exports=Object.freeze({captureReviewFrame,clearReviewMarkers,
+  reviewSessionStable});
